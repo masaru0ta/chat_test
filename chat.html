@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grok Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #eee;
+            height: 100%;
+            height: 100dvh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* サイドバー */
+        #sidebar {
+            width: 240px;
+            background: #1a1a1a;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: width 0.2s;
+        }
+
+        #sidebar.collapsed {
+            width: 50px;
+        }
+
+        #sidebar-header {
+            padding: 0.75rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            position: relative;
+        }
+
+        #sidebar-toggle {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        #sidebar-toggle:hover {
+            color: #2d5a7b;
+        }
+
+        #sidebar-header h2 {
+            font-size: 1.2rem;
+            color: #2d5a7b;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        #sidebar.collapsed #sidebar-header h2 {
+            display: none;
+        }
+
+        #sidebar-header #mobile-project {
+            display: none;
+            font-size: 0.9rem;
+            color: #2d5a7b;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 60%;
+        }
+
+        #sidebar-menu {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .menu-item {
+            padding: 0.875rem 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: background 0.2s;
+            border: none;
+            background: transparent;
+            color: #aaa;
+            font-size: 0.95rem;
+            text-align: left;
+            width: 100%;
+            flex-shrink: 0;
+        }
+
+        .menu-item:hover {
+            background: #111;
+            color: #eee;
+        }
+
+        .menu-item.active {
+            background: #111;
+            color: #2d5a7b;
+            border-left: 3px solid #2d5a7b;
+        }
+
+        .menu-item-icon {
+            font-size: 1.1rem;
+            width: 1.5rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .menu-item-text {
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        #sidebar.collapsed .menu-item-text {
+            display: none;
+        }
+
+        #sidebar.collapsed .panel-list {
+            display: none !important;
+        }
+
+        .menu-spacer {
+            flex: 1;
+        }
+
+        .menu-item.settings {
+            border-top: 1px solid #333;
+        }
+
+        /* サイドバー統計 */
+        #sidebar-stats {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid #333;
+            font-size: 0.8rem;
+        }
+
+        #sidebar.collapsed #sidebar-stats {
+            display: none;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #888;
+            text-decoration: none;
+        }
+
+        a.stat-label:hover {
+            color: #2d5a7b;
+        }
+
+        .stat-value {
+            color: #2d5a7b;
+            font-weight: bold;
+        }
+
+        .stat-reset-btn {
+            width: 100%;
+            padding: 0.4rem;
+            background: transparent;
+            border: 1px solid #333;
+            color: #888;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .stat-reset-btn:hover {
+            border-color: #2d5a7b;
+            color: #2d5a7b;
+        }
+
+        /* パネル共通スタイル */
+        .panel-list {
+            flex: 1;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            border-top: 1px solid #333;
+        }
+
+        .panel-list.show {
+            display: flex;
+        }
+
+        .panel-header {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        /* リストアイテム共通 */
+        .list-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            transition: background 0.2s;
+            border: none;
+            background: transparent;
+            color: #888;
+            font-size: 0.85rem;
+            text-align: left;
+            width: 100%;
+            border-bottom: 1px solid #333;
+        }
+
+        .list-item:hover {
+            background: #111;
+            color: #eee;
+        }
+
+        .list-item.active {
+            background: #111;
+            color: #2d5a7b;
+        }
+
+        .list-item-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .list-item-btn {
+            color: #888;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+        }
+
+        .list-item-btn:hover {
+            color: #2d5a7b;
+        }
+
+        .list-item-btn.delete {
+            color: #2d5a7b;
+        }
+
+        .list-item-btn.delete:hover {
+            background: #2d5a7b;
+            color: white;
+        }
+
+        .list-item.new-item {
+            color: #2d5a7b;
+            font-weight: 500;
+        }
+
+        .list-item.new-item:hover {
+            color: #3d6a8b;
+        }
+
+        .list-item.delete-all-btn {
+            color: #c0392b;
+            font-size: 0.8rem;
+            justify-content: center;
+        }
+
+        .list-item.delete-all-btn:hover {
+            background: #c0392b;
+            color: white;
+        }
+
+        /* モーダル */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 0.75rem;
+            width: 80%;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            color: #2d5a7b;
+            font-size: 1.1rem;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 1.25rem;
+        }
+
+        .modal-close:hover {
+            color: #2d5a7b;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group.flex-grow {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.flex-grow textarea {
+            flex: 1;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+            color: #eee;
+            font-size: 0.95rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: #2d5a7b;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+            color: #eee;
+            font-size: 0.95rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .modal-footer-left {
+            display: flex;
+        }
+
+        .modal-footer-right {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.6rem 1.25rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #2d5a7b;
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #3d6a8b;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #aaa;
+            border: 1px solid #333;
+        }
+
+        .btn-secondary:hover {
+            color: #eee;
+            border-color: #888;
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #2d5a7b;
+            border: 1px solid #2d5a7b;
+        }
+
+        .btn-danger:hover {
+            background: #2d5a7b;
+            color: white;
+        }
+
+        /* メインコンテンツ */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        header {
+            background: #1a1a1a;
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid #333;
+        }
+
+        #current-project {
+            font-size: 0.8rem;
+            color: #2d5a7b;
+            margin-bottom: 0.5rem;
+        }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .user {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            border-bottom-right-radius: 0.25rem;
+            align-self: flex-end;
+            background: #2d5a7b;
+            color: white;
+        }
+
+        .assistant {
+            width: 100%;
+            padding: 0.5rem 0;
+            color: #eee;
+        }
+
+        .system-msg {
+            align-self: center;
+            background: #333;
+            color: #888;
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .reasoning {
+            font-size: 0.85rem;
+            color: #888;
+            background: #0d0d0d;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #2d5a7b;
+        }
+
+        .reasoning-toggle {
+            cursor: pointer;
+            color: #2d5a7b;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .reasoning-content {
+            display: none;
+        }
+
+        .reasoning-content.show {
+            display: block;
+        }
+
+        #input-container {
+            padding: 1rem;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #message-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #333;
+            border-radius: 1.5rem;
+            background: #111;
+            color: #eee;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        #message-input:focus {
+            border-color: #2d5a7b;
+        }
+
+        #send-btn {
+            padding: 0.75rem 1.5rem;
+            background: #2d5a7b;
+            color: white;
+            border: none;
+            border-radius: 1.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+
+        #send-btn:hover {
+            background: #3d6a8b;
+        }
+
+        #send-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: flex;
+            gap: 0.3rem;
+            padding: 1rem;
+        }
+
+        .loading span {
+            width: 8px;
+            height: 8px;
+            background: #2d5a7b;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading span:nth-child(1) { animation-delay: -0.32s; }
+        .loading span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .empty-message {
+            color: #666;
+            text-align: center;
+            padding: 2rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .clickable-word {
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .clickable-word:hover {
+            opacity: 0.7;
+        }
+
+        .clickable-choice {
+            cursor: pointer;
+            color: #6b9dc4;
+            font-weight: bold;
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            transition: background 0.2s;
+        }
+
+        .clickable-choice:hover {
+            background: #333;
+            color: #8bb8d8;
+        }
+
+        .character-settings {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .character-group {
+            flex: 1;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+        }
+
+        .character-group-title {
+            font-weight: bold;
+            color: #aaa;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #333;
+        }
+
+        .character-row {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .character-row label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .character-row label code {
+            font-size: 0.7rem;
+            color: #6b9dc4;
+            background: #222;
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.2rem;
+        }
+
+        .character-row input[type="text"] {
+            width: 100%;
+            padding: 0.4rem;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 0.25rem;
+            color: #eee;
+            font-size: 0.85rem;
+        }
+
+        .character-row input[type="color"] {
+            width: 40px;
+            height: 30px;
+            padding: 0;
+            border: 1px solid #333;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        /* モバイル対応 */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            #sidebar {
+                width: 100%;
+                height: 100%;
+                max-height: none;
+                border-right: none;
+                border-bottom: none;
+                overflow-y: auto;
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: 100;
+            }
+
+            #sidebar.collapsed {
+                width: 100%;
+                height: auto;
+                max-height: 50px;
+                overflow: hidden;
+                position: relative;
+            }
+
+            #sidebar.collapsed #sidebar-menu {
+                display: none;
+            }
+
+            #sidebar.collapsed #sidebar-stats {
+                display: none;
+            }
+
+            #sidebar-menu {
+                overflow: visible;
+            }
+
+            #sidebar-header #mobile-project {
+                display: block;
+            }
+
+            #sidebar-header h2 {
+                display: none;
+            }
+
+            header {
+                display: none;
+            }
+
+            #main {
+                flex: 1;
+                min-height: 0;
+                padding-top: 50px;
+            }
+
+            .modal {
+                width: 95%;
+                height: 95vh;
+            }
+
+            .character-settings {
+                flex-direction: column;
+            }
+
+            #message-input {
+                flex: 1;
+                min-width: 0;
+            }
+
+            #send-btn {
+                padding: 0.75rem 1rem;
+            }
+
+            .panel-list {
+                max-height: none;
+                flex: 1;
+                overflow-y: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- サイドバー -->
+    <div id="sidebar">
+        <div id="sidebar-header">
+            <button id="sidebar-toggle">≡</button>
+            <h2>Grok Chat</h2>
+            <span id="mobile-project"></span>
+        </div>
+        <div id="sidebar-menu">
+            <button class="menu-item" id="menu-new-chat">
+                <span class="menu-item-icon">+</span>
+                <span class="menu-item-text">新規チャット</span>
+            </button>
+            <button class="menu-item" id="menu-projects">
+                <span class="menu-item-icon">📁</span>
+                <span class="menu-item-text">プロジェクト</span>
+            </button>
+            <button class="menu-item" id="menu-history">
+                <span class="menu-item-icon">📜</span>
+                <span class="menu-item-text">履歴</span>
+            </button>
+
+            <!-- プロジェクトリスト -->
+            <div id="project-list" class="panel-list">
+                <div class="panel-header">
+                    <span>プロジェクト</span>
+                </div>
+                <div id="project-items"></div>
+            </div>
+
+            <!-- 履歴リスト -->
+            <div id="history-list" class="panel-list">
+                <div class="panel-header">
+                    <span>セッション履歴</span>
+                </div>
+                <div id="history-items"></div>
+            </div>
+
+            <div class="menu-spacer"></div>
+
+            <!-- 統計情報 -->
+            <div id="sidebar-stats">
+                <div class="stat-item">
+                    <a class="stat-label" href="https://openrouter.ai/settings/credits" target="_blank">💳 クレジット残高</a>
+                    <span class="stat-value" id="credit-balance">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">💰 累積コスト</span>
+                    <span class="stat-value" id="total-cost">$0.000000</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">📊 累積トークン</span>
+                    <span class="stat-value" id="total-tokens">0</span>
+                </div>
+                <button class="stat-reset-btn" id="clear-cost-btn">リセット</button>
+            </div>
+
+            <button class="menu-item settings" id="menu-settings">
+                <span class="menu-item-icon">⚙️</span>
+                <span class="menu-item-text">設定</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- プロジェクト作成/編集モーダル -->
+    <div class="modal-overlay" id="project-modal">
+        <div class="modal">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="project-name">プロジェクト名</label>
+                    <input type="text" id="project-name" placeholder="例: 英語翻訳アシスタント">
+                </div>
+                <div class="form-group flex-grow">
+                    <label for="project-prompt">システムプロンプト</label>
+                    <textarea id="project-prompt" placeholder="例: あなたは優秀な英語翻訳者です。ユーザーが入力した日本語を自然な英語に翻訳してください。"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-footer-left">
+                    <button class="btn btn-danger" id="project-delete" style="display: none;">削除</button>
+                </div>
+                <div class="modal-footer-right">
+                    <button class="btn btn-secondary" id="project-cancel">キャンセル</button>
+                    <button class="btn btn-primary" id="project-save">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 設定モーダル -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal" style="height: auto; max-height: 90vh;">
+            <div class="modal-header">
+                <h3>設定</h3>
+                <button class="modal-close" id="settings-modal-close">×</button>
+            </div>
+            <div class="modal-body" style="display: block;">
+                <div class="form-group">
+                    <label for="model-select">モデル</label>
+                    <select id="model-select">
+                        <option value="x-ai/grok-3-mini">Grok 3 Mini ($0.30/$0.50)</option>
+                        <option value="x-ai/grok-4-fast">Grok 4 Fast ($0.20/$0.50)</option>
+                        <option value="x-ai/grok-4.1-fast" selected>Grok 4.1 Fast ($0.20/$0.50)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="click-prompt">クリック時のプロンプト（{word}が単語に置換されます）</label>
+                    <input type="text" id="click-prompt" placeholder="例: {word}について詳しく">
+                </div>
+                <div class="form-group">
+                    <label>強調設定</label>
+                    <div class="character-settings">
+                        <div class="character-group">
+                            <div class="character-group-title">強調１</div>
+                            <div class="character-row">
+                                <label>名称１ <code>{name1}</code></label>
+                                <input type="text" id="name1" placeholder="例: さくら">
+                            </div>
+                            <div class="character-row">
+                                <label>通称１ <code>{nickname1}</code></label>
+                                <input type="text" id="nickname1" placeholder="例: さくらちゃん">
+                            </div>
+                            <div class="character-row">
+                                <label>文字色</label>
+                                <input type="color" id="color1" value="#ff69b4">
+                            </div>
+                        </div>
+                        <div class="character-group">
+                            <div class="character-group-title">強調２</div>
+                            <div class="character-row">
+                                <label>名称２ <code>{name2}</code></label>
+                                <input type="text" id="name2" placeholder="例: 太郎">
+                            </div>
+                            <div class="character-row">
+                                <label>通称２ <code>{nickname2}</code></label>
+                                <input type="text" id="nickname2" placeholder="例: 太郎くん">
+                            </div>
+                            <div class="character-row">
+                                <label>文字色</label>
+                                <input type="color" id="color2" value="#4a90d9">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-footer-left"></div>
+                <div class="modal-footer-right">
+                    <button class="btn btn-primary" id="settings-close">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div id="main">
+        <header>
+            <div id="current-project"></div>
+        </header>
+
+        <div id="chat-container"></div>
+
+        <div id="input-container">
+            <input type="text" id="message-input" placeholder="メッセージを入力..." autocomplete="off">
+            <button id="send-btn">送信</button>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = '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';
+        const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+        const CREDITS_URL = 'https://openrouter.ai/api/v1/credits';
+
+        const STORAGE_KEY = 'grok-chat-data';
+        const SESSIONS_KEY = 'grok-chat-sessions';
+        const PROJECTS_KEY = 'grok-chat-projects';
+
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const clearCostBtn = document.getElementById('clear-cost-btn');
+        const totalCostEl = document.getElementById('total-cost');
+        const totalTokensEl = document.getElementById('total-tokens');
+        const creditBalanceEl = document.getElementById('credit-balance');
+        const modelSelect = document.getElementById('model-select');
+        const clickPromptInput = document.getElementById('click-prompt');
+        const historyList = document.getElementById('history-list');
+        const historyItems = document.getElementById('history-items');
+        const projectList = document.getElementById('project-list');
+        const projectItems = document.getElementById('project-items');
+        const projectModal = document.getElementById('project-modal');
+        const currentProjectEl = document.getElementById('current-project');
+
+        // 現在のセッション
+        let currentSessionId = null;
+        let currentProjectId = null;
+        let messages = [];
+        let chatHistory = [];
+
+        // グローバル統計
+        let totalCost = 0;
+        let totalTokens = 0;
+
+        // クリック時のプロンプト
+        let clickPrompt = '{word}について詳しく';
+
+        // 強調設定
+        let highlightSettings = {
+            h1: { name: '', nickname: '', color: '#ff69b4' },
+            h2: { name: '', nickname: '', color: '#4a90d9' }
+        };
+
+        // データ
+        let sessions = [];
+        let projects = [];
+
+        // 編集中のプロジェクトID
+        let editingProjectId = null;
+
+        // 日時フォーマット
+        function formatDateTime(timestamp) {
+            const date = new Date(timestamp);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}/${month}/${day} ${hours}:${minutes}`;
+        }
+
+        // ========== セッション管理 ==========
+        function saveSessions() {
+            localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+        }
+
+        function loadSessions() {
+            const saved = localStorage.getItem(SESSIONS_KEY);
+            if (saved) {
+                sessions = JSON.parse(saved);
+            }
+        }
+
+        function saveCurrentSession() {
+            if (!currentSessionId || messages.length === 0) return;
+
+            const sessionIndex = sessions.findIndex(s => s.id === currentSessionId);
+            const sessionData = {
+                id: currentSessionId,
+                title: formatDateTime(currentSessionId),
+                messages: messages,
+                chatHistory: chatHistory,
+                projectId: currentProjectId,
+                createdAt: currentSessionId
+            };
+
+            if (sessionIndex >= 0) {
+                sessions[sessionIndex] = sessionData;
+            } else {
+                sessions.unshift(sessionData);
+            }
+            saveSessions();
+        }
+
+        function loadSession(sessionId) {
+            const session = sessions.find(s => s.id === sessionId);
+            if (session) {
+                currentSessionId = session.id;
+                currentProjectId = session.projectId || null;
+                messages = [...session.messages];
+                chatHistory = [...session.chatHistory];
+
+                chatContainer.innerHTML = '';
+                chatHistory.forEach(item => {
+                    addMessageToDOM(item.role, item.content, item.reasoning);
+                });
+
+                updateCurrentProjectDisplay();
+                saveGlobalSettings();
+                renderHistoryList();
+                closeMobileMenu();
+            }
+        }
+
+        function replacePromptVariables(prompt) {
+            // プロンプト内の変数を置換
+            return prompt
+                .replace(/\{name1\}/g, highlightSettings.h1.name || '')
+                .replace(/\{nickname1\}/g, highlightSettings.h1.nickname || '')
+                .replace(/\{name2\}/g, highlightSettings.h2.name || '')
+                .replace(/\{nickname2\}/g, highlightSettings.h2.nickname || '');
+        }
+
+        function startNewSession(projectId = null) {
+            saveCurrentSession();
+
+            currentSessionId = Date.now();
+            currentProjectId = projectId;
+            messages = [];
+            chatHistory = [];
+            chatContainer.innerHTML = '';
+
+            // プロジェクトがある場合はシステムプロンプトを設定
+            if (projectId) {
+                const project = projects.find(p => p.id === projectId);
+                if (project && project.prompt) {
+                    const expandedPrompt = replacePromptVariables(project.prompt);
+                    messages.push({ role: 'system', content: expandedPrompt });
+                    // システムメッセージを表示
+                    const div = document.createElement('div');
+                    div.className = 'message system-msg';
+                    div.textContent = `📁 プロジェクト「${project.name}」を開始`;
+                    chatContainer.appendChild(div);
+                }
+            }
+
+            updateCurrentProjectDisplay();
+            saveGlobalSettings();
+            renderHistoryList();
+        }
+
+        function deleteSession(sessionId, event) {
+            event.stopPropagation();
+            if (!confirm('このセッションを削除しますか？')) return;
+
+            sessions = sessions.filter(s => s.id !== sessionId);
+            saveSessions();
+
+            if (currentSessionId === sessionId) {
+                if (sessions.length > 0) {
+                    loadSession(sessions[0].id);
+                } else {
+                    startNewSession();
+                }
+            }
+
+            renderHistoryList();
+        }
+
+        function deleteAllSessions() {
+            if (!confirm('全ての履歴を削除しますか？この操作は取り消せません。')) return;
+
+            // 現在のセッションもクリア
+            currentSessionId = null;
+            currentProjectId = null;
+            messages = [];
+            chatHistory = [];
+            chatContainer.innerHTML = '';
+
+            sessions = [];
+            saveSessions();
+            saveGlobalSettings();
+
+            // 新規セッション開始
+            currentSessionId = Date.now();
+            updateCurrentProjectDisplay();
+            renderHistoryList();
+        }
+
+        function renderHistoryList() {
+            historyItems.innerHTML = '';
+
+            if (sessions.length === 0) {
+                historyItems.innerHTML = '<div class="empty-message">履歴がありません</div>';
+                return;
+            }
+
+            // 全削除ボタン
+            const deleteAllBtn = document.createElement('button');
+            deleteAllBtn.className = 'list-item delete-all-btn';
+            deleteAllBtn.textContent = '全ての履歴を削除';
+            deleteAllBtn.addEventListener('click', deleteAllSessions);
+            historyItems.appendChild(deleteAllBtn);
+
+            sessions.forEach(session => {
+                const item = document.createElement('div');
+                item.className = 'list-item' + (session.id === currentSessionId ? ' active' : '');
+                item.innerHTML = `
+                    <span class="list-item-title">${session.title}</span>
+                    <button class="list-item-btn delete" title="削除">×</button>
+                `;
+                item.addEventListener('click', () => loadSession(session.id));
+                item.querySelector('.list-item-btn').addEventListener('click', (e) => deleteSession(session.id, e));
+                historyItems.appendChild(item);
+            });
+        }
+
+        function toggleHistoryPanel() {
+            projectList.classList.remove('show');
+            historyList.classList.toggle('show');
+            if (historyList.classList.contains('show')) {
+                renderHistoryList();
+            }
+        }
+
+        // ========== プロジェクト管理 ==========
+        function saveProjects() {
+            localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+        }
+
+        function loadProjects() {
+            const saved = localStorage.getItem(PROJECTS_KEY);
+            if (saved) {
+                projects = JSON.parse(saved);
+            }
+        }
+
+        function renderProjectList() {
+            projectItems.innerHTML = '';
+
+            // 新規プロジェクトボタン
+            const newItem = document.createElement('div');
+            newItem.className = 'list-item new-item';
+            newItem.innerHTML = `<span class="list-item-title">+ 新規プロジェクト</span>`;
+            newItem.addEventListener('click', () => openProjectModal());
+            projectItems.appendChild(newItem);
+
+            if (projects.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-message';
+                empty.textContent = 'プロジェクトがありません';
+                projectItems.appendChild(empty);
+                return;
+            }
+
+            projects.forEach(project => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.innerHTML = `
+                    <span class="list-item-title">${project.name}</span>
+                    <button class="list-item-btn" title="編集">✎</button>
+                `;
+                item.querySelector('.list-item-title').addEventListener('click', () => startProjectChat(project.id));
+                item.querySelector('.list-item-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openProjectModal(project.id);
+                });
+                projectItems.appendChild(item);
+            });
+        }
+
+        function toggleProjectPanel() {
+            historyList.classList.remove('show');
+            projectList.classList.toggle('show');
+            if (projectList.classList.contains('show')) {
+                renderProjectList();
+            }
+        }
+
+        function openProjectModal(projectId = null) {
+            editingProjectId = projectId;
+            const nameInput = document.getElementById('project-name');
+            const promptInput = document.getElementById('project-prompt');
+            const deleteBtn = document.getElementById('project-delete');
+
+            if (projectId) {
+                const project = projects.find(p => p.id === projectId);
+                if (project) {
+                    nameInput.value = project.name;
+                    promptInput.value = project.prompt;
+                    deleteBtn.style.display = 'block';
+                }
+            } else {
+                nameInput.value = '';
+                promptInput.value = '';
+                deleteBtn.style.display = 'none';
+            }
+
+            projectModal.classList.add('show');
+            nameInput.focus();
+        }
+
+        function closeProjectModal() {
+            projectModal.classList.remove('show');
+            editingProjectId = null;
+        }
+
+        function saveProject() {
+            const name = document.getElementById('project-name').value.trim();
+            const prompt = document.getElementById('project-prompt').value.trim();
+
+            if (!name) {
+                alert('プロジェクト名を入力してください');
+                return;
+            }
+
+            if (editingProjectId) {
+                const index = projects.findIndex(p => p.id === editingProjectId);
+                if (index >= 0) {
+                    projects[index].name = name;
+                    projects[index].prompt = prompt;
+                }
+            } else {
+                projects.push({
+                    id: Date.now(),
+                    name: name,
+                    prompt: prompt,
+                    createdAt: Date.now()
+                });
+            }
+
+            saveProjects();
+            closeProjectModal();
+            renderProjectList();
+        }
+
+        function deleteProject(projectId) {
+            if (!confirm('このプロジェクトを削除しますか？')) return;
+
+            projects = projects.filter(p => p.id !== projectId);
+            saveProjects();
+            closeProjectModal();
+            renderProjectList();
+        }
+
+        async function startProjectChat(projectId) {
+            startNewSession(projectId);
+            projectList.classList.remove('show');
+            closeMobileMenu();
+
+            // プロジェクト開始時にシステムから最初のメッセージを送信
+            const project = projects.find(p => p.id === projectId);
+            if (project && project.prompt) {
+                sendBtn.disabled = true;
+                await streamResponse(messages);
+                sendBtn.disabled = false;
+            }
+
+            if (!isMobile()) {
+                messageInput.focus();
+            }
+        }
+
+        function updateCurrentProjectDisplay() {
+            const mobileProjectEl = document.getElementById('mobile-project');
+            if (currentProjectId) {
+                const project = projects.find(p => p.id === currentProjectId);
+                if (project) {
+                    currentProjectEl.textContent = `📁 ${project.name}`;
+                    mobileProjectEl.textContent = `📁 ${project.name}`;
+                    return;
+                }
+            }
+            currentProjectEl.textContent = '';
+            mobileProjectEl.textContent = '';
+        }
+
+        // ========== グローバル設定 ==========
+        function saveGlobalSettings() {
+            const data = {
+                totalCost,
+                totalTokens,
+                selectedModel: modelSelect.value,
+                currentSessionId,
+                currentProjectId,
+                clickPrompt,
+                highlightSettings
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function loadGlobalSettings() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const data = JSON.parse(saved);
+                totalCost = data.totalCost || 0;
+                totalTokens = data.totalTokens || 0;
+                currentSessionId = data.currentSessionId || null;
+                currentProjectId = data.currentProjectId || null;
+                clickPrompt = data.clickPrompt || '{word}について詳しく';
+                if (data.highlightSettings) {
+                    highlightSettings = data.highlightSettings;
+                }
+
+                if (data.selectedModel) {
+                    modelSelect.value = data.selectedModel;
+                }
+
+                clickPromptInput.value = clickPrompt;
+                totalCostEl.textContent = '$' + totalCost.toFixed(6);
+                totalTokensEl.textContent = totalTokens.toLocaleString();
+            }
+            loadHighlightSettings();
+        }
+
+        function loadHighlightSettings() {
+            document.getElementById('name1').value = highlightSettings.h1.name || '';
+            document.getElementById('nickname1').value = highlightSettings.h1.nickname || '';
+            document.getElementById('color1').value = highlightSettings.h1.color || '#ff69b4';
+            document.getElementById('name2').value = highlightSettings.h2.name || '';
+            document.getElementById('nickname2').value = highlightSettings.h2.nickname || '';
+            document.getElementById('color2').value = highlightSettings.h2.color || '#4a90d9';
+        }
+
+        function saveHighlightSettings() {
+            highlightSettings.h1.name = document.getElementById('name1').value;
+            highlightSettings.h1.nickname = document.getElementById('nickname1').value;
+            highlightSettings.h1.color = document.getElementById('color1').value;
+            highlightSettings.h2.name = document.getElementById('name2').value;
+            highlightSettings.h2.nickname = document.getElementById('nickname2').value;
+            highlightSettings.h2.color = document.getElementById('color2').value;
+            saveGlobalSettings();
+        }
+
+        // ========== チャット機能 ==========
+        async function fetchCredits() {
+            try {
+                const response = await fetch(CREDITS_URL, {
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const balance = data.data.total_credits - data.data.total_usage;
+                    creditBalanceEl.textContent = '$' + balance.toFixed(4);
+                }
+            } catch (error) {
+                creditBalanceEl.textContent = 'エラー';
+            }
+        }
+
+        function updateStats(cost, tokens) {
+            totalCost += cost;
+            totalTokens += tokens;
+            totalCostEl.textContent = '$' + totalCost.toFixed(6);
+            totalTokensEl.textContent = totalTokens.toLocaleString();
+            saveGlobalSettings();
+            fetchCredits(); // クレジット残高も更新
+        }
+
+        function parseClickableWords(text) {
+            // [word] を検出してクリック可能なspanに変換（括弧は表示しない）
+            let result = text.replace(/\[([^\]]+)\]/g, (match, word) => {
+                const encoded = encodeURIComponent(word);
+                return `<span class="clickable-word" onclick="askAbout('${encoded}')">${word}</span>`;
+            });
+
+            // 【選択肢】が含まれている場合、番号付きリストをクリック可能にする
+            if (text.includes('【選択肢】')) {
+                result = result.replace(/^(\d+)\.\s?/gm, (match, num) => {
+                    return `<span class="clickable-choice" onclick="sendChoice('${num}')">${num}.</span> `;
+                });
+            }
+
+            return result;
+        }
+
+        window.sendChoice = function(num) {
+            messageInput.value = num;
+            sendMessage();
+        };
+
+        function parseDialogueColors(text) {
+            // 強調設定に基づいて色を付ける
+            let result = text;
+
+            // 名称１で色付け
+            if (highlightSettings.h1.name) {
+                const pattern = new RegExp(`^(${escapeRegex(highlightSettings.h1.name)})(：|:)(.*)$`, 'gm');
+                result = result.replace(pattern, (match, name, colon, dialogue) => {
+                    return `<span style="color: ${highlightSettings.h1.color}">${name}${colon}${dialogue}</span>`;
+                });
+            }
+
+            // 名称２で色付け
+            if (highlightSettings.h2.name) {
+                const pattern = new RegExp(`^(${escapeRegex(highlightSettings.h2.name)})(：|:)(.*)$`, 'gm');
+                result = result.replace(pattern, (match, name, colon, dialogue) => {
+                    return `<span style="color: ${highlightSettings.h2.color}">${name}${colon}${dialogue}</span>`;
+                });
+            }
+
+            return result;
+        }
+
+        function escapeRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        window.askAbout = function(encodedWord) {
+            const word = decodeURIComponent(encodedWord);
+            const query = clickPrompt.replace(/{word}/g, word);
+            messageInput.value = query;
+            sendMessage();
+        };
+
+        function addMessageToDOM(role, content, reasoning = null) {
+            if (role === 'system') return; // システムメッセージは表示しない
+
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            const escapedContent = escapeHtml(content);
+            let parsedContent = parseClickableWords(escapedContent);
+            parsedContent = parseDialogueColors(parsedContent);
+
+            if (reasoning) {
+                const toggleId = 'reasoning-' + Date.now() + Math.random();
+                div.innerHTML = `
+                    <div class="reasoning-toggle" onclick="toggleReasoning('${toggleId}')">
+                        💭 思考プロセスを表示
+                    </div>
+                    <div id="${toggleId}" class="reasoning-content">
+                        <div class="reasoning">${escapeHtml(reasoning)}</div>
+                    </div>
+                    ${parsedContent}
+                `;
+            } else {
+                div.innerHTML = parsedContent;
+            }
+
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function addMessage(role, content, reasoning = null) {
+            if (messages.length === 0 && !currentSessionId) {
+                currentSessionId = Date.now();
+                saveGlobalSettings();
+            }
+
+            addMessageToDOM(role, content, reasoning);
+            chatHistory.push({ role, content, reasoning });
+            saveCurrentSession();
+        }
+
+        window.toggleReasoning = function(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('show');
+        };
+
+        function showLoading() {
+            const div = document.createElement('div');
+            div.className = 'message assistant loading';
+            div.id = 'loading';
+            div.innerHTML = '<span></span><span></span><span></span>';
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            if (loading) loading.remove();
+        }
+
+        function clearCost() {
+            if (confirm('累積コストをリセットしますか？')) {
+                totalCost = 0;
+                totalTokens = 0;
+                totalCostEl.textContent = '$0.000000';
+                totalTokensEl.textContent = '0';
+                saveGlobalSettings();
+            }
+        }
+
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+
+        function closeMobileMenu() {
+            if (isMobile()) {
+                sidebar.classList.add('collapsed');
+            }
+        }
+
+        async function sendMessage() {
+            const content = messageInput.value.trim();
+            if (!content) return;
+
+            messageInput.value = '';
+            sendBtn.disabled = true;
+
+            addMessage('user', content);
+            messages.push({ role: 'user', content });
+
+            await streamResponse(messages);
+
+            sendBtn.disabled = false;
+            if (!isMobile()) {
+                messageInput.focus();
+            }
+            renderHistoryList();
+        }
+
+        async function streamResponse(msgs) {
+            // ストリーミング用のメッセージ要素を作成
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            chatContainer.appendChild(div);
+
+            let fullContent = '';
+            let reasoning = '';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: modelSelect.value,
+                        messages: msgs,
+                        stream: true
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    div.textContent = `エラー: ${error.error?.message || response.statusText}`;
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                const delta = parsed.choices?.[0]?.delta;
+
+                                if (delta?.reasoning) {
+                                    reasoning += delta.reasoning;
+                                }
+                                if (delta?.content) {
+                                    fullContent += delta.content;
+                                    // リアルタイムで表示を更新
+                                    updateStreamingMessage(div, fullContent, reasoning);
+                                }
+
+                                // 使用量情報（最後のチャンクに含まれる場合）
+                                if (parsed.usage) {
+                                    const cost = parsed.usage.cost || 0;
+                                    const tokens = parsed.usage.total_tokens || 0;
+                                    updateStats(cost, tokens);
+                                }
+                            } catch (e) {
+                                // JSON解析エラーは無視
+                            }
+                        }
+                    }
+                }
+
+                // 完了後、メッセージを保存
+                if (fullContent) {
+                    messages.push({ role: 'assistant', content: fullContent });
+                    chatHistory.push({ role: 'assistant', content: fullContent, reasoning: reasoning || null });
+                    saveCurrentSession();
+                    // 最終的なパース処理を適用
+                    updateStreamingMessage(div, fullContent, reasoning, true);
+                }
+
+            } catch (error) {
+                div.textContent = `エラー: ${error.message}`;
+            }
+
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function updateStreamingMessage(div, content, reasoning, final = false) {
+            if (final) {
+                // 最終更新時はパース処理を適用
+                const escapedContent = escapeHtml(content);
+                let parsedContent = parseClickableWords(escapedContent);
+                parsedContent = parseDialogueColors(parsedContent);
+
+                if (reasoning) {
+                    const toggleId = 'reasoning-' + Date.now() + Math.random();
+                    div.innerHTML = `
+                        <div class="reasoning-toggle" onclick="toggleReasoning('${toggleId}')">
+                            💭 思考プロセスを表示
+                        </div>
+                        <div id="${toggleId}" class="reasoning-content">
+                            <div class="reasoning">${escapeHtml(reasoning)}</div>
+                        </div>
+                        ${parsedContent}
+                    `;
+                } else {
+                    div.innerHTML = parsedContent;
+                }
+            } else {
+                // ストリーミング中も色付けを適用
+                const escapedContent = escapeHtml(content);
+                const coloredContent = parseDialogueColors(escapedContent);
+
+                let html = '';
+                if (reasoning) {
+                    html += `<div class="reasoning" style="margin-bottom: 0.5rem;">${escapeHtml(reasoning)}</div>`;
+                }
+                html += coloredContent;
+                div.innerHTML = html;
+            }
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // ========== イベントリスナー ==========
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            // パネルを閉じる
+            historyList.classList.remove('show');
+            projectList.classList.remove('show');
+        });
+
+        document.getElementById('menu-new-chat').addEventListener('click', () => {
+            if (messages.length === 0) return;
+            startNewSession();
+            closeMobileMenu();
+        });
+
+        document.getElementById('menu-history').addEventListener('click', toggleHistoryPanel);
+        document.getElementById('menu-projects').addEventListener('click', toggleProjectPanel);
+
+        document.getElementById('project-cancel').addEventListener('click', closeProjectModal);
+        document.getElementById('project-save').addEventListener('click', saveProject);
+        document.getElementById('project-delete').addEventListener('click', () => {
+            if (editingProjectId) {
+                deleteProject(editingProjectId);
+            }
+        });
+
+        projectModal.addEventListener('click', (e) => {
+            if (e.target === projectModal) closeProjectModal();
+        });
+
+        const settingsModal = document.getElementById('settings-modal');
+
+        document.getElementById('menu-settings').addEventListener('click', () => {
+            settingsModal.classList.add('show');
+        });
+
+        document.getElementById('settings-modal-close').addEventListener('click', () => {
+            settingsModal.classList.remove('show');
+        });
+
+        document.getElementById('settings-close').addEventListener('click', () => {
+            settingsModal.classList.remove('show');
+        });
+
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) settingsModal.classList.remove('show');
+        });
+
+        // 強調設定のイベントリスナー
+        ['name1', 'nickname1', 'color1', 'name2', 'nickname2', 'color2'].forEach(id => {
+            document.getElementById(id).addEventListener('input', saveHighlightSettings);
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+        clearCostBtn.addEventListener('click', clearCost);
+        modelSelect.addEventListener('change', saveGlobalSettings);
+        clickPromptInput.addEventListener('input', () => {
+            clickPrompt = clickPromptInput.value || '{word}について詳しく';
+            saveGlobalSettings();
+        });
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+
+        // ========== 初期化 ==========
+        loadSessions();
+        loadProjects();
+        loadGlobalSettings();
+
+        // デフォルト値を設定
+        if (!clickPromptInput.value) {
+            clickPromptInput.value = clickPrompt;
+        }
+
+        if (currentSessionId) {
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (session) {
+                currentProjectId = session.projectId || null;
+                messages = [...session.messages];
+                chatHistory = [...session.chatHistory];
+                chatHistory.forEach(item => {
+                    addMessageToDOM(item.role, item.content, item.reasoning);
+                });
+            }
+        }
+
+        updateCurrentProjectDisplay();
+        fetchCredits(); // 初期化時にクレジット残高を取得
+        if (!isMobile()) {
+            messageInput.focus();
+        }
+    </script>
+</body>
+</html>
