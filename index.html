@@ -922,30 +922,30 @@
                             <div class="character-group-title">強調１</div>
                             <div class="character-row">
                                 <label>名称１ <code>{name1}</code></label>
-                                <input type="text" id="name1" placeholder="例: さくら">
+                                <input type="text" id="name1">
                             </div>
                             <div class="character-row">
                                 <label>通称１ <code>{nickname1}</code></label>
-                                <input type="text" id="nickname1" placeholder="例: さくらちゃん">
+                                <input type="text" id="nickname1">
                             </div>
                             <div class="character-row">
                                 <label>文字色</label>
-                                <input type="color" id="color1" value="#ff69b4">
+                                <input type="color" id="color1" value="#00cc66">
                             </div>
                         </div>
                         <div class="character-group">
                             <div class="character-group-title">強調２</div>
                             <div class="character-row">
                                 <label>名称２ <code>{name2}</code></label>
-                                <input type="text" id="name2" placeholder="例: 太郎">
+                                <input type="text" id="name2">
                             </div>
                             <div class="character-row">
                                 <label>通称２ <code>{nickname2}</code></label>
-                                <input type="text" id="nickname2" placeholder="例: 太郎くん">
+                                <input type="text" id="nickname2">
                             </div>
                             <div class="character-row">
                                 <label>文字色</label>
-                                <input type="color" id="color2" value="#4a90d9">
+                                <input type="color" id="color2" value="#00cc66">
                             </div>
                         </div>
                     </div>
@@ -1017,8 +1017,8 @@
 
         // 強調設定
         let highlightSettings = {
-            h1: { name: '', nickname: '', color: '#ff69b4' },
-            h2: { name: '', nickname: '', color: '#4a90d9' }
+            h1: { name: '', nickname: '', color: '#00cc66' },
+            h2: { name: '', nickname: '', color: '#00cc66' }
         };
 
         // データ
@@ -1404,10 +1404,10 @@
         function loadHighlightSettings() {
             document.getElementById('name1').value = highlightSettings.h1.name || '';
             document.getElementById('nickname1').value = highlightSettings.h1.nickname || '';
-            document.getElementById('color1').value = highlightSettings.h1.color || '#ff69b4';
+            document.getElementById('color1').value = highlightSettings.h1.color || '#00cc66';
             document.getElementById('name2').value = highlightSettings.h2.name || '';
             document.getElementById('nickname2').value = highlightSettings.h2.nickname || '';
-            document.getElementById('color2').value = highlightSettings.h2.color || '#4a90d9';
+            document.getElementById('color2').value = highlightSettings.h2.color || '#00cc66';
         }
 
         function saveHighlightSettings() {
