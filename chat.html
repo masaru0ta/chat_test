@@ -847,7 +847,7 @@
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">💰 累積コスト</span>
-                    <span class="stat-value" id="total-cost">$0.000000</span>
+                    <span class="stat-value" id="total-cost">$0.00</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">📊 累積トークン</span>
@@ -896,6 +896,13 @@
                 <button class="modal-close" id="settings-modal-close">×</button>
             </div>
             <div class="modal-body" style="display: block;">
+                <div class="form-group">
+                    <label for="api-key-input">OpenRouter APIキー</label>
+                    <input type="password" id="api-key-input" placeholder="sk-or-v1-...">
+                    <div style="font-size: 0.75rem; color: #888; margin-top: 0.25rem;">
+                        <a href="https://openrouter.ai/keys" target="_blank" style="color: #2d5a7b;">APIキーを取得</a>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label for="model-select">モデル</label>
                     <select id="model-select">
@@ -968,7 +975,7 @@
     </div>
 
     <script>
-        const API_KEY = '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';
+        let apiKey = '';
         const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
         const CREDITS_URL = 'https://openrouter.ai/api/v1/credits';
 
@@ -987,6 +994,7 @@
         const creditBalanceEl = document.getElementById('credit-balance');
         const modelSelect = document.getElementById('model-select');
         const clickPromptInput = document.getElementById('click-prompt');
+        const apiKeyInput = document.getElementById('api-key-input');
         const historyList = document.getElementById('history-list');
         const historyItems = document.getElementById('history-items');
         const projectList = document.getElementById('project-list');
@@ -1323,6 +1331,11 @@
             // プロジェクト開始時にシステムから最初のメッセージを送信
             const project = projects.find(p => p.id === projectId);
             if (project && project.prompt) {
+                if (!apiKey) {
+                    alert('APIキーが設定されていません。設定画面でOpenRouter APIキーを入力してください。');
+                    document.getElementById('settings-modal').classList.add('show');
+                    return;
+                }
                 sendBtn.disabled = true;
                 await streamResponse(messages);
                 sendBtn.disabled = false;
@@ -1356,7 +1369,8 @@
                 currentSessionId,
                 currentProjectId,
                 clickPrompt,
-                highlightSettings
+                highlightSettings,
+                apiKey
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         }
@@ -1370,6 +1384,7 @@
                 currentSessionId = data.currentSessionId || null;
                 currentProjectId = data.currentProjectId || null;
                 clickPrompt = data.clickPrompt || '{word}について詳しく';
+                apiKey = data.apiKey || '';
                 if (data.highlightSettings) {
                     highlightSettings = data.highlightSettings;
                 }
@@ -1379,7 +1394,8 @@
                 }
 
                 clickPromptInput.value = clickPrompt;
-                totalCostEl.textContent = '$' + totalCost.toFixed(6);
+                apiKeyInput.value = apiKey;
+                totalCostEl.textContent = '$' + totalCost.toFixed(2);
                 totalTokensEl.textContent = totalTokens.toLocaleString();
             }
             loadHighlightSettings();
@@ -1406,16 +1422,20 @@
 
         // ========== チャット機能 ==========
         async function fetchCredits() {
+            if (!apiKey) {
+                creditBalanceEl.textContent = '--';
+                return;
+            }
             try {
                 const response = await fetch(CREDITS_URL, {
                     headers: {
-                        'Authorization': `Bearer ${API_KEY}`
+                        'Authorization': `Bearer ${apiKey}`
                     }
                 });
                 if (response.ok) {
                     const data = await response.json();
                     const balance = data.data.total_credits - data.data.total_usage;
-                    creditBalanceEl.textContent = '$' + balance.toFixed(4);
+                    creditBalanceEl.textContent = '$' + balance.toFixed(2);
                 }
             } catch (error) {
                 creditBalanceEl.textContent = 'エラー';
@@ -1425,7 +1445,7 @@
         function updateStats(cost, tokens) {
             totalCost += cost;
             totalTokens += tokens;
-            totalCostEl.textContent = '$' + totalCost.toFixed(6);
+            totalCostEl.textContent = '$' + totalCost.toFixed(2);
             totalTokensEl.textContent = totalTokens.toLocaleString();
             saveGlobalSettings();
             fetchCredits(); // クレジット残高も更新
@@ -1576,6 +1596,12 @@
             const content = messageInput.value.trim();
             if (!content) return;
 
+            if (!apiKey) {
+                alert('APIキーが設定されていません。設定画面でOpenRouter APIキーを入力してください。');
+                document.getElementById('settings-modal').classList.add('show');
+                return;
+            }
+
             messageInput.value = '';
             sendBtn.disabled = true;
 
@@ -1604,7 +1630,7 @@
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${API_KEY}`,
+                        'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -1771,6 +1797,13 @@
         clickPromptInput.addEventListener('input', () => {
             clickPrompt = clickPromptInput.value || '{word}について詳しく';
             saveGlobalSettings();
+        });
+        apiKeyInput.addEventListener('input', () => {
+            apiKey = apiKeyInput.value;
+            saveGlobalSettings();
+            if (apiKey) {
+                fetchCredits();
+            }
         });
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
