@@ -37,7 +37,14 @@
         }
 
         #sidebar.collapsed {
-            width: 50px;
+            width: 0;
+            border-right: none;
+            overflow: hidden;
+        }
+
+        /* サイドバーが開いている時はヘッダーのメニューボタンを非表示 */
+        body:has(#sidebar:not(.collapsed)) #header-menu-toggle {
+            display: none;
         }
 
         #sidebar-header {
@@ -487,12 +494,40 @@
             padding: 1rem;
             text-align: center;
             border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
         }
 
         #current-project {
             font-size: 0.8rem;
             color: #2d5a7b;
-            margin-bottom: 0.5rem;
+        }
+
+        #header-menu-toggle,
+        #header-image-toggle {
+            position: absolute;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            transition: color 0.2s;
+        }
+
+        #header-menu-toggle {
+            left: 1rem;
+        }
+
+        #header-image-toggle {
+            right: 1rem;
+        }
+
+        #header-menu-toggle:hover,
+        #header-image-toggle:hover {
+            color: #2d5a7b;
         }
 
         #chat-container {
@@ -598,21 +633,20 @@
         }
 
         #generate-image-btn {
-            padding: 0.75rem;
-            background: transparent;
-            color: #888;
-            border: 1px solid #333;
-            border-radius: 50%;
+            padding: 0.75rem 1rem;
+            background: #2d5a7b;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
             cursor: pointer;
-            font-size: 1.2rem;
+            font-size: 0.9rem;
             transition: all 0.2s;
-            line-height: 1;
+            margin: 0.5rem;
+            width: calc(100% - 1rem);
         }
 
         #generate-image-btn:hover {
-            background: #2d5a7b;
-            color: white;
-            border-color: #2d5a7b;
+            background: #3d6a8b;
         }
 
         #generate-image-btn:disabled {
@@ -751,7 +785,18 @@
         }
 
         #right-sidebar.collapsed {
-            width: 50px;
+            width: 0;
+            border-left: none;
+            overflow: hidden;
+        }
+
+        #right-sidebar.collapsed #generate-image-btn {
+            display: none;
+        }
+
+        /* サイドバーが開いている時はヘッダーのボタンを非表示 */
+        body:has(#right-sidebar:not(.collapsed)) #header-image-toggle {
+            display: none;
         }
 
         #right-sidebar-header {
@@ -919,7 +964,8 @@
                 height: 50px;
             }
 
-            #right-sidebar.collapsed #image-container {
+            #right-sidebar.collapsed #image-container,
+            #right-sidebar.collapsed #generate-image-btn {
                 display: none;
             }
 
@@ -1004,16 +1050,20 @@
             <!-- 統計情報 -->
             <div id="sidebar-stats">
                 <div class="stat-item">
-                    <a class="stat-label" href="https://openrouter.ai/settings/credits" target="_blank">💳 クレジット残高</a>
+                    <a class="stat-label" href="https://openrouter.ai/settings/credits" target="_blank">OpenRouter 残高</a>
                     <span class="stat-value" id="credit-balance">--</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">💰 累積コスト</span>
+                    <span class="stat-label">累計 OpenRouter コスト</span>
                     <span class="stat-value" id="total-cost">$0.00</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">📊 累積トークン</span>
-                    <span class="stat-value" id="total-tokens">0</span>
+                <div class="stat-item" id="runware-balance-item" style="display: none;">
+                    <a class="stat-label" href="https://my.runware.ai/wallet" target="_blank">Runware 残高</a>
+                    <span class="stat-value" id="runware-balance">--</span>
+                </div>
+                <div class="stat-item" id="runware-cost-item" style="display: none;">
+                    <span class="stat-label">累計 Runware コスト</span>
+                    <span class="stat-value" id="total-runware-cost">$0.00</span>
                 </div>
                 <button class="stat-reset-btn" id="clear-cost-btn">リセット</button>
             </div>
@@ -1143,13 +1193,14 @@
     <!-- メインコンテンツ -->
     <div id="main">
         <header>
+            <button id="header-menu-toggle" title="メニューを開く">☰</button>
             <div id="current-project"></div>
+            <button id="header-image-toggle" title="画像ウィンドウを開く">🖼️</button>
         </header>
 
         <div id="chat-container"></div>
 
         <div id="input-container">
-            <button id="generate-image-btn" title="現在の状況から画像を生成">🎨</button>
             <input type="text" id="message-input" placeholder="メッセージを入力..." autocomplete="off">
             <button id="send-btn">送信</button>
         </div>
@@ -1163,6 +1214,7 @@
         <div id="image-container">
             <div class="empty-message">画像がありません</div>
         </div>
+        <button id="generate-image-btn" title="現在の状況から画像を生成">🎨 画像生成</button>
     </div>
 
     <script>
@@ -1178,13 +1230,17 @@
 
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebar-toggle');
+        const headerMenuToggle = document.getElementById('header-menu-toggle');
         const chatContainer = document.getElementById('chat-container');
         const messageInput = document.getElementById('message-input');
         const sendBtn = document.getElementById('send-btn');
         const clearCostBtn = document.getElementById('clear-cost-btn');
         const totalCostEl = document.getElementById('total-cost');
-        const totalTokensEl = document.getElementById('total-tokens');
+        const totalRunwareCostEl = document.getElementById('total-runware-cost');
         const creditBalanceEl = document.getElementById('credit-balance');
+        const runwareBalanceEl = document.getElementById('runware-balance');
+        const runwareBalanceItem = document.getElementById('runware-balance-item');
+        const runwareCostItem = document.getElementById('runware-cost-item');
         const chatModelSelect = document.getElementById('chat-model-select');
         const imageModelSelect = document.getElementById('image-model-select');
         const clickPromptInput = document.getElementById('click-prompt');
@@ -1195,6 +1251,7 @@
         const generateImageBtn = document.getElementById('generate-image-btn');
         const rightSidebar = document.getElementById('right-sidebar');
         const rightSidebarToggle = document.getElementById('right-sidebar-toggle');
+        const headerImageToggle = document.getElementById('header-image-toggle');
         const imageContainer = document.getElementById('image-container');
         const historyList = document.getElementById('history-list');
         const historyItems = document.getElementById('history-items');
@@ -1211,7 +1268,7 @@
 
         // グローバル統計
         let totalCost = 0;
-        let totalTokens = 0;
+        let totalRunwareCost = 0;
 
         // クリック時のプロンプト
         let clickPrompt = '{word}について詳しく';
@@ -1568,7 +1625,7 @@
         function saveGlobalSettings() {
             const data = {
                 totalCost,
-                totalTokens,
+                totalRunwareCost,
                 chatModel: chatModelSelect.value,
                 imageModel: imageModelSelect.value,
                 currentSessionId,
@@ -1587,7 +1644,7 @@
             if (saved) {
                 const data = JSON.parse(saved);
                 totalCost = data.totalCost || 0;
-                totalTokens = data.totalTokens || 0;
+                totalRunwareCost = data.totalRunwareCost || 0;
                 currentSessionId = data.currentSessionId || null;
                 currentProjectId = data.currentProjectId || null;
                 clickPrompt = data.clickPrompt || '{word}について詳しく';
@@ -1610,7 +1667,7 @@
                 apiKeyInput.value = apiKey;
                 runwareApiKeyInput.value = runwareApiKey;
                 totalCostEl.textContent = '$' + totalCost.toFixed(2);
-                totalTokensEl.textContent = totalTokens.toLocaleString();
+                totalRunwareCostEl.textContent = '$' + totalRunwareCost.toFixed(2);
 
                 // Runware選択時はAPIキー入力欄を表示
                 updateRunwareApiKeyVisibility();
@@ -1621,6 +1678,11 @@
         function updateRunwareApiKeyVisibility() {
             const isRunware = imageModelSelect.value.startsWith('runware:');
             runwareApiKeyGroup.style.display = isRunware ? 'block' : 'none';
+            runwareBalanceItem.style.display = isRunware ? 'flex' : 'none';
+            runwareCostItem.style.display = isRunware ? 'flex' : 'none';
+            if (isRunware && runwareApiKey) {
+                fetchRunwareBalance();
+            }
         }
 
         function loadHighlightSettings() {
@@ -1664,13 +1726,47 @@
             }
         }
 
-        function updateStats(cost, tokens) {
+        async function fetchRunwareBalance() {
+            if (!runwareApiKey) {
+                runwareBalanceEl.textContent = '--';
+                return;
+            }
+            try {
+                const response = await fetch(RUNWARE_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${runwareApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify([
+                        {
+                            taskType: 'accountManagement',
+                            taskUUID: generateUUID(),
+                            operation: 'getDetails'
+                        }
+                    ])
+                });
+                const data = await response.json();
+                const result = Array.isArray(data.data) ? data.data[0] : data.data;
+                if (result && result.balance !== undefined) {
+                    runwareBalanceEl.textContent = '$' + result.balance.toFixed(2);
+                }
+            } catch (error) {
+                runwareBalanceEl.textContent = 'エラー';
+            }
+        }
+
+        function updateStats(cost) {
             totalCost += cost;
-            totalTokens += tokens;
             totalCostEl.textContent = '$' + totalCost.toFixed(2);
-            totalTokensEl.textContent = totalTokens.toLocaleString();
             saveGlobalSettings();
             fetchCredits(); // クレジット残高も更新
+        }
+
+        function updateRunwareStats(cost) {
+            totalRunwareCost += cost;
+            totalRunwareCostEl.textContent = '$' + totalRunwareCost.toFixed(2);
+            saveGlobalSettings();
         }
 
         function parseClickableWords(text) {
@@ -1795,11 +1891,11 @@
         }
 
         function clearCost() {
-            if (confirm('累積コストをリセットしますか？')) {
+            if (confirm('累計コストをリセットしますか？')) {
                 totalCost = 0;
-                totalTokens = 0;
-                totalCostEl.textContent = '$0.000000';
-                totalTokensEl.textContent = '0';
+                totalRunwareCost = 0;
+                totalCostEl.textContent = '$0.00';
+                totalRunwareCostEl.textContent = '$0.00';
                 saveGlobalSettings();
             }
         }
@@ -1927,12 +2023,13 @@
                     addImageToSidebar(result.imageURL, imagePrompt);
                 }
                 if (result.cost) {
-                    updateStats(result.cost, 0);
+                    updateRunwareStats(result.cost);
                 }
             }
 
             if (results.some(r => r.imageURL)) {
                 rightSidebar.classList.remove('collapsed');
+                fetchRunwareBalance();
             } else {
                 throw new Error('画像を生成できませんでした');
             }
@@ -1958,7 +2055,7 @@
             }
 
             generateImageBtn.disabled = true;
-            generateImageBtn.textContent = '⏳';
+            generateImageBtn.textContent = '⏳ 生成中...';
 
             try {
                 // 1. 会話用モデルにプロンプト生成を依頼
@@ -1993,7 +2090,7 @@
 
                 // 使用量を記録
                 if (promptResult.usage) {
-                    updateStats(promptResult.usage.cost || 0, promptResult.usage.total_tokens || 0);
+                    updateStats(promptResult.usage.cost || 0);
                 }
 
                 // 2. 画像生成
@@ -2056,7 +2153,7 @@
 
                     // 使用量を記録
                     if (imageResult.usage) {
-                        updateStats(imageResult.usage.cost || 0, imageResult.usage.total_tokens || 0);
+                        updateStats(imageResult.usage.cost || 0);
                     }
                 }
 
@@ -2064,7 +2161,7 @@
                 alert(`エラー: ${error.message}`);
             } finally {
                 generateImageBtn.disabled = false;
-                generateImageBtn.textContent = '🎨';
+                generateImageBtn.textContent = '🎨 画像生成';
             }
         }
 
@@ -2133,8 +2230,7 @@
                                 // 使用量情報（最後のチャンクに含まれる場合）
                                 if (parsed.usage) {
                                     const cost = parsed.usage.cost || 0;
-                                    const tokens = parsed.usage.total_tokens || 0;
-                                    updateStats(cost, tokens);
+                                    updateStats(cost);
                                 }
                             } catch (e) {
                                 // JSON解析エラーは無視
@@ -2203,10 +2299,21 @@
             projectList.classList.remove('show');
         });
 
+        headerMenuToggle.addEventListener('click', () => {
+            sidebar.classList.remove('collapsed');
+        });
+
         rightSidebarToggle.addEventListener('click', () => {
             rightSidebar.classList.toggle('collapsed');
             if (isMobile()) {
                 rightSidebar.classList.toggle('show-mobile');
+            }
+        });
+
+        headerImageToggle.addEventListener('click', () => {
+            rightSidebar.classList.remove('collapsed');
+            if (isMobile()) {
+                rightSidebar.classList.add('show-mobile');
             }
         });
 
@@ -2264,6 +2371,9 @@
         runwareApiKeyInput.addEventListener('input', () => {
             runwareApiKey = runwareApiKeyInput.value;
             saveGlobalSettings();
+            if (runwareApiKey) {
+                fetchRunwareBalance();
+            }
         });
         generateImageBtn.addEventListener('click', generateImageFromContext);
         clickPromptInput.addEventListener('input', () => {
