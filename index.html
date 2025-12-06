@@ -861,13 +861,55 @@
             opacity: 0.8;
         }
 
+        .image-prompt-container {
+            background: #111;
+            border-radius: 0 0 0.5rem 0.5rem;
+            overflow: hidden;
+        }
+
         .image-prompt {
             font-size: 0.75rem;
             color: #888;
             padding: 0.5rem;
-            background: #111;
-            border-radius: 0 0 0.5rem 0.5rem;
             word-break: break-word;
+            max-height: 4rem;
+            overflow-y: auto;
+        }
+
+
+        .image-prompt-buttons {
+            display: flex;
+            border-top: 1px solid #222;
+        }
+
+        .image-prompt-btn {
+            flex: 1;
+            padding: 0.4rem;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .image-prompt-btn:hover {
+            background: #222;
+            color: #2d5a7b;
+        }
+
+        .image-prompt-btn:first-child {
+            border-right: 1px solid #222;
+        }
+
+        .image-prompt-btn.active {
+            background: #2d5a7b;
+            color: white;
+        }
+
+        .image-prompt-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         /* モバイル対応 */
@@ -1128,6 +1170,7 @@
                     <select id="image-model-select">
                         <option value="google/gemini-2.5-flash-image" selected>Gemini 2.5 Flash Image ($0.30/$2.50)</option>
                         <option value="runware:z-image@turbo">Runware / Z-Image Turbo</option>
+                        <option value="civitai:481162@558910">Runware / Aoi-Realistic-Pony</option>
                     </select>
                 </div>
                 <div class="form-group" id="runware-api-key-group" style="display: none;">
@@ -1138,8 +1181,10 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="image-gen-prompt">画像生成プロンプト依頼文</label>
-                    <textarea id="image-gen-prompt" rows="3" style="width: 100%; resize: vertical;"></textarea>
+                    <label>画像生成プロンプト依頼文</label>
+                    <button class="btn btn-secondary" id="open-image-prompt-editor" style="width: 100%; text-align: left;">
+                        <span id="image-prompt-preview" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                    </button>
                 </div>
                 <div class="form-group">
                     <label for="click-prompt">クリック時のプロンプト（{word}が単語に置換されます）</label>
@@ -1185,6 +1230,54 @@
                 <div class="modal-footer-left"></div>
                 <div class="modal-footer-right">
                     <button class="btn btn-primary" id="settings-close">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像プロンプト編集モーダル（個別の画像用） -->
+    <div class="modal-overlay" id="edit-prompt-modal">
+        <div class="modal" style="width: 90%; height: 80vh;">
+            <div class="modal-header">
+                <h3>プロンプトを編集</h3>
+                <button class="modal-close" id="edit-prompt-modal-close">×</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column;">
+                <div class="form-group flex-grow" style="flex: 1; display: flex; flex-direction: column;">
+                    <textarea id="edit-prompt-textarea" style="flex: 1; resize: none; font-family: monospace; font-size: 0.95rem; line-height: 1.5;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-footer-left">
+                    <button class="btn btn-secondary" id="edit-prompt-cancel">キャンセル</button>
+                </div>
+                <div class="modal-footer-right">
+                    <button class="btn btn-secondary" id="edit-prompt-save">保存</button>
+                    <button class="btn btn-primary" id="edit-prompt-generate">保存して生成</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像生成プロンプト編集モーダル -->
+    <div class="modal-overlay" id="image-prompt-modal">
+        <div class="modal" style="width: 90%; height: 90vh;">
+            <div class="modal-header">
+                <h3>画像生成プロンプト依頼文</h3>
+                <button class="modal-close" id="image-prompt-modal-close">×</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column;">
+                <div class="form-group flex-grow" style="flex: 1; display: flex; flex-direction: column;">
+                    <label for="image-gen-prompt">会話の状況から画像生成用プロンプトを作成させる指示文</label>
+                    <textarea id="image-gen-prompt" style="flex: 1; resize: none; font-family: monospace; font-size: 0.9rem; line-height: 1.5;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-footer-left">
+                    <button class="btn btn-secondary" id="image-prompt-reset">デフォルトに戻す</button>
+                </div>
+                <div class="modal-footer-right">
+                    <button class="btn btn-primary" id="image-prompt-save">保存</button>
                 </div>
             </div>
         </div>
@@ -1248,6 +1341,8 @@
         const runwareApiKeyInput = document.getElementById('runware-api-key-input');
         const runwareApiKeyGroup = document.getElementById('runware-api-key-group');
         const imageGenPromptInput = document.getElementById('image-gen-prompt');
+        const imagePromptPreview = document.getElementById('image-prompt-preview');
+        const imagePromptModal = document.getElementById('image-prompt-modal');
         const generateImageBtn = document.getElementById('generate-image-btn');
         const rightSidebar = document.getElementById('right-sidebar');
         const rightSidebarToggle = document.getElementById('right-sidebar-toggle');
@@ -1274,7 +1369,14 @@
         let clickPrompt = '{word}について詳しく';
 
         // 画像生成プロンプト依頼文
-        let imageGenPrompt = '現在の会話の状況を表す画像を生成するための、英語の画像生成プロンプトを1つだけ生成してください。プロンプトのみを出力し、説明は不要です。';
+        const DEFAULT_IMAGE_GEN_PROMPT = '現在の会話の状況を表す画像を生成するための、英語の画像生成プロンプトを1つだけ生成してください。プロンプトのみを出力し、説明は不要です。';
+        let imageGenPrompt = DEFAULT_IMAGE_GEN_PROMPT;
+
+        // プレビュー更新関数
+        function updateImagePromptPreview() {
+            const preview = imageGenPrompt || DEFAULT_IMAGE_GEN_PROMPT;
+            imagePromptPreview.textContent = preview.substring(0, 50) + (preview.length > 50 ? '...' : '');
+        }
 
         // 強調設定
         let highlightSettings = {
@@ -1648,7 +1750,7 @@
                 currentSessionId = data.currentSessionId || null;
                 currentProjectId = data.currentProjectId || null;
                 clickPrompt = data.clickPrompt || '{word}について詳しく';
-                imageGenPrompt = data.imageGenPrompt || '現在の会話の状況を表す画像を生成するための、英語の画像生成プロンプトを1つだけ生成してください。プロンプトのみを出力し、説明は不要です。';
+                imageGenPrompt = data.imageGenPrompt || DEFAULT_IMAGE_GEN_PROMPT;
                 apiKey = data.apiKey || '';
                 runwareApiKey = data.runwareApiKey || '';
                 if (data.highlightSettings) {
@@ -1664,6 +1766,7 @@
 
                 clickPromptInput.value = clickPrompt;
                 imageGenPromptInput.value = imageGenPrompt;
+                updateImagePromptPreview();
                 apiKeyInput.value = apiKey;
                 runwareApiKeyInput.value = runwareApiKey;
                 totalCostEl.textContent = '$' + totalCost.toFixed(2);
@@ -1676,7 +1779,7 @@
         }
 
         function updateRunwareApiKeyVisibility() {
-            const isRunware = imageModelSelect.value.startsWith('runware:');
+            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:');
             runwareApiKeyGroup.style.display = isRunware ? 'block' : 'none';
             runwareBalanceItem.style.display = isRunware ? 'flex' : 'none';
             runwareCostItem.style.display = isRunware ? 'flex' : 'none';
@@ -1961,10 +2064,38 @@
             wrapper.appendChild(img);
 
             if (prompt) {
+                const promptContainer = document.createElement('div');
+                promptContainer.className = 'image-prompt-container';
+
                 const promptEl = document.createElement('div');
                 promptEl.className = 'image-prompt';
                 promptEl.textContent = prompt;
-                wrapper.appendChild(promptEl);
+
+                const buttonsEl = document.createElement('div');
+                buttonsEl.className = 'image-prompt-buttons';
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'image-prompt-btn';
+                editBtn.textContent = '✎ 編集';
+
+                const generateBtn = document.createElement('button');
+                generateBtn.className = 'image-prompt-btn';
+                generateBtn.textContent = '🎨 生成';
+
+                editBtn.onclick = () => {
+                    openEditPromptModal(promptEl);
+                };
+
+                generateBtn.onclick = async () => {
+                    await generateImageWithPrompt(promptEl.textContent);
+                };
+
+                buttonsEl.appendChild(editBtn);
+                buttonsEl.appendChild(generateBtn);
+
+                promptContainer.appendChild(promptEl);
+                promptContainer.appendChild(buttonsEl);
+                wrapper.appendChild(promptContainer);
             }
 
             // 最新の画像を上に追加
@@ -1975,6 +2106,48 @@
         function clearImageSidebar() {
             imageContainer.innerHTML = '<div class="empty-message">画像がありません</div>';
         }
+
+        // プロンプト編集モーダル
+        const editPromptModal = document.getElementById('edit-prompt-modal');
+        const editPromptTextarea = document.getElementById('edit-prompt-textarea');
+        let currentEditingPromptEl = null;
+
+        function openEditPromptModal(promptEl) {
+            currentEditingPromptEl = promptEl;
+            editPromptTextarea.value = promptEl.textContent;
+            editPromptModal.classList.add('show');
+            editPromptTextarea.focus();
+        }
+
+        function closeEditPromptModal() {
+            editPromptModal.classList.remove('show');
+            currentEditingPromptEl = null;
+        }
+
+        document.getElementById('edit-prompt-modal-close').addEventListener('click', closeEditPromptModal);
+        document.getElementById('edit-prompt-cancel').addEventListener('click', closeEditPromptModal);
+
+        document.getElementById('edit-prompt-save').addEventListener('click', () => {
+            if (currentEditingPromptEl) {
+                currentEditingPromptEl.textContent = editPromptTextarea.value.trim();
+            }
+            closeEditPromptModal();
+        });
+
+        document.getElementById('edit-prompt-generate').addEventListener('click', async () => {
+            const newPrompt = editPromptTextarea.value.trim();
+            if (currentEditingPromptEl && newPrompt) {
+                currentEditingPromptEl.textContent = newPrompt;
+                closeEditPromptModal();
+                await generateImageWithPrompt(newPrompt);
+            }
+        });
+
+        editPromptModal.addEventListener('click', (e) => {
+            if (e.target === editPromptModal) {
+                closeEditPromptModal();
+            }
+        });
 
         // UUID生成
         function generateUUID() {
@@ -1987,27 +2160,58 @@
 
         // Runware APIで画像生成
         async function generateImageWithRunware(imagePrompt) {
+            const selectedModel = imageModelSelect.value;
+
+            // モデル別のパラメータ設定
+            const modelParams = {
+                'runware:z-image@turbo': {
+                    steps: 9,
+                    CFGScale: 0,
+                    scheduler: undefined,
+                    positivePrefix: '',
+                    negativePrompt: ''
+                },
+                'civitai:481162@558910': {
+                    steps: 25,
+                    CFGScale: 7,
+                    scheduler: 'Euler',
+                    positivePrefix: 'score_9, score_8_up, score_7_up, ',
+                    negativePrompt: 'score_6, score_5, score_4, source_furry, source_pony, source_cartoon, 3d, blur,'
+                }
+            };
+            const params = modelParams[selectedModel] || modelParams['runware:z-image@turbo'];
+
+            const finalPrompt = params.positivePrefix + imagePrompt;
+
+            const requestBody = {
+                taskType: 'imageInference',
+                taskUUID: generateUUID(),
+                positivePrompt: finalPrompt,
+                model: selectedModel,
+                width: 1024,
+                height: 1024,
+                steps: params.steps,
+                CFGScale: params.CFGScale,
+                numberResults: 1,
+                outputType: 'URL',
+                includeCost: true
+            };
+
+            if (params.scheduler) {
+                requestBody.scheduler = params.scheduler;
+            }
+
+            if (params.negativePrompt) {
+                requestBody.negativePrompt = params.negativePrompt;
+            }
+
             const response = await fetch(RUNWARE_API_URL, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${runwareApiKey}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify([
-                    {
-                        taskType: 'imageInference',
-                        taskUUID: generateUUID(),
-                        positivePrompt: imagePrompt,
-                        model: 'runware:z-image@turbo',
-                        width: 1024,
-                        height: 1024,
-                        steps: 9,
-                        CFGScale: 0,
-                        numberResults: 1,
-                        outputType: 'URL',
-                        includeCost: true
-                    }
-                ])
+                body: JSON.stringify([requestBody])
             });
 
             if (!response.ok) {
@@ -2035,6 +2239,87 @@
             }
         }
 
+        // 指定プロンプトで画像生成
+        async function generateImageWithPrompt(imagePrompt) {
+            if (!apiKey) {
+                alert('APIキーが設定されていません。');
+                return;
+            }
+
+            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:');
+            if (isRunware && !runwareApiKey) {
+                alert('Runware APIキーが設定されていません。');
+                return;
+            }
+
+            generateImageBtn.disabled = true;
+            generateImageBtn.textContent = '⏳ 生成中...';
+
+            try {
+                if (isRunware) {
+                    await generateImageWithRunware(imagePrompt);
+                } else {
+                    // OpenRouter API (Gemini等)
+                    const imageResponse = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: imageModelSelect.value,
+                            messages: [{ role: 'user', content: imagePrompt }],
+                            modalities: ['text', 'image'],
+                            stream: false
+                        })
+                    });
+
+                    if (!imageResponse.ok) {
+                        throw new Error('画像生成に失敗しました');
+                    }
+
+                    const imageResult = await imageResponse.json();
+                    const choice = imageResult.choices?.[0];
+                    const message = choice?.message;
+
+                    const finishReason = choice?.finish_reason;
+                    const nativeReason = choice?.native_finish_reason;
+                    if (finishReason !== 'stop' || (nativeReason && nativeReason !== 'STOP')) {
+                        const blockReasons = {
+                            'content_filter': 'コンテンツフィルター',
+                            'PROHIBITED_CONTENT': 'コンテンツフィルター',
+                            'IMAGE_PROHIBITED_CONTENT': '画像コンテンツフィルター',
+                            'IMAGE_SAFETY': '画像安全フィルター',
+                            'SAFETY': '安全フィルター'
+                        };
+                        const reason = blockReasons[nativeReason] || blockReasons[finishReason] || '不明な理由';
+                        alert(`${reason}により画像生成がブロックされました`);
+                        return;
+                    }
+
+                    if (message?.images && Array.isArray(message.images)) {
+                        for (const img of message.images) {
+                            if (img.image_url?.url) {
+                                addImageToSidebar(img.image_url.url, imagePrompt);
+                            }
+                        }
+                        rightSidebar.classList.remove('collapsed');
+                    } else {
+                        alert('画像を生成できませんでした');
+                    }
+
+                    if (imageResult.usage) {
+                        updateStats(imageResult.usage.cost || 0);
+                    }
+                }
+            } catch (error) {
+                alert(`エラー: ${error.message}`);
+            } finally {
+                generateImageBtn.disabled = false;
+                generateImageBtn.textContent = '🎨 画像生成';
+            }
+        }
+
         // 画像生成ボタンのクリック処理
         async function generateImageFromContext() {
             if (!apiKey) {
@@ -2042,7 +2327,7 @@
                 return;
             }
 
-            const isRunware = imageModelSelect.value.startsWith('runware:');
+            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:');
             if (isRunware && !runwareApiKey) {
                 alert('Runware APIキーが設定されていません。設定画面で入力してください。');
                 document.getElementById('settings-modal').classList.add('show');
@@ -2380,10 +2665,34 @@
             clickPrompt = clickPromptInput.value || '{word}について詳しく';
             saveGlobalSettings();
         });
-        imageGenPromptInput.addEventListener('input', () => {
-            imageGenPrompt = imageGenPromptInput.value || '現在の会話の状況を表す画像を生成するための、英語の画像生成プロンプトを1つだけ生成してください。プロンプトのみを出力し、説明は不要です。';
-            saveGlobalSettings();
+
+        // 画像生成プロンプト編集モーダル
+        document.getElementById('open-image-prompt-editor').addEventListener('click', () => {
+            imageGenPromptInput.value = imageGenPrompt;
+            imagePromptModal.classList.add('show');
         });
+
+        document.getElementById('image-prompt-modal-close').addEventListener('click', () => {
+            imagePromptModal.classList.remove('show');
+        });
+
+        document.getElementById('image-prompt-save').addEventListener('click', () => {
+            imageGenPrompt = imageGenPromptInput.value || DEFAULT_IMAGE_GEN_PROMPT;
+            updateImagePromptPreview();
+            saveGlobalSettings();
+            imagePromptModal.classList.remove('show');
+        });
+
+        document.getElementById('image-prompt-reset').addEventListener('click', () => {
+            imageGenPromptInput.value = DEFAULT_IMAGE_GEN_PROMPT;
+        });
+
+        imagePromptModal.addEventListener('click', (e) => {
+            if (e.target === imagePromptModal) {
+                imagePromptModal.classList.remove('show');
+            }
+        });
+
         apiKeyInput.addEventListener('input', () => {
             apiKey = apiKeyInput.value;
             saveGlobalSettings();
@@ -2405,6 +2714,7 @@
         if (!clickPromptInput.value) {
             clickPromptInput.value = clickPrompt;
         }
+        updateImagePromptPreview();
 
         if (currentSessionId) {
             const session = sessions.find(s => s.id === currentSessionId);
