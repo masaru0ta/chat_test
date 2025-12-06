@@ -716,6 +716,79 @@
             background: transparent;
         }
 
+        /* 右側サイドバー（画像表示用） */
+        #right-sidebar {
+            width: 300px;
+            background: #1a1a1a;
+            border-left: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: width 0.2s;
+        }
+
+        #right-sidebar.collapsed {
+            width: 50px;
+        }
+
+        #right-sidebar-header {
+            padding: 0.75rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        #right-sidebar-toggle {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        #right-sidebar-toggle:hover {
+            color: #2d5a7b;
+        }
+
+        #right-sidebar-header h2 {
+            font-size: 1.2rem;
+            color: #2d5a7b;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        #right-sidebar.collapsed #right-sidebar-header h2 {
+            display: none;
+        }
+
+        #image-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        #right-sidebar.collapsed #image-container {
+            display: none;
+        }
+
+        .generated-image {
+            width: 100%;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .generated-image:hover {
+            opacity: 0.8;
+        }
+
         /* モバイル対応 */
         @media (max-width: 768px) {
             body {
@@ -795,6 +868,27 @@
                 max-height: none;
                 flex: 1;
                 overflow-y: auto;
+            }
+
+            #right-sidebar {
+                width: 100%;
+                height: 40%;
+                border-left: none;
+                border-bottom: 1px solid #333;
+                order: -1;
+            }
+
+            #right-sidebar.collapsed {
+                width: 100%;
+                height: 50px;
+            }
+
+            #right-sidebar.collapsed #image-container {
+                display: none;
+            }
+
+            #right-sidebar-header {
+                justify-content: center;
             }
         }
     </style>
@@ -909,6 +1003,7 @@
                         <option value="x-ai/grok-3-mini">Grok 3 Mini ($0.30/$0.50)</option>
                         <option value="x-ai/grok-4-fast">Grok 4 Fast ($0.20/$0.50)</option>
                         <option value="x-ai/grok-4.1-fast" selected>Grok 4.1 Fast ($0.20/$0.50)</option>
+                        <option value="google/gemini-2.5-flash-image">Gemini 2.5 Flash Image ($0.30/$2.50)</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -974,6 +1069,16 @@
         </div>
     </div>
 
+    <!-- 右側サイドバー（画像表示用） -->
+    <div id="right-sidebar" class="collapsed">
+        <div id="right-sidebar-header">
+            <button id="right-sidebar-toggle">🖼️</button>
+        </div>
+        <div id="image-container">
+            <div class="empty-message">画像がありません</div>
+        </div>
+    </div>
+
     <script>
         let apiKey = '';
         const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -995,6 +1100,9 @@
         const modelSelect = document.getElementById('model-select');
         const clickPromptInput = document.getElementById('click-prompt');
         const apiKeyInput = document.getElementById('api-key-input');
+        const rightSidebar = document.getElementById('right-sidebar');
+        const rightSidebarToggle = document.getElementById('right-sidebar-toggle');
+        const imageContainer = document.getElementById('image-container');
         const historyList = document.getElementById('history-list');
         const historyItems = document.getElementById('history-items');
         const projectList = document.getElementById('project-list');
@@ -1617,6 +1725,36 @@
             renderHistoryList();
         }
 
+        // 画像生成モデルかどうかを判定
+        function isImageModel(model) {
+            return model.includes('gemini') && model.includes('image');
+        }
+
+        // 画像を右側サイドバーに追加
+        function addImageToSidebar(imageUrl) {
+            // 空メッセージを削除
+            const emptyMsg = imageContainer.querySelector('.empty-message');
+            if (emptyMsg) {
+                emptyMsg.remove();
+            }
+
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.className = 'generated-image';
+            img.onclick = () => {
+                // クリックで新しいタブで開く
+                window.open(imageUrl, '_blank');
+            };
+
+            // 最新の画像を上に追加
+            imageContainer.insertBefore(img, imageContainer.firstChild);
+        }
+
+        // 画像サイドバーをクリア
+        function clearImageSidebar() {
+            imageContainer.innerHTML = '<div class="empty-message">画像がありません</div>';
+        }
+
         async function streamResponse(msgs) {
             // ストリーミング用のメッセージ要素を作成
             const div = document.createElement('div');
@@ -1626,26 +1764,125 @@
             let fullContent = '';
             let reasoning = '';
 
+            const currentModel = modelSelect.value;
+            const isImageGen = isImageModel(currentModel);
+
             try {
+                // リクエストボディを構築
+                const requestBody = {
+                    model: currentModel,
+                    messages: msgs,
+                    stream: !isImageGen // 画像生成モデルはストリーミング無効
+                };
+
+                // 画像生成モデルの場合はmodalitiesを追加
+                if (isImageGen) {
+                    requestBody.modalities = ['text', 'image'];
+                }
+
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        model: modelSelect.value,
-                        messages: msgs,
-                        stream: true
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {
                     const error = await response.json();
-                    div.textContent = `エラー: ${error.error?.message || response.statusText}`;
+                    const errorMsg = error.error?.message || response.statusText;
+                    if (errorMsg.includes('User not found') || errorMsg.includes('Invalid API key')) {
+                        div.textContent = 'エラー: APIキーが無効化されていないか確認してください';
+                    } else {
+                        div.textContent = `エラー: ${errorMsg}`;
+                    }
                     return;
                 }
 
+                // 画像生成モデルの場合は非ストリーミングで処理
+                if (isImageGen) {
+                    const result = await response.json();
+                    console.log('API Response:', result); // デバッグ用
+                    const choice = result.choices?.[0];
+                    const message = choice?.message;
+
+                    // ブロックされた場合のメッセージマップ
+                    const blockReasons = {
+                        'content_filter': 'コンテンツフィルター',
+                        'PROHIBITED_CONTENT': 'コンテンツフィルター',
+                        'IMAGE_PROHIBITED_CONTENT': '画像コンテンツフィルター',
+                        'IMAGE_SAFETY': '画像安全フィルター',
+                        'SAFETY': '安全フィルター',
+                        'RECITATION': '引用ポリシー',
+                        'BLOCKLIST': 'ブロックリスト',
+                        'SPII': '個人情報保護',
+                        'OTHER': '不明な理由'
+                    };
+
+                    const finishReason = choice?.finish_reason;
+                    const nativeReason = choice?.native_finish_reason;
+
+                    // stop以外の場合は警告表示
+                    if (finishReason !== 'stop' || (nativeReason && nativeReason !== 'STOP')) {
+                        const reason = blockReasons[nativeReason] || blockReasons[finishReason] || nativeReason || finishReason || '不明';
+                        div.innerHTML = `<p style="color: #c0392b;">⚠️ ${reason}により画像生成がブロックされました</p>`;
+                        if (message?.content) {
+                            div.innerHTML += `<p>${escapeHtml(message.content)}</p>`;
+                        }
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                        return;
+                    }
+
+                    if (message) {
+                        let chatHtml = '';
+
+                        // テキストコンテンツ（チャットに表示）
+                        if (message.content) {
+                            fullContent = message.content;
+                            chatHtml += `<p>${escapeHtml(fullContent)}</p>`;
+                        }
+
+                        // 画像（右側サイドバーに表示）
+                        if (message.images && Array.isArray(message.images)) {
+                            for (const img of message.images) {
+                                if (img.image_url?.url) {
+                                    addImageToSidebar(img.image_url.url);
+                                    chatHtml += `<p style="color: #2d5a7b;">🖼️ 画像を生成しました（右側パネルに表示）</p>`;
+                                }
+                            }
+                            // 右側サイドバーを開く
+                            rightSidebar.classList.remove('collapsed');
+                        }
+
+                        // 画像もテキストもない場合
+                        if (!chatHtml) {
+                            chatHtml = '<p style="color: #888;">画像を生成できませんでした</p>';
+                        }
+
+                        div.innerHTML = chatHtml;
+
+                        // メッセージを保存
+                        const saveContent = fullContent || (message.images?.length > 0 ? '[画像生成]' : '');
+                        if (saveContent) {
+                            messages.push({ role: 'assistant', content: saveContent });
+                            chatHistory.push({ role: 'assistant', content: saveContent, reasoning: null });
+                        }
+                        saveCurrentSession();
+                    }
+
+                    // 使用量情報
+                    if (result.usage) {
+                        const cost = result.usage.cost || 0;
+                        const tokens = result.usage.total_tokens || 0;
+                        updateStats(cost, tokens);
+                    }
+
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    return;
+                }
+
+                // 通常のストリーミング処理
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
 
@@ -1667,10 +1904,10 @@
 
                                 if (delta?.reasoning) {
                                     reasoning += delta.reasoning;
+                                    updateStreamingMessage(div, fullContent, reasoning);
                                 }
                                 if (delta?.content) {
                                     fullContent += delta.content;
-                                    // リアルタイムで表示を更新
                                     updateStreamingMessage(div, fullContent, reasoning);
                                 }
 
@@ -1745,6 +1982,13 @@
             // パネルを閉じる
             historyList.classList.remove('show');
             projectList.classList.remove('show');
+        });
+
+        rightSidebarToggle.addEventListener('click', () => {
+            rightSidebar.classList.toggle('collapsed');
+            if (isMobile()) {
+                rightSidebar.classList.toggle('show-mobile');
+            }
         });
 
         document.getElementById('menu-new-chat').addEventListener('click', () => {
