@@ -597,6 +597,29 @@
             background: #3d6a8b;
         }
 
+        #generate-image-btn {
+            padding: 0.75rem;
+            background: transparent;
+            color: #888;
+            border: 1px solid #333;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+
+        #generate-image-btn:hover {
+            background: #2d5a7b;
+            color: white;
+            border-color: #2d5a7b;
+        }
+
+        #generate-image-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         #send-btn:disabled {
             background: #555;
             cursor: not-allowed;
@@ -778,6 +801,10 @@
             display: none;
         }
 
+        .image-wrapper {
+            margin-bottom: 1rem;
+        }
+
         .generated-image {
             width: 100%;
             border-radius: 0.5rem;
@@ -787,6 +814,15 @@
 
         .generated-image:hover {
             opacity: 0.8;
+        }
+
+        .image-prompt {
+            font-size: 0.75rem;
+            color: #888;
+            padding: 0.5rem;
+            background: #111;
+            border-radius: 0 0 0.5rem 0.5rem;
+            word-break: break-word;
         }
 
         /* モバイル対応 */
@@ -893,12 +929,34 @@
 
             #right-sidebar #image-container {
                 overflow: hidden;
+                padding: 0;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            #right-sidebar .image-wrapper {
+                max-height: 100%;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
 
             #right-sidebar .generated-image {
-                max-height: 100%;
+                max-height: calc(100% - 2rem);
+                max-width: 100%;
                 width: auto;
+                height: auto;
                 object-fit: contain;
+            }
+
+            #right-sidebar .image-prompt {
+                font-size: 0.65rem;
+                padding: 0.25rem;
+                max-height: 2rem;
+                overflow: hidden;
             }
         }
     </style>
@@ -1008,13 +1066,30 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="model-select">モデル</label>
-                    <select id="model-select">
+                    <label for="chat-model-select">会話用モデル</label>
+                    <select id="chat-model-select">
                         <option value="x-ai/grok-3-mini">Grok 3 Mini ($0.30/$0.50)</option>
                         <option value="x-ai/grok-4-fast">Grok 4 Fast ($0.20/$0.50)</option>
                         <option value="x-ai/grok-4.1-fast" selected>Grok 4.1 Fast ($0.20/$0.50)</option>
-                        <option value="google/gemini-2.5-flash-image">Gemini 2.5 Flash Image ($0.30/$2.50)</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="image-model-select">画像生成用モデル</label>
+                    <select id="image-model-select">
+                        <option value="google/gemini-2.5-flash-image" selected>Gemini 2.5 Flash Image ($0.30/$2.50)</option>
+                        <option value="runware:z-image@turbo">Runware / Z-Image Turbo</option>
+                    </select>
+                </div>
+                <div class="form-group" id="runware-api-key-group" style="display: none;">
+                    <label for="runware-api-key-input">Runware APIキー</label>
+                    <input type="password" id="runware-api-key-input" placeholder="Runware API Key">
+                    <div style="font-size: 0.75rem; color: #888; margin-top: 0.25rem;">
+                        <a href="https://my.runware.ai/" target="_blank" style="color: #2d5a7b;">APIキーを取得</a>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="image-gen-prompt">画像生成プロンプト依頼文</label>
+                    <textarea id="image-gen-prompt" rows="3" style="width: 100%; resize: vertical;"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="click-prompt">クリック時のプロンプト（{word}が単語に置換されます）</label>
@@ -1074,6 +1149,7 @@
         <div id="chat-container"></div>
 
         <div id="input-container">
+            <button id="generate-image-btn" title="現在の状況から画像を生成">🎨</button>
             <input type="text" id="message-input" placeholder="メッセージを入力..." autocomplete="off">
             <button id="send-btn">送信</button>
         </div>
@@ -1091,8 +1167,10 @@
 
     <script>
         let apiKey = '';
+        let runwareApiKey = '';
         const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
         const CREDITS_URL = 'https://openrouter.ai/api/v1/credits';
+        const RUNWARE_API_URL = 'https://api.runware.ai/v1';
 
         const STORAGE_KEY = 'grok-chat-data';
         const SESSIONS_KEY = 'grok-chat-sessions';
@@ -1107,9 +1185,14 @@
         const totalCostEl = document.getElementById('total-cost');
         const totalTokensEl = document.getElementById('total-tokens');
         const creditBalanceEl = document.getElementById('credit-balance');
-        const modelSelect = document.getElementById('model-select');
+        const chatModelSelect = document.getElementById('chat-model-select');
+        const imageModelSelect = document.getElementById('image-model-select');
         const clickPromptInput = document.getElementById('click-prompt');
         const apiKeyInput = document.getElementById('api-key-input');
+        const runwareApiKeyInput = document.getElementById('runware-api-key-input');
+        const runwareApiKeyGroup = document.getElementById('runware-api-key-group');
+        const imageGenPromptInput = document.getElementById('image-gen-prompt');
+        const generateImageBtn = document.getElementById('generate-image-btn');
         const rightSidebar = document.getElementById('right-sidebar');
         const rightSidebarToggle = document.getElementById('right-sidebar-toggle');
         const imageContainer = document.getElementById('image-container');
@@ -1132,6 +1215,9 @@
 
         // クリック時のプロンプト
         let clickPrompt = '{word}について詳しく';
+
+        // 画像生成プロンプト依頼文
+        let imageGenPrompt = '現在の会話の状況を表す画像を生成するための、英語の画像生成プロンプトを1つだけ生成してください。プロンプトのみを出力し、説明は不要です。';
 
         // 強調設定
         let highlightSettings = {
@@ -1483,12 +1569,15 @@
             const data = {
                 totalCost,
                 totalTokens,
-                selectedModel: modelSelect.value,
+                chatModel: chatModelSelect.value,
+                imageModel: imageModelSelect.value,
                 currentSessionId,
                 currentProjectId,
                 clickPrompt,
+                imageGenPrompt,
                 highlightSettings,
-                apiKey
+                apiKey,
+                runwareApiKey
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         }
@@ -1502,21 +1591,36 @@
                 currentSessionId = data.currentSessionId || null;
                 currentProjectId = data.currentProjectId || null;
                 clickPrompt = data.clickPrompt || '{word}について詳しく';
+                imageGenPrompt = data.imageGenPrompt || '現在の会話の状況を表す画像を生成するための、英語の画像生成プロンプトを1つだけ生成してください。プロンプトのみを出力し、説明は不要です。';
                 apiKey = data.apiKey || '';
+                runwareApiKey = data.runwareApiKey || '';
                 if (data.highlightSettings) {
                     highlightSettings = data.highlightSettings;
                 }
 
-                if (data.selectedModel) {
-                    modelSelect.value = data.selectedModel;
+                if (data.chatModel || data.selectedModel) {
+                    chatModelSelect.value = data.chatModel || data.selectedModel;
+                }
+                if (data.imageModel) {
+                    imageModelSelect.value = data.imageModel;
                 }
 
                 clickPromptInput.value = clickPrompt;
+                imageGenPromptInput.value = imageGenPrompt;
                 apiKeyInput.value = apiKey;
+                runwareApiKeyInput.value = runwareApiKey;
                 totalCostEl.textContent = '$' + totalCost.toFixed(2);
                 totalTokensEl.textContent = totalTokens.toLocaleString();
+
+                // Runware選択時はAPIキー入力欄を表示
+                updateRunwareApiKeyVisibility();
             }
             loadHighlightSettings();
+        }
+
+        function updateRunwareApiKeyVisibility() {
+            const isRunware = imageModelSelect.value.startsWith('runware:');
+            runwareApiKeyGroup.style.display = isRunware ? 'block' : 'none';
         }
 
         function loadHighlightSettings() {
@@ -1741,28 +1845,227 @@
         }
 
         // 画像を右側サイドバーに追加
-        function addImageToSidebar(imageUrl) {
+        function addImageToSidebar(imageUrl, prompt = '') {
             // 空メッセージを削除
             const emptyMsg = imageContainer.querySelector('.empty-message');
             if (emptyMsg) {
                 emptyMsg.remove();
             }
 
+            const wrapper = document.createElement('div');
+            wrapper.className = 'image-wrapper';
+
             const img = document.createElement('img');
             img.src = imageUrl;
             img.className = 'generated-image';
             img.onclick = () => {
-                // クリックで新しいタブで開く
                 window.open(imageUrl, '_blank');
             };
 
+            wrapper.appendChild(img);
+
+            if (prompt) {
+                const promptEl = document.createElement('div');
+                promptEl.className = 'image-prompt';
+                promptEl.textContent = prompt;
+                wrapper.appendChild(promptEl);
+            }
+
             // 最新の画像を上に追加
-            imageContainer.insertBefore(img, imageContainer.firstChild);
+            imageContainer.insertBefore(wrapper, imageContainer.firstChild);
         }
 
         // 画像サイドバーをクリア
         function clearImageSidebar() {
             imageContainer.innerHTML = '<div class="empty-message">画像がありません</div>';
+        }
+
+        // UUID生成
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Runware APIで画像生成
+        async function generateImageWithRunware(imagePrompt) {
+            const response = await fetch(RUNWARE_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${runwareApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify([
+                    {
+                        taskType: 'imageInference',
+                        taskUUID: generateUUID(),
+                        positivePrompt: imagePrompt,
+                        model: 'runware:z-image@turbo',
+                        width: 1024,
+                        height: 1024,
+                        steps: 9,
+                        CFGScale: 0,
+                        numberResults: 1,
+                        outputType: 'URL',
+                        includeCost: true
+                    }
+                ])
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Runware API エラー');
+            }
+
+            const data = await response.json();
+            const results = Array.isArray(data.data) ? data.data : [data.data];
+
+            for (const result of results) {
+                if (result.imageURL) {
+                    addImageToSidebar(result.imageURL, imagePrompt);
+                }
+                if (result.cost) {
+                    updateStats(result.cost, 0);
+                }
+            }
+
+            if (results.some(r => r.imageURL)) {
+                rightSidebar.classList.remove('collapsed');
+            } else {
+                throw new Error('画像を生成できませんでした');
+            }
+        }
+
+        // 画像生成ボタンのクリック処理
+        async function generateImageFromContext() {
+            if (!apiKey) {
+                alert('APIキーが設定されていません。');
+                return;
+            }
+
+            const isRunware = imageModelSelect.value.startsWith('runware:');
+            if (isRunware && !runwareApiKey) {
+                alert('Runware APIキーが設定されていません。設定画面で入力してください。');
+                document.getElementById('settings-modal').classList.add('show');
+                return;
+            }
+
+            if (messages.length === 0) {
+                alert('会話履歴がありません。まず会話を始めてください。');
+                return;
+            }
+
+            generateImageBtn.disabled = true;
+            generateImageBtn.textContent = '⏳';
+
+            try {
+                // 1. 会話用モデルにプロンプト生成を依頼
+                const promptRequest = [...messages, {
+                    role: 'user',
+                    content: imageGenPrompt
+                }];
+
+                const promptResponse = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: chatModelSelect.value,
+                        messages: promptRequest,
+                        stream: false
+                    })
+                });
+
+                if (!promptResponse.ok) {
+                    throw new Error('プロンプト生成に失敗しました');
+                }
+
+                const promptResult = await promptResponse.json();
+                const imagePrompt = promptResult.choices?.[0]?.message?.content?.trim();
+
+                if (!imagePrompt) {
+                    throw new Error('プロンプトを取得できませんでした');
+                }
+
+                // 使用量を記録
+                if (promptResult.usage) {
+                    updateStats(promptResult.usage.cost || 0, promptResult.usage.total_tokens || 0);
+                }
+
+                // 2. 画像生成
+                if (isRunware) {
+                    // Runware API
+                    await generateImageWithRunware(imagePrompt);
+                } else {
+                    // OpenRouter API (Gemini等)
+                    const imageResponse = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: imageModelSelect.value,
+                            messages: [{ role: 'user', content: imagePrompt }],
+                            modalities: ['text', 'image'],
+                            stream: false
+                        })
+                    });
+
+                    if (!imageResponse.ok) {
+                        throw new Error('画像生成に失敗しました');
+                    }
+
+                    const imageResult = await imageResponse.json();
+                    console.log('Image API Response:', imageResult);
+
+                    const choice = imageResult.choices?.[0];
+                    const message = choice?.message;
+
+                    // ブロックチェック
+                    const finishReason = choice?.finish_reason;
+                    const nativeReason = choice?.native_finish_reason;
+                    if (finishReason !== 'stop' || (nativeReason && nativeReason !== 'STOP')) {
+                        const blockReasons = {
+                            'content_filter': 'コンテンツフィルター',
+                            'PROHIBITED_CONTENT': 'コンテンツフィルター',
+                            'IMAGE_PROHIBITED_CONTENT': '画像コンテンツフィルター',
+                            'IMAGE_SAFETY': '画像安全フィルター',
+                            'SAFETY': '安全フィルター'
+                        };
+                        const reason = blockReasons[nativeReason] || blockReasons[finishReason] || '不明な理由';
+                        alert(`${reason}により画像生成がブロックされました`);
+                        return;
+                    }
+
+                    // 画像を表示
+                    if (message?.images && Array.isArray(message.images)) {
+                        for (const img of message.images) {
+                            if (img.image_url?.url) {
+                                addImageToSidebar(img.image_url.url, imagePrompt);
+                            }
+                        }
+                        rightSidebar.classList.remove('collapsed');
+                    } else {
+                        alert('画像を生成できませんでした');
+                    }
+
+                    // 使用量を記録
+                    if (imageResult.usage) {
+                        updateStats(imageResult.usage.cost || 0, imageResult.usage.total_tokens || 0);
+                    }
+                }
+
+            } catch (error) {
+                alert(`エラー: ${error.message}`);
+            } finally {
+                generateImageBtn.disabled = false;
+                generateImageBtn.textContent = '🎨';
+            }
         }
 
         async function streamResponse(msgs) {
@@ -1774,29 +2077,18 @@
             let fullContent = '';
             let reasoning = '';
 
-            const currentModel = modelSelect.value;
-            const isImageGen = isImageModel(currentModel);
-
             try {
-                // リクエストボディを構築
-                const requestBody = {
-                    model: currentModel,
-                    messages: msgs,
-                    stream: !isImageGen // 画像生成モデルはストリーミング無効
-                };
-
-                // 画像生成モデルの場合はmodalitiesを追加
-                if (isImageGen) {
-                    requestBody.modalities = ['text', 'image'];
-                }
-
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify({
+                        model: chatModelSelect.value,
+                        messages: msgs,
+                        stream: true
+                    })
                 });
 
                 if (!response.ok) {
@@ -1810,89 +2102,6 @@
                     return;
                 }
 
-                // 画像生成モデルの場合は非ストリーミングで処理
-                if (isImageGen) {
-                    const result = await response.json();
-                    console.log('API Response:', result); // デバッグ用
-                    const choice = result.choices?.[0];
-                    const message = choice?.message;
-
-                    // ブロックされた場合のメッセージマップ
-                    const blockReasons = {
-                        'content_filter': 'コンテンツフィルター',
-                        'PROHIBITED_CONTENT': 'コンテンツフィルター',
-                        'IMAGE_PROHIBITED_CONTENT': '画像コンテンツフィルター',
-                        'IMAGE_SAFETY': '画像安全フィルター',
-                        'SAFETY': '安全フィルター',
-                        'RECITATION': '引用ポリシー',
-                        'BLOCKLIST': 'ブロックリスト',
-                        'SPII': '個人情報保護',
-                        'OTHER': '不明な理由'
-                    };
-
-                    const finishReason = choice?.finish_reason;
-                    const nativeReason = choice?.native_finish_reason;
-
-                    // stop以外の場合は警告表示
-                    if (finishReason !== 'stop' || (nativeReason && nativeReason !== 'STOP')) {
-                        const reason = blockReasons[nativeReason] || blockReasons[finishReason] || nativeReason || finishReason || '不明';
-                        div.innerHTML = `<p style="color: #c0392b;">⚠️ ${reason}により画像生成がブロックされました</p>`;
-                        if (message?.content) {
-                            div.innerHTML += `<p>${escapeHtml(message.content)}</p>`;
-                        }
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                        return;
-                    }
-
-                    if (message) {
-                        let chatHtml = '';
-
-                        // テキストコンテンツ（チャットに表示）
-                        if (message.content) {
-                            fullContent = message.content;
-                            chatHtml += `<p>${escapeHtml(fullContent)}</p>`;
-                        }
-
-                        // 画像（右側サイドバーに表示）
-                        if (message.images && Array.isArray(message.images)) {
-                            for (const img of message.images) {
-                                if (img.image_url?.url) {
-                                    addImageToSidebar(img.image_url.url);
-                                    chatHtml += `<p style="color: #2d5a7b;">🖼️ 画像を生成しました（右側パネルに表示）</p>`;
-                                }
-                            }
-                            // 右側サイドバーを開く
-                            rightSidebar.classList.remove('collapsed');
-                        }
-
-                        // 画像もテキストもない場合
-                        if (!chatHtml) {
-                            chatHtml = '<p style="color: #888;">画像を生成できませんでした</p>';
-                        }
-
-                        div.innerHTML = chatHtml;
-
-                        // メッセージを保存
-                        const saveContent = fullContent || (message.images?.length > 0 ? '[画像生成]' : '');
-                        if (saveContent) {
-                            messages.push({ role: 'assistant', content: saveContent });
-                            chatHistory.push({ role: 'assistant', content: saveContent, reasoning: null });
-                        }
-                        saveCurrentSession();
-                    }
-
-                    // 使用量情報
-                    if (result.usage) {
-                        const cost = result.usage.cost || 0;
-                        const tokens = result.usage.total_tokens || 0;
-                        updateStats(cost, tokens);
-                    }
-
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                    return;
-                }
-
-                // 通常のストリーミング処理
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
 
@@ -2047,9 +2256,22 @@
 
         sendBtn.addEventListener('click', sendMessage);
         clearCostBtn.addEventListener('click', clearCost);
-        modelSelect.addEventListener('change', saveGlobalSettings);
+        chatModelSelect.addEventListener('change', saveGlobalSettings);
+        imageModelSelect.addEventListener('change', () => {
+            updateRunwareApiKeyVisibility();
+            saveGlobalSettings();
+        });
+        runwareApiKeyInput.addEventListener('input', () => {
+            runwareApiKey = runwareApiKeyInput.value;
+            saveGlobalSettings();
+        });
+        generateImageBtn.addEventListener('click', generateImageFromContext);
         clickPromptInput.addEventListener('input', () => {
             clickPrompt = clickPromptInput.value || '{word}について詳しく';
+            saveGlobalSettings();
+        });
+        imageGenPromptInput.addEventListener('input', () => {
+            imageGenPrompt = imageGenPromptInput.value || '現在の会話の状況を表す画像を生成するための、英語の画像生成プロンプトを1つだけ生成してください。プロンプトのみを出力し、説明は不要です。';
             saveGlobalSettings();
         });
         apiKeyInput.addEventListener('input', () => {
