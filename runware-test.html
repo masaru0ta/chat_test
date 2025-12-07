@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Runware API Test</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a1a;
+            color: #eee;
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4a9eff;
+            margin-bottom: 1rem;
+        }
+        .main-layout {
+            display: flex;
+            gap: 2rem;
+        }
+        .left-pane {
+            flex: 1;
+            min-width: 0;
+        }
+        .right-pane {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #888;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+            background: #111;
+            color: #eee;
+            font-size: 1rem;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .row {
+            display: flex;
+            gap: 1rem;
+        }
+        .row .form-group {
+            flex: 1;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-right: 0.5rem;
+        }
+        button:hover {
+            background: #5aafff;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #111;
+            border-radius: 0.5rem;
+            border: 1px solid #333;
+        }
+        .status-label {
+            font-weight: bold;
+            color: #4a9eff;
+        }
+        .log {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #000;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .image-card {
+            background: #111;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid #333;
+        }
+        .result-image {
+            max-width: 100%;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            display: block;
+        }
+        .image-url-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            align-items: center;
+        }
+        .image-url {
+            flex: 1;
+            font-size: 0.75rem;
+            color: #888;
+            background: #000;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: monospace;
+        }
+        .copy-btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            margin: 0;
+            white-space: nowrap;
+        }
+        .copy-btn.copied {
+            background: #2ecc71;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            cursor: pointer;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+        }
+        .time-info {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .cost-info {
+            color: #4a9eff;
+            font-size: 0.9rem;
+        }
+        .balance-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .error {
+            color: #e74c3c;
+        }
+        .success {
+            color: #2ecc71;
+        }
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .section-divider {
+            border: none;
+            border-top: 2px solid #333;
+            margin: 2rem 0;
+        }
+        .section-title {
+            color: #4a9eff;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        .image-select-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .image-select-item {
+            border: 2px solid #333;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .image-select-item:hover {
+            border-color: #4a9eff;
+        }
+        .image-select-item.selected {
+            border-color: #2ecc71;
+        }
+        .image-select-item img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            display: block;
+        }
+        .masking-result {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .masking-result-item {
+            flex: 1;
+            text-align: center;
+        }
+        .masking-result-item img {
+            max-width: 100%;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+        .masking-result-item .label {
+            color: #888;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        .use-mask-btn {
+            margin-top: 0.5rem;
+            width: 100%;
+        }
+        .inpaint-source {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .inpaint-source-item {
+            flex: 1;
+            text-align: center;
+        }
+        .inpaint-source-item img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 0.5rem;
+            border: 2px solid #333;
+        }
+        .inpaint-source-item .label {
+            color: #888;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+        .inpaint-source-placeholder {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #333;
+            border-radius: 0.5rem;
+            color: #666;
+            font-size: 0.85rem;
+        }
+        .dropzone {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #444;
+            border-radius: 0.5rem;
+            color: #666;
+            font-size: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-size: cover;
+            background-position: center;
+        }
+        .dropzone:hover {
+            border-color: #4a9eff;
+            color: #4a9eff;
+        }
+        .dropzone.dragover {
+            border-color: #2ecc71;
+            background-color: rgba(46, 204, 113, 0.1);
+        }
+        .dropzone.has-image {
+            border-style: solid;
+        }
+        .dropzone.has-image span {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h1 style="margin: 0;">Runware API Test</h1>
+            <button onclick="clearAllHistory()" style="background: #e74c3c;">履歴を全て削除</button>
+        </div>
+
+        <div class="main-layout">
+            <div class="left-pane">
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="api-key" placeholder="Runware API Keyを入力">
+                </div>
+
+                <div class="form-group">
+                    <label>モデル</label>
+                    <select id="model" onchange="applyModelDefaults()">
+                        <option value="runware:z-image@turbo">Z-Image Turbo</option>
+                        <option value="civitai:481162@558910">Aoi-Realistic-Pony</option>
+                        <option value="civitai:958009@1484125">RED-Zimage 1.5</option>
+                        <option value="civitai:457669@691683">PinkiePie Pony Mix</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>ポジティブプロンプト（品質）</label>
+                    <textarea id="prompt-quality" style="min-height: 60px;"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>ポジティブプロンプト（任意１）</label>
+                    <textarea id="prompt">a cute cat sitting on a window</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>ポジティブプロンプト（任意２）</label>
+                    <textarea id="prompt2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>ネガティブプロンプト（品質）</label>
+                    <textarea id="negative-prompt-quality" style="min-height: 60px;"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>ネガティブプロンプト（任意）</label>
+                    <textarea id="negative-prompt" style="min-height: 60px;"></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label>幅</label>
+                        <select id="width">
+                            <option value="512">512</option>
+                            <option value="768">768</option>
+                            <option value="1024" selected>1024</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>高さ</label>
+                        <select id="height">
+                            <option value="512">512</option>
+                            <option value="768">768</option>
+                            <option value="1024" selected>1024</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>生成枚数</label>
+                        <select id="number-results">
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label>ステップ数</label>
+                        <input type="number" id="steps" value="9" min="1" max="50">
+                    </div>
+                    <div class="form-group">
+                        <label>CFG Scale</label>
+                        <input type="number" id="cfg-scale" value="0" min="0" max="20" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>スケジューラ</label>
+                        <select id="scheduler">
+                            <option value="">未指定</option>
+                            <option value="Default">Default</option>
+                            <option value="Euler">Euler</option>
+                            <option value="EulerA">Euler A</option>
+                            <option value="DPM++ 2M">DPM++ 2M</option>
+                            <option value="DPM++ 2M Karras">DPM++ 2M Karras</option>
+                            <option value="DPM++ SDE">DPM++ SDE</option>
+                            <option value="DPM++ SDE Karras">DPM++ SDE Karras</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Seed (-1 = ランダム)</label>
+                        <input type="number" id="seed" value="-1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-pane">
+                <button id="start-btn" onclick="startGeneration()">画像生成開始</button>
+
+                <div class="status">
+                    <div><span class="status-label">ステータス:</span> <span id="status">待機中</span></div>
+                    <div class="time-info" id="time-info"></div>
+                    <div class="cost-info" id="cost-info"></div>
+                    <div class="balance-info">
+                        <span class="status-label">残高:</span>
+                        <span id="balance">-</span>
+                        <button onclick="fetchBalance()" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; margin: 0;">更新</button>
+                    </div>
+                </div>
+
+                <div class="log" id="log"></div>
+
+                <div class="images-grid" id="result"></div>
+
+                <hr class="section-divider">
+
+                <h3 class="section-title">Image Masking</h3>
+
+                <div class="form-group">
+                    <label>ソース画像を選択</label>
+                    <div class="image-select-grid" id="masking-source-images">
+                        <div style="color: #666; font-size: 0.85rem;">上で画像を生成してください</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label>検出モデル</label>
+                        <select id="masking-model">
+                            <option value="face_yolov8n">顔検出 (YOLOv8)</option>
+                            <option value="mediapipe_face_full">顔検出 (MediaPipe)</option>
+                            <option value="hand_yolov8n">手検出</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>最大検出数</label>
+                        <input type="number" id="max-detections" value="1" min="1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label>マスクパディング</label>
+                        <input type="number" id="mask-padding" value="10" min="0" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>マスクブラー</label>
+                        <input type="number" id="mask-blur" value="5" min="0" max="50">
+                    </div>
+                </div>
+
+                <button id="masking-btn" onclick="startMasking()" disabled>マスク生成</button>
+
+                <div class="status" id="masking-status-container" style="display: none;">
+                    <div><span class="status-label">ステータス:</span> <span id="masking-status">待機中</span></div>
+                    <div class="cost-info" id="masking-cost-info"></div>
+                </div>
+
+                <div id="masking-result"></div>
+
+                <hr class="section-divider">
+
+                <h3 class="section-title">ADetailer</h3>
+
+                <div class="inpaint-source" id="inpaint-source">
+                    <div class="inpaint-source-item">
+                        <div class="inpaint-source-placeholder" id="inpaint-seed-preview">元画像を選択</div>
+                        <div class="label">元画像</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>ADetailer用モデル</label>
+                    <select id="inpaint-model" onchange="applyADetailerModelDefaults()">
+                        <option value="civitai:481162@558910">Aoi-Realistic-Pony</option>
+                        <option value="civitai:958009@1484125">RED-Zimage 1.5</option>
+                        <option value="civitai:457669@691683">PinkiePie Pony Mix</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>ポジティブプロンプト（品質）</label>
+                    <textarea id="inpaint-prompt-quality" style="min-height: 60px;">score_9, score_8_up, score_7_up, detailed face, sharp focus, detailed eyes, clear skin</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                        ポジティブプロンプト（任意）
+                        <button type="button" onclick="copyPromptFromGeneration('positive')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">生成時のをコピー</button>
+                    </label>
+                    <textarea id="inpaint-prompt" style="min-height: 60px;"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>ネガティブプロンプト（品質）</label>
+                    <textarea id="inpaint-negative-prompt-quality" style="min-height: 60px;">score_6, score_5, score_4, blurry, low quality, distorted face, ugly</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                        ネガティブプロンプト（任意）
+                        <button type="button" onclick="copyPromptFromGeneration('negative')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">生成時のをコピー</button>
+                    </label>
+                    <textarea id="inpaint-negative-prompt" style="min-height: 60px;"></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label>強度 (strength)</label>
+                        <input type="number" id="inpaint-strength" value="0.5" min="0" max="1" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>ステップ数</label>
+                        <input type="number" id="inpaint-steps" value="25" min="1" max="50">
+                    </div>
+                    <div class="form-group">
+                        <label>CFG Scale</label>
+                        <input type="number" id="inpaint-cfg" value="7" min="0" max="20" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>モード</label>
+                        <select id="inpaint-mode">
+                            <option value="img2img">img2img (マスクなし)</option>
+                            <option value="inpaint-white" selected>Inpaint (白マスク)</option>
+                            <option value="inpaint-black">Inpaint (黒マスク)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>サイズ</label>
+                        <select id="inpaint-size">
+                            <option value="512">512x512</option>
+                            <option value="1024" selected>1024x1024</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="inpaint-border-mask" checked style="width: auto;">
+                            周囲保持マスク（境界ブレンド）
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>保持幅 (px)</label>
+                        <input type="number" id="inpaint-border-width" value="20" min="5" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>フェザー幅 (px)</label>
+                        <input type="number" id="inpaint-feather-width" value="80" min="0" max="150">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="inpaint-use-ipadapter" style="width: auto;">
+                            IPAdapter（顔の特徴を維持）
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>IPAdapterモデル</label>
+                        <select id="inpaint-ipadapter-model">
+                            <option value="runware:55@1">IP-Adapter Face ID Plus V2 (SD1.5)</option>
+                            <option value="runware:55@2">IP-Adapter Face ID Plus V2 (SDXL)</option>
+                            <option value="runware:55@3" selected>IP-Adapter Face ID (SDXL)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Weight</label>
+                        <input type="number" id="inpaint-ipadapter-weight" value="0.5" min="0" max="1" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>参照画像</label>
+                        <div id="ipadapter-dropzone" class="dropzone">
+                            <span>ドラッグ＆ドロップ<br>または クリック</span>
+                        </div>
+                        <input type="file" id="ipadapter-file-input" accept="image/*" style="display: none;">
+                    </div>
+                </div>
+
+                <button id="inpaint-btn" onclick="startInpainting()" disabled>ADetailer 実行</button>
+
+                <div class="status" id="inpaint-status-container" style="display: none;">
+                    <div><span class="status-label">ステータス:</span> <span id="inpaint-status">待機中</span></div>
+                    <div class="cost-info" id="inpaint-cost-info"></div>
+                </div>
+
+                <div class="images-grid" id="inpaint-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal" onclick="closeModal()">
+        <img id="modal-image" src="" alt="">
+    </div>
+
+    <script>
+        const API_BASE = 'https://api.runware.ai/v1';
+        const STORAGE_KEY = 'runware_api_key';
+        const IMAGES_STORAGE_KEY = 'runware_images';
+        const PROMPTS_STORAGE_KEY = 'runware_prompts';
+        const USD_TO_JPY = 150;
+        let startTime = null;
+        let generatedImages = [];
+        let selectedMaskingImage = null;
+        let inpaintSeedImage = null;
+        let inpaintMaskImage = null;
+        let inpaintImageSize = { width: 1024, height: 1024 };
+        let lastMaskResult = null;
+        let lastDetections = null;
+        let ipAdapterGuideImage = null;
+
+        function clearAllHistory() {
+            if (!confirm('全ての履歴（生成画像、マスク結果、検出データ）を削除しますか？')) {
+                return;
+            }
+
+            // LocalStorageから削除
+            localStorage.removeItem(IMAGES_STORAGE_KEY);
+
+            // 変数をリセット
+            generatedImages = [];
+            selectedMaskingImage = null;
+            inpaintSeedImage = null;
+            inpaintMaskImage = null;
+            inpaintImageSize = { width: 1024, height: 1024 };
+            lastMaskResult = null;
+            lastDetections = null;
+
+            // UIをリセット
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('masking-source-images').innerHTML = '<div style="color: #666; font-size: 0.85rem;">上で画像を生成してください</div>';
+            document.getElementById('masking-btn').disabled = true;
+            document.getElementById('masking-result').innerHTML = '';
+            document.getElementById('inpaint-seed-preview').outerHTML = '<div class="inpaint-source-placeholder" id="inpaint-seed-preview">元画像を選択</div>';
+            document.getElementById('inpaint-btn').disabled = true;
+            document.getElementById('inpaint-result').innerHTML = '';
+            document.getElementById('log').innerHTML = '';
+
+            log('履歴を全て削除しました', 'success');
+        }
+
+        function saveImageState() {
+            // Data URI（data:で始まる）は容量が大きいので保存から除外
+            const filteredImages = generatedImages.filter(url => !url.startsWith('data:'));
+            const state = {
+                generatedImages: filteredImages,
+                selectedMaskingImage: selectedMaskingImage?.startsWith('data:') ? null : selectedMaskingImage,
+                inpaintSeedImage: inpaintSeedImage?.startsWith('data:') ? null : inpaintSeedImage,
+                inpaintMaskImage: inpaintMaskImage?.startsWith('data:') ? null : inpaintMaskImage,
+                inpaintImageSize,
+                lastMaskResult,
+                lastDetections
+            };
+            try {
+                localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {
+                console.warn('Failed to save image state:', e);
+                // 容量超過時は古い画像を削除して再試行
+                state.generatedImages = filteredImages.slice(-5);
+                try {
+                    localStorage.setItem(IMAGES_STORAGE_KEY, JSON.stringify(state));
+                } catch (e2) {
+                    console.error('Still failed to save:', e2);
+                }
+            }
+        }
+
+        function loadImageState() {
+            const saved = localStorage.getItem(IMAGES_STORAGE_KEY);
+            if (saved) {
+                try {
+                    const state = JSON.parse(saved);
+                    generatedImages = state.generatedImages || [];
+                    selectedMaskingImage = state.selectedMaskingImage || null;
+                    inpaintSeedImage = state.inpaintSeedImage || null;
+                    inpaintMaskImage = state.inpaintMaskImage || null;
+                    inpaintImageSize = state.inpaintImageSize || { width: 1024, height: 1024 };
+                    lastMaskResult = state.lastMaskResult || null;
+                    lastDetections = state.lastDetections || null;
+                    return true;
+                } catch (e) {
+                    console.error('Failed to load image state:', e);
+                }
+            }
+            return false;
+        }
+
+        function restoreUI() {
+            // 生成画像を復元
+            if (generatedImages.length > 0) {
+                const resultEl = document.getElementById('result');
+                resultEl.innerHTML = '';
+                for (const url of generatedImages) {
+                    resultEl.innerHTML +=
+                        `<div class="image-card">
+                            <img src="${url}" class="result-image" onclick="openModal('${url}')">
+                            <div class="image-url-container">
+                                <span class="image-url" title="${url}">${url}</span>
+                                <button class="copy-btn" onclick="copyToClipboard('${url}', this)">コピー</button>
+                            </div>
+                        </div>`;
+                }
+                updateMaskingSourceImages();
+            }
+
+            // マスク結果を復元
+            if (lastMaskResult && lastMaskResult.seedImage && lastDetections && lastDetections.length > 0) {
+                document.getElementById('masking-result').innerHTML = `
+                    <div style="color: #2ecc71; font-size: 0.9rem; margin-top: 0.5rem;">検出済み: ${lastDetections.length}件</div>
+                    <button class="use-mask-btn" onclick="useForInpainting('${lastMaskResult.seedImage}', '${lastMaskResult.maskImage}')" style="margin-top: 0.5rem; background: #2ecc71;">ADetailerに使用</button>
+                `;
+            }
+
+            // Inpainting画像を復元
+            if (inpaintSeedImage) {
+                document.getElementById('inpaint-seed-preview').outerHTML =
+                    `<img id="inpaint-seed-preview" src="${inpaintSeedImage}" onclick="openModal('${inpaintSeedImage}')">`;
+                document.getElementById('inpaint-btn').disabled = false;
+            }
+        }
+
+        // ページ読み込み時にAPIキーを復元し残高取得
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem(STORAGE_KEY);
+            if (savedKey) {
+                document.getElementById('api-key').value = savedKey;
+                fetchBalance();
+            }
+
+            // 画像状態を復元
+            if (loadImageState()) {
+                restoreUI();
+                log('前回の画像データを復元しました', 'success');
+            }
+
+            // プロンプトを復元
+            loadPrompts();
+
+            // プロンプト変更時に保存
+            document.getElementById('prompt').addEventListener('input', savePrompts);
+            document.getElementById('inpaint-prompt').addEventListener('input', savePrompts);
+
+            // IPAdapter ドロップゾーンの設定
+            setupIPAdapterDropzone();
+            loadIPAdapterImage();
+        });
+
+        // APIキー変更時に保存して残高取得
+        document.getElementById('api-key').addEventListener('change', (e) => {
+            localStorage.setItem(STORAGE_KEY, e.target.value);
+            if (e.target.value) {
+                fetchBalance();
+            }
+        });
+
+        // モデル別の最適パラメータ
+        const PONY_QUALITY = {
+            positive: 'score_9, score_8_up, score_7_up',
+            negative: 'score_6, score_5, score_4, source_furry, source_pony, source_cartoon, 3d, blur'
+        };
+
+        const MODEL_DEFAULTS = {
+            'runware:z-image@turbo': {
+                steps: 9,
+                cfgScale: 0,
+                scheduler: '',
+                qualityPositive: '',
+                qualityNegative: ''
+            },
+            'civitai:481162@558910': {
+                steps: 25,
+                cfgScale: 7,
+                scheduler: 'Euler',
+                qualityPositive: PONY_QUALITY.positive,
+                qualityNegative: PONY_QUALITY.negative
+            },
+            'civitai:958009@1484125': {
+                steps: 20,
+                cfgScale: 7,
+                scheduler: 'Default',
+                qualityPositive: PONY_QUALITY.positive,
+                qualityNegative: PONY_QUALITY.negative
+            },
+            'civitai:457669@691683': {
+                steps: 20,
+                cfgScale: 7.5,
+                scheduler: 'Default',
+                qualityPositive: PONY_QUALITY.positive,
+                qualityNegative: PONY_QUALITY.negative
+            }
+        };
+
+        function applyModelDefaults() {
+            const model = document.getElementById('model').value;
+            const defaults = MODEL_DEFAULTS[model];
+            if (defaults) {
+                document.getElementById('steps').value = defaults.steps;
+                document.getElementById('cfg-scale').value = defaults.cfgScale;
+                document.getElementById('scheduler').value = defaults.scheduler;
+                document.getElementById('prompt-quality').value = defaults.qualityPositive;
+                document.getElementById('negative-prompt-quality').value = defaults.qualityNegative;
+            }
+        }
+
+        // ADetailer用の品質プロンプト
+        const ADETAILER_QUALITY = {
+            positive: 'score_9, score_8_up, score_7_up, detailed face, sharp focus, detailed eyes, clear skin',
+            negative: 'score_6, score_5, score_4, blurry, low quality, distorted face, ugly'
+        };
+
+        function copyPromptFromGeneration(type) {
+            if (type === 'positive') {
+                const prompt = document.getElementById('prompt').value;
+                document.getElementById('inpaint-prompt').value = prompt;
+            } else {
+                const prompt = document.getElementById('negative-prompt').value;
+                document.getElementById('inpaint-negative-prompt').value = prompt;
+            }
+        }
+
+        function setupIPAdapterDropzone() {
+            const dropzone = document.getElementById('ipadapter-dropzone');
+            const fileInput = document.getElementById('ipadapter-file-input');
+
+            // クリックでファイル選択
+            dropzone.addEventListener('click', () => fileInput.click());
+
+            // ファイル選択時
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    handleIPAdapterImage(e.target.files[0]);
+                }
+            });
+
+            // ドラッグオーバー
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            });
+
+            // ドラッグリーブ
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('dragover');
+            });
+
+            // ドロップ
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleIPAdapterImage(e.dataTransfer.files[0]);
+                }
+            });
+
+            // 右クリックでクリア
+            dropzone.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                clearIPAdapterImage();
+            });
+        }
+
+        function handleIPAdapterImage(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('画像ファイルを選択してください');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setIPAdapterImage(e.target.result);
+                log('IPAdapter参照画像を設定しました', 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function setIPAdapterImage(dataURI) {
+            ipAdapterGuideImage = dataURI;
+            const dropzone = document.getElementById('ipadapter-dropzone');
+            dropzone.style.backgroundImage = `url(${ipAdapterGuideImage})`;
+            dropzone.classList.add('has-image');
+            saveIPAdapterImage();
+        }
+
+        function clearIPAdapterImage() {
+            ipAdapterGuideImage = null;
+            const dropzone = document.getElementById('ipadapter-dropzone');
+            dropzone.style.backgroundImage = '';
+            dropzone.classList.remove('has-image');
+            localStorage.removeItem('runware_ipadapter_image');
+            log('IPAdapter参照画像をクリアしました');
+        }
+
+        function saveIPAdapterImage() {
+            if (ipAdapterGuideImage) {
+                try {
+                    localStorage.setItem('runware_ipadapter_image', ipAdapterGuideImage);
+                } catch (e) {
+                    console.warn('IPAdapter画像の保存に失敗:', e);
+                }
+            }
+        }
+
+        function loadIPAdapterImage() {
+            const saved = localStorage.getItem('runware_ipadapter_image');
+            if (saved) {
+                ipAdapterGuideImage = saved;
+                const dropzone = document.getElementById('ipadapter-dropzone');
+                dropzone.style.backgroundImage = `url(${saved})`;
+                dropzone.classList.add('has-image');
+            }
+        }
+
+        function savePrompts() {
+            const prompts = {
+                prompt1: document.getElementById('prompt').value,
+                adetailerPrompt: document.getElementById('inpaint-prompt').value
+            };
+            localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(prompts));
+        }
+
+        function loadPrompts() {
+            const saved = localStorage.getItem(PROMPTS_STORAGE_KEY);
+            if (saved) {
+                try {
+                    const prompts = JSON.parse(saved);
+                    if (prompts.prompt1) {
+                        document.getElementById('prompt').value = prompts.prompt1;
+                    }
+                    if (prompts.adetailerPrompt) {
+                        document.getElementById('inpaint-prompt').value = prompts.adetailerPrompt;
+                    }
+                } catch (e) {
+                    console.error('Failed to load prompts:', e);
+                }
+            }
+        }
+
+        function applyADetailerModelDefaults() {
+            const model = document.getElementById('inpaint-model').value;
+            const defaults = MODEL_DEFAULTS[model];
+            if (defaults) {
+                document.getElementById('inpaint-steps').value = defaults.steps;
+                document.getElementById('inpaint-cfg').value = defaults.cfgScale;
+                // ADetailer用品質プロンプト（Pony系は共通）
+                document.getElementById('inpaint-prompt-quality').value = ADETAILER_QUALITY.positive;
+                document.getElementById('inpaint-negative-prompt-quality').value = ADETAILER_QUALITY.negative;
+            }
+        }
+
+        async function fetchBalance() {
+            const apiKey = document.getElementById('api-key').value;
+            if (!apiKey) {
+                document.getElementById('balance').textContent = '-';
+                return;
+            }
+
+            try {
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify([
+                        {
+                            taskType: 'accountManagement',
+                            taskUUID: generateUUID(),
+                            operation: 'getDetails'
+                        }
+                    ])
+                });
+                const data = await response.json();
+                const result = Array.isArray(data.data) ? data.data[0] : data.data;
+                if (result && result.balance !== undefined) {
+                    document.getElementById('balance').textContent = `$${result.balance.toFixed(2)}`;
+                } else {
+                    document.getElementById('balance').textContent = 'エラー';
+                }
+            } catch (error) {
+                document.getElementById('balance').textContent = 'エラー';
+            }
+        }
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function log(message, type = '') {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const className = type ? ` class="${type}"` : '';
+            logEl.innerHTML += `<div${className}>[${time}] ${message}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateStatus(status) {
+            document.getElementById('status').textContent = status;
+        }
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = 'コピー済';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = 'コピー';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function openModal(url) {
+            document.getElementById('modal-image').src = url;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        // ADetailer方式: 画像をロードしてCanvasに描画
+        function loadImageToCanvas(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    resolve({ canvas, ctx, img });
+                };
+                img.onerror = reject;
+                img.src = url;
+            });
+        }
+
+        // 検出座標から正方形の切り出し領域を計算（パディング付き）
+        function calculateSquareCropArea(detection, imgWidth, imgHeight, padding = 0.3) {
+            const { x_min, y_min, x_max, y_max } = detection;
+            const width = x_max - x_min;
+            const height = y_max - y_min;
+            const size = Math.max(width, height);
+
+            // パディングを追加
+            const paddedSize = size * (1 + padding * 2);
+
+            // 中心を計算
+            const centerX = (x_min + x_max) / 2;
+            const centerY = (y_min + y_max) / 2;
+
+            // 正方形の座標を計算
+            let cropX = centerX - paddedSize / 2;
+            let cropY = centerY - paddedSize / 2;
+            let cropSize = paddedSize;
+
+            // 画像境界内に収める
+            if (cropX < 0) cropX = 0;
+            if (cropY < 0) cropY = 0;
+            if (cropX + cropSize > imgWidth) cropX = imgWidth - cropSize;
+            if (cropY + cropSize > imgHeight) cropY = imgHeight - cropSize;
+            if (cropX < 0) { cropX = 0; cropSize = imgWidth; }
+            if (cropY < 0) { cropY = 0; cropSize = imgHeight; }
+
+            return { x: Math.floor(cropX), y: Math.floor(cropY), size: Math.floor(Math.min(cropSize, imgWidth, imgHeight)) };
+        }
+
+        // 画像の一部を512x512に切り出し・拡大
+        function cropAndResize(canvas, cropArea, targetSize = 512) {
+            const { x, y, size } = cropArea;
+            const croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = targetSize;
+            croppedCanvas.height = targetSize;
+            const ctx = croppedCanvas.getContext('2d');
+            ctx.drawImage(canvas, x, y, size, size, 0, 0, targetSize, targetSize);
+            return croppedCanvas;
+        }
+
+        // マスク画像を生成（周囲保持オプション付き）
+        function createMask(size = 512, color = 'white', borderWidth = 0, featherWidth = 0) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // 背景色（保持領域）を設定
+            const bgColor = color === 'white' ? 'black' : 'white';
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, size, size);
+
+            if (borderWidth > 0) {
+                // 周囲保持マスク：中央部分だけをインペイント対象にする
+                const innerX = borderWidth;
+                const innerY = borderWidth;
+                const innerSize = size - borderWidth * 2;
+
+                if (featherWidth > 0) {
+                    // フェザー（グラデーション）付きマスク
+                    // ピクセル単位でグラデーションを計算
+                    const imageData = ctx.getImageData(0, 0, size, size);
+                    const data = imageData.data;
+                    const colorValue = color === 'white' ? 255 : 0;
+                    const bgValue = color === 'white' ? 0 : 255;
+
+                    for (let py = 0; py < size; py++) {
+                        for (let px = 0; px < size; px++) {
+                            // 内側の矩形からの距離を計算
+                            const innerLeft = innerX + featherWidth;
+                            const innerTop = innerY + featherWidth;
+                            const innerRight = innerX + innerSize - featherWidth;
+                            const innerBottom = innerY + innerSize - featherWidth;
+
+                            let value;
+                            if (px >= innerLeft && px < innerRight && py >= innerTop && py < innerBottom) {
+                                // 内側：完全にインペイント対象
+                                value = colorValue;
+                            } else if (px < innerX || px >= innerX + innerSize || py < innerY || py >= innerY + innerSize) {
+                                // 外側（ボーダー外）：完全に保持
+                                value = bgValue;
+                            } else {
+                                // フェザー領域：距離に応じてグラデーション
+                                let dist = 0;
+                                if (px < innerLeft) dist = Math.max(dist, innerLeft - px);
+                                if (px >= innerRight) dist = Math.max(dist, px - innerRight + 1);
+                                if (py < innerTop) dist = Math.max(dist, innerTop - py);
+                                if (py >= innerBottom) dist = Math.max(dist, py - innerBottom + 1);
+
+                                const t = Math.min(dist / featherWidth, 1);
+                                value = Math.round(colorValue * (1 - t) + bgValue * t);
+                            }
+
+                            const idx = (py * size + px) * 4;
+                            data[idx] = value;     // R
+                            data[idx + 1] = value; // G
+                            data[idx + 2] = value; // B
+                            data[idx + 3] = 255;   // A
+                        }
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                } else {
+                    // フェザーなし：シャープな境界
+                    ctx.fillStyle = color;
+                    ctx.fillRect(innerX, innerY, innerSize, innerSize);
+                }
+            } else {
+                // 全面塗りつぶし（従来の動作）
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, size, size);
+            }
+
+            return canvas;
+        }
+
+        // Inpainting結果を元画像に合成
+        function compositeResult(originalCanvas, inpaintedCanvas, cropArea) {
+            const { x, y, size } = cropArea;
+            const resultCanvas = document.createElement('canvas');
+            resultCanvas.width = originalCanvas.width;
+            resultCanvas.height = originalCanvas.height;
+            const ctx = resultCanvas.getContext('2d');
+
+            // 元画像を描画
+            ctx.drawImage(originalCanvas, 0, 0);
+
+            // Inpainting結果を縮小して合成
+            ctx.drawImage(inpaintedCanvas, 0, 0, inpaintedCanvas.width, inpaintedCanvas.height, x, y, size, size);
+
+            return resultCanvas;
+        }
+
+        // CanvasをBase64 Data URIに変換
+        function canvasToDataURI(canvas, format = 'image/png') {
+            return canvas.toDataURL(format);
+        }
+
+        async function startGeneration() {
+            const apiKey = document.getElementById('api-key').value;
+            const model = document.getElementById('model').value;
+            const promptQuality = document.getElementById('prompt-quality').value.trim();
+            const promptCustom1 = document.getElementById('prompt').value.trim();
+            const promptCustom2 = document.getElementById('prompt2').value.trim();
+            const prompt = [promptQuality, promptCustom1, promptCustom2].filter(p => p).join(', ');
+            const negativePromptQuality = document.getElementById('negative-prompt-quality').value.trim();
+            const negativePromptCustom = document.getElementById('negative-prompt').value.trim();
+            const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p).join(', ');
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+            const steps = parseInt(document.getElementById('steps').value);
+            const cfgScale = parseFloat(document.getElementById('cfg-scale').value);
+            const scheduler = document.getElementById('scheduler').value;
+            const seed = parseInt(document.getElementById('seed').value);
+            const numberResults = parseInt(document.getElementById('number-results').value);
+
+            if (!apiKey || !prompt) {
+                alert('API Keyとプロンプトを入力してください');
+                return;
+            }
+
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('log').innerHTML = '';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('cost-info').textContent = '';
+            startTime = Date.now();
+
+            log('リクエスト送信中...');
+            updateStatus('生成中');
+
+            try {
+                const taskUUID = generateUUID();
+                const requestBody = [
+                    {
+                        taskType: 'imageInference',
+                        taskUUID: taskUUID,
+                        positivePrompt: prompt,
+                        negativePrompt: negativePrompt || undefined,
+                        model: model,
+                        width: width,
+                        height: height,
+                        steps: steps,
+                        CFGScale: cfgScale,
+                        scheduler: scheduler || undefined,
+                        seed: seed === -1 ? undefined : seed,
+                        numberResults: numberResults,
+                        outputType: 'URL',
+                        includeCost: true
+                    }
+                ];
+
+                // undefinedのプロパティを削除
+                const cleanBody = requestBody.map(task => {
+                    return Object.fromEntries(
+                        Object.entries(task).filter(([_, v]) => v !== undefined)
+                    );
+                });
+
+                log('リクエスト: ' + JSON.stringify(cleanBody, null, 2));
+
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(cleanBody)
+                });
+
+                const data = await response.json();
+                log('レスポンス: ' + JSON.stringify(data, null, 2));
+
+                if (!response.ok) {
+                    throw new Error(data.error || data.message || `HTTP ${response.status}`);
+                }
+
+                // エラーチェック
+                if (data.errors && data.errors.length > 0) {
+                    throw new Error(data.errors.map(e => e.message || e.error).join(', '));
+                }
+
+                // 結果を処理
+                const results = Array.isArray(data.data) ? data.data : [data.data];
+                let totalCost = 0;
+
+                for (const result of results) {
+                    if (result.imageURL) {
+                        const cardId = 'card-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                        generatedImages.push(result.imageURL);
+                        document.getElementById('result').innerHTML +=
+                            `<div class="image-card">
+                                <img src="${result.imageURL}" class="result-image" onclick="openModal('${result.imageURL}')">
+                                <div class="image-url-container">
+                                    <span class="image-url" title="${result.imageURL}">${result.imageURL}</span>
+                                    <button class="copy-btn" onclick="copyToClipboard('${result.imageURL}', this)">コピー</button>
+                                </div>
+                            </div>`;
+                        log(`画像生成完了: ${result.imageURL}`, 'success');
+                    }
+                    if (result.cost) {
+                        totalCost += result.cost;
+                    }
+                }
+                updateMaskingSourceImages();
+                saveImageState();
+
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                updateStatus('完了');
+                log(`完了! 所要時間: ${elapsed}秒`, 'success');
+
+                if (totalCost > 0) {
+                    const jpyCost = (totalCost * USD_TO_JPY).toFixed(2);
+                    document.getElementById('cost-info').textContent = `コスト: $${totalCost.toFixed(4)}（${jpyCost}円）`;
+                }
+
+            } catch (error) {
+                log(`エラー: ${error.message}`, 'error');
+                updateStatus('エラー');
+            } finally {
+                document.getElementById('start-btn').disabled = false;
+                fetchBalance();
+            }
+        }
+
+        function updateMaskingSourceImages() {
+            const container = document.getElementById('masking-source-images');
+            if (generatedImages.length === 0) {
+                container.innerHTML = '<div style="color: #666; font-size: 0.85rem;">上で画像を生成してください</div>';
+                document.getElementById('masking-btn').disabled = true;
+                return;
+            }
+
+            container.innerHTML = generatedImages.map((url, index) =>
+                `<div class="image-select-item ${selectedMaskingImage === url ? 'selected' : ''}" onclick="selectMaskingImage('${url}')">
+                    <img src="${url}" alt="Image ${index + 1}">
+                </div>`
+            ).join('');
+        }
+
+        function selectMaskingImage(url) {
+            selectedMaskingImage = url;
+            updateMaskingSourceImages();
+            document.getElementById('masking-btn').disabled = false;
+        }
+
+        async function startMasking() {
+            const apiKey = document.getElementById('api-key').value;
+            if (!apiKey || !selectedMaskingImage) {
+                alert('API Keyと画像を選択してください');
+                return;
+            }
+
+            const model = document.getElementById('masking-model').value;
+            const maskPadding = parseInt(document.getElementById('mask-padding').value);
+            const maskBlur = parseInt(document.getElementById('mask-blur').value);
+
+            document.getElementById('masking-btn').disabled = true;
+            document.getElementById('masking-status-container').style.display = 'block';
+            document.getElementById('masking-status').textContent = '処理中...';
+            document.getElementById('masking-cost-info').textContent = '';
+            document.getElementById('masking-result').innerHTML = '';
+
+            try {
+                const taskUUID = generateUUID();
+                const requestBody = [
+                    {
+                        taskType: 'imageMasking',
+                        taskUUID: taskUUID,
+                        inputImage: selectedMaskingImage,
+                        detectModel: model,
+                        maskPadding: maskPadding,
+                        maskBlur: maskBlur,
+                        outputType: 'URL',
+                        includeCost: true
+                    }
+                ];
+
+                log('Image Masking リクエスト: ' + JSON.stringify(requestBody, null, 2));
+
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+                log('Image Masking レスポンス: ' + JSON.stringify(data, null, 2));
+
+                if (!response.ok) {
+                    throw new Error(data.error || data.message || `HTTP ${response.status}`);
+                }
+
+                if (data.errors && data.errors.length > 0) {
+                    throw new Error(data.errors.map(e => e.message || e.error).join(', '));
+                }
+
+                const result = Array.isArray(data.data) ? data.data[0] : data.data;
+
+                if (result.maskImageURL) {
+                    lastMaskResult = { seedImage: selectedMaskingImage, maskImage: result.maskImageURL };
+                    const maxDetections = parseInt(document.getElementById('max-detections').value);
+                    const allDetections = result.detections || [];
+                    lastDetections = allDetections.slice(0, maxDetections);
+                    log(`検出数: ${allDetections.length}件 → 使用: ${lastDetections.length}件`);
+                    document.getElementById('masking-result').innerHTML = `
+                        ${allDetections.length > 0 ? `<div style="color: #2ecc71; font-size: 0.9rem; margin-top: 0.5rem;">検出数: ${allDetections.length}件 → 使用: ${lastDetections.length}件</div>` : '<div style="color: #e74c3c;">顔が検出されませんでした</div>'}
+                        ${lastDetections.length > 0 ? `<button class="use-mask-btn" onclick="useForInpainting('${selectedMaskingImage}', '${result.maskImageURL}')" style="margin-top: 0.5rem; background: #2ecc71;">ADetailerに使用</button>` : ''}
+                    `;
+                    log(`マスク生成完了: ${result.maskImageURL}`, 'success');
+                    saveImageState();
+                }
+
+                document.getElementById('masking-status').textContent = '完了';
+
+                if (result.cost) {
+                    const jpyCost = (result.cost * USD_TO_JPY).toFixed(2);
+                    document.getElementById('masking-cost-info').textContent = `コスト: $${result.cost.toFixed(4)}（${jpyCost}円）`;
+                }
+
+            } catch (error) {
+                log(`Image Masking エラー: ${error.message}`, 'error');
+                document.getElementById('masking-status').textContent = 'エラー';
+            } finally {
+                document.getElementById('masking-btn').disabled = false;
+                fetchBalance();
+            }
+        }
+
+        function useForInpainting(seedUrl, maskUrl) {
+            inpaintSeedImage = seedUrl;
+            inpaintMaskImage = maskUrl;
+
+            // 画像サイズを取得
+            const img = new Image();
+            img.onload = function() {
+                inpaintImageSize = { width: img.width, height: img.height };
+                log(`Inpainting用画像サイズ: ${img.width}x${img.height}`);
+            };
+            img.src = seedUrl;
+
+            document.getElementById('inpaint-seed-preview').outerHTML =
+                `<img id="inpaint-seed-preview" src="${seedUrl}" onclick="openModal('${seedUrl}')">`;
+
+            document.getElementById('inpaint-btn').disabled = false;
+            saveImageState();
+
+            // Inpaintingセクションまでスクロール
+            document.getElementById('inpaint-source').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function startInpainting() {
+            const apiKey = document.getElementById('api-key').value;
+            if (!apiKey || !inpaintSeedImage) {
+                alert('API Keyと画像を設定してください');
+                return;
+            }
+
+            if (!lastDetections || lastDetections.length === 0) {
+                alert('検出された顔がありません。Image Maskingを先に実行してください。');
+                return;
+            }
+
+            const model = document.getElementById('inpaint-model').value;
+            const promptQuality = document.getElementById('inpaint-prompt-quality').value.trim();
+            const promptCustom = document.getElementById('inpaint-prompt').value.trim();
+            const prompt = [promptQuality, promptCustom].filter(p => p).join(', ');
+            const negativePromptQuality = document.getElementById('inpaint-negative-prompt-quality').value.trim();
+            const negativePromptCustom = document.getElementById('inpaint-negative-prompt').value.trim();
+            const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p).join(', ');
+            const strength = parseFloat(document.getElementById('inpaint-strength').value);
+            const steps = parseInt(document.getElementById('inpaint-steps').value);
+            const cfgScale = parseFloat(document.getElementById('inpaint-cfg').value);
+            const mode = document.getElementById('inpaint-mode').value;
+            const inpaintSize = parseInt(document.getElementById('inpaint-size').value);
+            const useBorderMask = document.getElementById('inpaint-border-mask').checked;
+            const borderWidth = parseInt(document.getElementById('inpaint-border-width').value);
+            const featherWidth = parseInt(document.getElementById('inpaint-feather-width').value);
+            const useIPAdapter = document.getElementById('inpaint-use-ipadapter').checked;
+            const ipAdapterModel = document.getElementById('inpaint-ipadapter-model').value;
+            const ipAdapterWeight = parseFloat(document.getElementById('inpaint-ipadapter-weight').value);
+
+            document.getElementById('inpaint-btn').disabled = true;
+            document.getElementById('inpaint-status-container').style.display = 'block';
+            document.getElementById('inpaint-status').textContent = '処理中...';
+            document.getElementById('inpaint-cost-info').textContent = '';
+            document.getElementById('inpaint-result').innerHTML = '';
+
+            let totalCost = 0;
+
+            try {
+                // 元画像をCanvasに読み込み
+                log('元画像を読み込み中...');
+                const { canvas: originalCanvas } = await loadImageToCanvas(inpaintSeedImage);
+                let currentCanvas = originalCanvas;
+
+                log(`検出数: ${lastDetections.length}件、ADetailer方式で処理開始`);
+
+                // 途中経過表示用のコンテナを追加
+                document.getElementById('inpaint-result').innerHTML = `
+                    <div style="margin-bottom: 1rem;">
+                        <div class="section-title" style="font-size: 1rem;">処理中...</div>
+                        <div id="inpaint-progress" class="images-grid"></div>
+                    </div>
+                `;
+
+                // 各検出領域を順番に処理
+                for (let i = 0; i < lastDetections.length; i++) {
+                    const detection = lastDetections[i];
+                    document.getElementById('inpaint-status').textContent = `処理中... (${i + 1}/${lastDetections.length})`;
+
+                    // 正方形の切り出し領域を計算
+                    const cropArea = calculateSquareCropArea(detection, currentCanvas.width, currentCanvas.height, 0.3);
+                    log(`顔${i + 1}: 切り出し領域 x=${cropArea.x}, y=${cropArea.y}, size=${cropArea.size}`);
+
+                    // 顔部分を指定サイズに切り出し・拡大
+                    const croppedCanvas = cropAndResize(currentCanvas, cropArea, inpaintSize);
+                    const seedDataURI = canvasToDataURI(croppedCanvas);
+
+                    // 途中画像を表示（切り出した顔）
+                    document.getElementById('inpaint-progress').innerHTML += `
+                        <div class="image-card">
+                            <img src="${seedDataURI}" class="result-image" onclick="openModal('${seedDataURI}')" style="max-height: 150px;">
+                            <div class="label" style="color: #888; font-size: 0.75rem; text-align: center;">顔${i + 1}: 切り出し (${inpaintSize}x${inpaintSize})</div>
+                        </div>
+                    `;
+
+                    // モードに応じてマスクを設定
+                    let maskDataURI = null;
+                    let maskCanvas = null;
+                    const border = useBorderMask ? borderWidth : 0;
+                    const feather = useBorderMask ? featherWidth : 0;
+
+                    if (mode === 'inpaint-white') {
+                        maskCanvas = createMask(inpaintSize, 'white', border, feather);
+                        maskDataURI = canvasToDataURI(maskCanvas);
+                        log(`顔${i + 1}: 白マスク生成完了 (border=${border}, feather=${feather})`);
+                    } else if (mode === 'inpaint-black') {
+                        maskCanvas = createMask(inpaintSize, 'black', border, feather);
+                        maskDataURI = canvasToDataURI(maskCanvas);
+                        log(`顔${i + 1}: 黒マスク生成完了 (border=${border}, feather=${feather})`);
+                    } else {
+                        log(`顔${i + 1}: img2imgモード - マスクなし`);
+                    }
+
+                    // マスクを表示（生成された場合）
+                    if (maskCanvas) {
+                        const maskPreviewURI = canvasToDataURI(maskCanvas);
+                        const progressEl = document.getElementById('inpaint-progress');
+                        const maskCard = document.createElement('div');
+                        maskCard.className = 'image-card';
+                        maskCard.innerHTML = `
+                            <img src="${maskPreviewURI}" class="result-image" style="max-height: 150px;">
+                            <div class="label" style="color: #ffa500; font-size: 0.75rem; text-align: center;">顔${i + 1}: マスク${useBorderMask ? ' (周囲保持)' : ''}</div>
+                        `;
+                        maskCard.querySelector('img').onclick = function() { openModal(maskPreviewURI); };
+                        progressEl.appendChild(maskCard);
+                    }
+
+                    // Inpainting実行
+                    const taskUUID = generateUUID();
+                    const requestData = {
+                        taskType: 'imageInference',
+                        taskUUID: taskUUID,
+                        positivePrompt: prompt,
+                        negativePrompt: negativePrompt || undefined,
+                        model: model,
+                        seedImage: seedDataURI,
+                        strength: strength,
+                        steps: steps,
+                        CFGScale: cfgScale,
+                        width: inpaintSize,
+                        height: inpaintSize,
+                        numberResults: 1,
+                        outputType: 'URL',
+                        includeCost: true
+                    };
+
+                    // マスクがある場合のみ追加
+                    if (maskDataURI) {
+                        requestData.maskImage = maskDataURI;
+                    }
+
+                    // IPAdapterを使用する場合
+                    if (useIPAdapter) {
+                        // 参照画像が設定されていればそれを使用、なければ切り出した顔を使用
+                        const guideImage = ipAdapterGuideImage || seedDataURI;
+                        requestData.ipAdapters = [
+                            {
+                                model: ipAdapterModel,
+                                guideImage: guideImage,
+                                weight: ipAdapterWeight
+                            }
+                        ];
+                    }
+
+                    const requestBody = [requestData];
+
+                    // Data URIは長いのでログ用に短縮
+                    const logBody = JSON.parse(JSON.stringify(requestBody));
+                    logBody[0].seedImage = logBody[0].seedImage.substring(0, 50) + '... (Data URI truncated)';
+                    if (logBody[0].maskImage) {
+                        logBody[0].maskImage = logBody[0].maskImage.substring(0, 50) + '... (Data URI truncated)';
+                    }
+                    if (logBody[0].ipAdapters && logBody[0].ipAdapters[0]) {
+                        logBody[0].ipAdapters[0].guideImage = logBody[0].ipAdapters[0].guideImage.substring(0, 50) + '... (Data URI truncated)';
+                    }
+                    const borderInfo = useBorderMask ? `, 周囲保持=${borderWidth}px, フェザー=${featherWidth}px` : '';
+                    const ipAdapterInfo = useIPAdapter ? `, IPAdapter=${ipAdapterWeight}` : '';
+                    log(`顔${i + 1}: モード=${mode}${borderInfo}${ipAdapterInfo}, Inpainting リクエスト: ` + JSON.stringify(logBody, null, 2));
+                    log(`顔${i + 1}: seedImage長さ: ${seedDataURI.length}${maskDataURI ? ', maskImage長さ: ' + maskDataURI.length : ' (マスクなし)'}`);
+
+                    const response = await fetch(API_BASE, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    const data = await response.json();
+                    log(`顔${i + 1}: Inpainting レスポンス: ` + JSON.stringify(data, null, 2));
+
+                    if (!response.ok) {
+                        throw new Error(data.error || data.message || `HTTP ${response.status}`);
+                    }
+
+                    if (data.errors && data.errors.length > 0) {
+                        throw new Error(data.errors.map(e => e.message || e.error).join(', '));
+                    }
+
+                    const result = Array.isArray(data.data) ? data.data[0] : data.data;
+
+                    if (result.cost) {
+                        totalCost += result.cost;
+                    }
+
+                    if (result.imageURL) {
+                        log(`顔${i + 1}: Inpainting完了、合成中...`, 'success');
+
+                        // 途中画像を表示（Inpainting結果）
+                        document.getElementById('inpaint-progress').innerHTML += `
+                            <div class="image-card">
+                                <img src="${result.imageURL}" class="result-image" onclick="openModal('${result.imageURL}')" style="max-height: 150px;">
+                                <div class="label" style="color: #2ecc71; font-size: 0.75rem; text-align: center;">顔${i + 1}: ADetailer結果</div>
+                            </div>
+                        `;
+
+                        // 結果画像を読み込み
+                        const { canvas: inpaintedCanvas } = await loadImageToCanvas(result.imageURL);
+
+                        // 元画像に合成
+                        currentCanvas = compositeResult(currentCanvas, inpaintedCanvas, cropArea);
+                    }
+                }
+
+                // 最終結果をData URIとして出力
+                const finalDataURI = canvasToDataURI(currentCanvas, 'image/png');
+
+                // 途中経過のタイトルを更新し、最終結果を追加
+                document.querySelector('#inpaint-result .section-title').textContent = '途中経過';
+                document.getElementById('inpaint-result').innerHTML +=
+                    `<div class="section-title" style="font-size: 1rem; margin-top: 1rem;">最終結果</div>
+                    <div class="image-card">
+                        <img src="${finalDataURI}" class="result-image" onclick="openModal('${finalDataURI}')">
+                        <div class="image-url-container">
+                            <span class="image-url" title="Data URI">ローカル生成画像 (Data URI)</span>
+                            <button class="copy-btn" onclick="copyToClipboard('${finalDataURI}', this)">コピー</button>
+                        </div>
+                    </div>`;
+
+                // ADetailer結果はローカル生成なのでgeneratedImagesには追加しない
+                // （必要なら再実行すればよい）
+                updateMaskingSourceImages();
+
+                document.getElementById('inpaint-status').textContent = '完了';
+                log(`ADetailer方式Inpainting完了！ ${lastDetections.length}件の顔を処理`, 'success');
+
+                if (totalCost > 0) {
+                    const jpyCost = (totalCost * USD_TO_JPY).toFixed(2);
+                    document.getElementById('inpaint-cost-info').textContent = `コスト: $${totalCost.toFixed(4)}（${jpyCost}円）`;
+                }
+
+            } catch (error) {
+                log(`Inpainting エラー: ${error.message}`, 'error');
+                document.getElementById('inpaint-status').textContent = 'エラー';
+            } finally {
+                document.getElementById('inpaint-btn').disabled = false;
+                fetchBalance();
+            }
+        }
+    </script>
+</body>
+</html>
