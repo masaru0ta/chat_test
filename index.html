@@ -898,7 +898,7 @@
             color: #2d5a7b;
         }
 
-        .image-prompt-btn:first-child {
+        .image-prompt-btn:not(:last-child) {
             border-right: 1px solid #222;
         }
 
@@ -910,6 +910,31 @@
         .image-prompt-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        /* 画像拡大モーダル */
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            cursor: pointer;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-modal.show {
+            display: flex;
+        }
+
+        .image-modal img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
         }
 
         /* モバイル対応 */
@@ -1171,6 +1196,7 @@
                         <option value="google/gemini-2.5-flash-image" selected>Gemini 2.5 Flash Image ($0.30/$2.50)</option>
                         <option value="runware:z-image@turbo">Runware / Z-Image Turbo</option>
                         <option value="civitai:481162@558910">Runware / Aoi-Realistic-Pony</option>
+                        <option value="civitai:457669@691683">Runware / PinkiePie Pony Mix</option>
                     </select>
                 </div>
                 <div class="form-group" id="runware-api-key-group" style="display: none;">
@@ -1310,6 +1336,11 @@
         <button id="generate-image-btn" title="現在の状況から画像を生成">🎨 画像生成</button>
     </div>
 
+    <!-- 画像拡大モーダル -->
+    <div id="image-modal" class="image-modal" onclick="closeImageModal()">
+        <img id="image-modal-img" src="" alt="">
+    </div>
+
     <script>
         let apiKey = '';
         let runwareApiKey = '';
@@ -1360,6 +1391,7 @@
         let currentProjectId = null;
         let messages = [];
         let chatHistory = [];
+        let currentSessionImage = { url: null, prompt: null };
 
         // グローバル統計
         let totalCost = 0;
@@ -1424,7 +1456,8 @@
                 messages: messages,
                 chatHistory: chatHistory,
                 projectId: currentProjectId,
-                createdAt: currentSessionId
+                createdAt: currentSessionId,
+                lastImage: currentSessionImage.url ? { ...currentSessionImage } : null
             };
 
             if (sessionIndex >= 0) {
@@ -1447,6 +1480,15 @@
                 chatHistory.forEach(item => {
                     addMessageToDOM(item.role, item.content, item.reasoning);
                 });
+
+                // 画像を復元
+                clearImageSidebar();
+                if (session.lastImage && session.lastImage.url) {
+                    currentSessionImage = { ...session.lastImage };
+                    addImageToSidebar(session.lastImage.url, session.lastImage.prompt || '', true);
+                } else {
+                    currentSessionImage = { url: null, prompt: null };
+                }
 
                 updateCurrentProjectDisplay();
                 saveGlobalSettings();
@@ -1472,6 +1514,8 @@
             messages = [];
             chatHistory = [];
             chatContainer.innerHTML = '';
+            currentSessionImage = { url: null, prompt: null };
+            clearImageSidebar();
 
             // プロジェクトがある場合はシステムプロンプトを設定
             if (projectId) {
@@ -2044,7 +2088,13 @@
         }
 
         // 画像を右側サイドバーに追加
-        function addImageToSidebar(imageUrl, prompt = '') {
+        function addImageToSidebar(imageUrl, prompt = '', skipSave = false) {
+            // 最後の画像情報を保持
+            if (!skipSave) {
+                currentSessionImage = { url: imageUrl, prompt: prompt };
+                saveCurrentSession();
+            }
+
             // 空メッセージを削除
             const emptyMsg = imageContainer.querySelector('.empty-message');
             if (emptyMsg) {
@@ -2058,7 +2108,7 @@
             img.src = imageUrl;
             img.className = 'generated-image';
             img.onclick = () => {
-                window.open(imageUrl, '_blank');
+                openImageModal(imageUrl);
             };
 
             wrapper.appendChild(img);
@@ -2074,6 +2124,10 @@
                 const buttonsEl = document.createElement('div');
                 buttonsEl.className = 'image-prompt-buttons';
 
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'image-prompt-btn';
+                copyBtn.textContent = '📋 コピー';
+
                 const editBtn = document.createElement('button');
                 editBtn.className = 'image-prompt-btn';
                 editBtn.textContent = '✎ 編集';
@@ -2081,6 +2135,18 @@
                 const generateBtn = document.createElement('button');
                 generateBtn.className = 'image-prompt-btn';
                 generateBtn.textContent = '🎨 生成';
+
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(promptEl.textContent).then(() => {
+                        const originalText = copyBtn.textContent;
+                        copyBtn.textContent = '✓ コピー済';
+                        copyBtn.classList.add('active');
+                        setTimeout(() => {
+                            copyBtn.textContent = originalText;
+                            copyBtn.classList.remove('active');
+                        }, 1500);
+                    });
+                };
 
                 editBtn.onclick = () => {
                     openEditPromptModal(promptEl);
@@ -2090,6 +2156,7 @@
                     await generateImageWithPrompt(promptEl.textContent);
                 };
 
+                buttonsEl.appendChild(copyBtn);
                 buttonsEl.appendChild(editBtn);
                 buttonsEl.appendChild(generateBtn);
 
@@ -2105,6 +2172,19 @@
         // 画像サイドバーをクリア
         function clearImageSidebar() {
             imageContainer.innerHTML = '<div class="empty-message">画像がありません</div>';
+        }
+
+        // 画像拡大モーダル
+        function openImageModal(imageUrl) {
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('image-modal-img');
+            modalImg.src = imageUrl;
+            modal.classList.add('show');
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('image-modal');
+            modal.classList.remove('show');
         }
 
         // プロンプト編集モーダル
@@ -2175,6 +2255,13 @@
                     steps: 25,
                     CFGScale: 7,
                     scheduler: 'Euler',
+                    positivePrefix: 'score_9, score_8_up, score_7_up, ',
+                    negativePrompt: 'score_6, score_5, score_4, source_furry, source_pony, source_cartoon, 3d, blur,'
+                },
+                'civitai:457669@691683': {
+                    steps: 20,
+                    CFGScale: 7.5,
+                    scheduler: 'Default',
                     positivePrefix: 'score_9, score_8_up, score_7_up, ',
                     negativePrompt: 'score_6, score_5, score_4, source_furry, source_pony, source_cartoon, 3d, blur,'
                 }
@@ -2725,6 +2812,11 @@
                 chatHistory.forEach(item => {
                     addMessageToDOM(item.role, item.content, item.reasoning);
                 });
+                // 画像を復元
+                if (session.lastImage && session.lastImage.url) {
+                    currentSessionImage = { ...session.lastImage };
+                    addImageToSidebar(session.lastImage.url, session.lastImage.prompt || '', true);
+                }
             }
         }
 
