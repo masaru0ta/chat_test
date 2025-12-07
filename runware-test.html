@@ -309,6 +309,20 @@
         .dropzone.has-image span {
             display: none;
         }
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            .main-layout {
+                flex-direction: column;
+            }
+            .row {
+                flex-wrap: wrap;
+            }
+            .row .form-group {
+                min-width: 45%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -331,13 +345,13 @@
                         <option value="runware:z-image@turbo">Z-Image Turbo</option>
                         <option value="civitai:481162@558910">Aoi-Realistic-Pony</option>
                         <option value="civitai:958009@1484125">RED-Zimage 1.5</option>
-                        <option value="civitai:457669@691683">PinkiePie Pony Mix</option>
+                        <option value="civitai:457669@691683" selected>PinkiePie Pony Mix</option>
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label>ポジティブプロンプト（品質）</label>
-                    <textarea id="prompt-quality" style="min-height: 60px;"></textarea>
+                    <textarea id="prompt-quality" style="min-height: 60px;">score_9, score_8_up, score_7_up</textarea>
                 </div>
 
                 <div class="form-group">
@@ -352,7 +366,7 @@
 
                 <div class="form-group">
                     <label>ネガティブプロンプト（品質）</label>
-                    <textarea id="negative-prompt-quality" style="min-height: 60px;"></textarea>
+                    <textarea id="negative-prompt-quality" style="min-height: 60px;">score_6, score_5, score_4, source_furry, source_pony, source_cartoon, 3d, blur</textarea>
                 </div>
 
                 <div class="form-group">
@@ -390,11 +404,11 @@
                 <div class="row">
                     <div class="form-group">
                         <label>ステップ数</label>
-                        <input type="number" id="steps" value="9" min="1" max="50">
+                        <input type="number" id="steps" value="20" min="1" max="50">
                     </div>
                     <div class="form-group">
                         <label>CFG Scale</label>
-                        <input type="number" id="cfg-scale" value="0" min="0" max="20" step="0.5">
+                        <input type="number" id="cfg-scale" value="7.5" min="0" max="20" step="0.5">
                     </div>
                     <div class="form-group">
                         <label>スケジューラ</label>
@@ -493,7 +507,7 @@
                     <select id="inpaint-model" onchange="applyADetailerModelDefaults()">
                         <option value="civitai:481162@558910">Aoi-Realistic-Pony</option>
                         <option value="civitai:958009@1484125">RED-Zimage 1.5</option>
-                        <option value="civitai:457669@691683">PinkiePie Pony Mix</option>
+                        <option value="civitai:457669@691683" selected>PinkiePie Pony Mix</option>
                     </select>
                 </div>
 
@@ -530,11 +544,11 @@
                     </div>
                     <div class="form-group">
                         <label>ステップ数</label>
-                        <input type="number" id="inpaint-steps" value="25" min="1" max="50">
+                        <input type="number" id="inpaint-steps" value="20" min="1" max="50">
                     </div>
                     <div class="form-group">
                         <label>CFG Scale</label>
-                        <input type="number" id="inpaint-cfg" value="7" min="0" max="20" step="0.5">
+                        <input type="number" id="inpaint-cfg" value="7.5" min="0" max="20" step="0.5">
                     </div>
                     <div class="form-group">
                         <label>モード</label>
