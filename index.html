@@ -1633,8 +1633,8 @@
                 // 新形式（images配列）と旧形式（lastImage）の両方に対応
                 if (session.images && session.images.length > 0) {
                     currentSessionImages = [...session.images];
-                    // 古い順に追加（最新が先頭に来るように）
-                    [...session.images].reverse().forEach(img => {
+                    // 古い順から表示（上が古い、下が新しい）
+                    session.images.forEach(img => {
                         addImageToSidebar(img.url, img.prompt || '', true);
                     });
                 } else if (session.lastImage && session.lastImage.url) {
@@ -2257,12 +2257,12 @@
 
         // 画像を右側サイドバーに追加
         function addImageToSidebar(imageUrl, prompt = '', skipSave = false) {
-            // 画像情報を配列に追加
+            // 画像情報を配列に追加（末尾に追加、古い順に並ぶ）
             if (!skipSave) {
-                currentSessionImages.unshift({ url: imageUrl, prompt: prompt });
+                currentSessionImages.push({ url: imageUrl, prompt: prompt });
                 // 最大枚数を超えたら古いものを削除
                 if (currentSessionImages.length > MAX_SESSION_IMAGES) {
-                    currentSessionImages = currentSessionImages.slice(0, MAX_SESSION_IMAGES);
+                    currentSessionImages = currentSessionImages.slice(-MAX_SESSION_IMAGES);
                 }
                 saveCurrentSession();
             }
@@ -2285,8 +2285,16 @@
 
             wrapper.appendChild(img);
 
-            // 最新の画像を上に追加
-            imageContainer.insertBefore(wrapper, imageContainer.firstChild);
+            // 最新の画像を下に追加
+            imageContainer.appendChild(wrapper);
+            // 画像読み込み完了後に最下部にスクロール
+            img.onload = () => {
+                imageContainer.scrollTop = imageContainer.scrollHeight;
+            };
+            // 既にキャッシュされている場合も対応
+            if (img.complete) {
+                imageContainer.scrollTop = imageContainer.scrollHeight;
+            }
         }
 
         // 画像サイドバーをクリア
@@ -2409,8 +2417,36 @@
                 imageContainer.innerHTML = '<div class="empty-message">画像がありません</div>';
             }
 
-            // モーダルを閉じる
-            closeImageModal();
+            // 次の画像があれば表示、なければモーダルを閉じる
+            if (currentSessionImages.length === 0) {
+                closeImageModal();
+            } else {
+                // 同じインデックスに画像があれば表示（次の画像）、なければ前の画像
+                let newIndex = index;
+                if (newIndex >= currentSessionImages.length) {
+                    newIndex = currentSessionImages.length - 1;
+                }
+                const newImage = currentSessionImages[newIndex];
+                if (newImage) {
+                    const modalImg = document.getElementById('image-modal-img');
+                    const modalPrompt = document.getElementById('image-modal-prompt');
+                    const controls = document.getElementById('image-modal-controls');
+
+                    modalImg.src = newImage.url;
+                    currentModalImageUrl = newImage.url;
+                    currentModalPrompt = newImage.prompt || '';
+                    currentModalImageIndex = newIndex;
+
+                    if (newImage.prompt) {
+                        modalPrompt.textContent = newImage.prompt;
+                        controls.style.display = 'block';
+                    } else {
+                        controls.style.display = 'none';
+                    }
+                } else {
+                    closeImageModal();
+                }
+            }
         });
 
         // 画像クリックで前後の画像に移動
