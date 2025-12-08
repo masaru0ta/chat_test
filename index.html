@@ -95,6 +95,11 @@
             max-width: 60%;
         }
 
+        /* デスクトップではサイドバーの画像トグルを非表示 */
+        #sidebar-image-toggle {
+            display: none;
+        }
+
         #sidebar-menu {
             flex: 1;
             display: flex;
@@ -807,7 +812,8 @@
             justify-content: flex-end;
         }
 
-        #right-sidebar-toggle {
+        #right-sidebar-toggle,
+        #right-sidebar-menu-toggle {
             background: transparent;
             border: none;
             color: #aaa;
@@ -818,8 +824,15 @@
             flex-shrink: 0;
         }
 
-        #right-sidebar-toggle:hover {
+        #right-sidebar-toggle:hover,
+        #right-sidebar-menu-toggle:hover {
             color: #2d5a7b;
+        }
+
+        /* デスクトップではメニューボタンとプロジェクト名を非表示 */
+        #right-sidebar-menu-toggle,
+        #right-sidebar-project {
+            display: none;
         }
 
         #right-sidebar-header h2 {
@@ -984,6 +997,23 @@
                 display: none;
             }
 
+            /* モバイルでサイドバーの画像トグルを表示 */
+            #sidebar.collapsed #sidebar-image-toggle {
+                display: block;
+                position: absolute;
+                right: 0.75rem;
+                background: transparent;
+                border: none;
+                color: #aaa;
+                font-size: 1.2rem;
+                cursor: pointer;
+                padding: 0.25rem;
+            }
+
+            #sidebar.collapsed #sidebar-image-toggle:hover {
+                color: #2d5a7b;
+            }
+
             header {
                 display: none;
             }
@@ -991,7 +1021,6 @@
             #main {
                 flex: 1;
                 min-height: 0;
-                padding-top: 50px;
             }
 
             .modal {
@@ -1027,17 +1056,37 @@
             }
 
             #right-sidebar.collapsed {
-                width: 100%;
-                height: 50px;
-            }
-
-            #right-sidebar.collapsed #image-container,
-            #right-sidebar.collapsed #generate-image-btn {
-                display: none;
+                display: none !important;
             }
 
             #right-sidebar-header {
-                justify-content: center;
+                justify-content: space-between;
+            }
+
+            /* 画像パネルが開いているときはサイドバーを非表示 */
+            body.image-panel-open #sidebar.collapsed {
+                display: none !important;
+            }
+
+            /* 画像パネルが開いているときはメニューボタンとプロジェクト名を表示 */
+            body.image-panel-open #right-sidebar-menu-toggle {
+                display: block;
+            }
+
+            body.image-panel-open #right-sidebar-project {
+                display: block;
+                flex: 1;
+                text-align: center;
+                font-size: 0.9rem;
+                color: #2d5a7b;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            /* 画像パネルが開いているときはmainのpadding-topを0に */
+            body.image-panel-open #main {
+                padding-top: 0 !important;
             }
 
             #right-sidebar #image-container {
@@ -1081,6 +1130,7 @@
             <button id="sidebar-toggle">≡</button>
             <h2>Grok Chat</h2>
             <span id="mobile-project"></span>
+            <button id="sidebar-image-toggle">🖼️</button>
         </div>
         <div id="sidebar-menu">
             <button class="menu-item" id="menu-new-chat">
@@ -1328,6 +1378,8 @@
     <!-- 右側サイドバー（画像表示用） -->
     <div id="right-sidebar" class="collapsed">
         <div id="right-sidebar-header">
+            <button id="right-sidebar-menu-toggle">☰</button>
+            <span id="right-sidebar-project"></span>
             <button id="right-sidebar-toggle">🖼️</button>
         </div>
         <div id="image-container">
@@ -1377,7 +1429,10 @@
         const generateImageBtn = document.getElementById('generate-image-btn');
         const rightSidebar = document.getElementById('right-sidebar');
         const rightSidebarToggle = document.getElementById('right-sidebar-toggle');
+        const rightSidebarMenuToggle = document.getElementById('right-sidebar-menu-toggle');
+        const rightSidebarProject = document.getElementById('right-sidebar-project');
         const headerImageToggle = document.getElementById('header-image-toggle');
+        const sidebarImageToggle = document.getElementById('sidebar-image-toggle');
         const imageContainer = document.getElementById('image-container');
         const historyList = document.getElementById('history-list');
         const historyItems = document.getElementById('history-items');
@@ -1760,11 +1815,13 @@
                 if (project) {
                     currentProjectEl.textContent = `📁 ${project.name}`;
                     mobileProjectEl.textContent = `📁 ${project.name}`;
+                    rightSidebarProject.textContent = `📁 ${project.name}`;
                     return;
                 }
             }
             currentProjectEl.textContent = '';
             mobileProjectEl.textContent = '';
+            rightSidebarProject.textContent = '';
         }
 
         // ========== グローバル設定 ==========
@@ -2320,6 +2377,7 @@
 
             if (results.some(r => r.imageURL)) {
                 rightSidebar.classList.remove('collapsed');
+                if (isMobile()) document.body.classList.add('image-panel-open');
                 fetchRunwareBalance();
             } else {
                 throw new Error('画像を生成できませんでした');
@@ -2391,6 +2449,7 @@
                             }
                         }
                         rightSidebar.classList.remove('collapsed');
+                        if (isMobile()) document.body.classList.add('image-panel-open');
                     } else {
                         alert('画像を生成できませんでした');
                     }
@@ -2519,6 +2578,7 @@
                             }
                         }
                         rightSidebar.classList.remove('collapsed');
+                        if (isMobile()) document.body.classList.add('image-panel-open');
                     } else {
                         alert('画像を生成できませんでした');
                     }
@@ -2675,10 +2735,15 @@
             sidebar.classList.remove('collapsed');
         });
 
+        rightSidebarMenuToggle.addEventListener('click', () => {
+            sidebar.classList.remove('collapsed');
+        });
+
         rightSidebarToggle.addEventListener('click', () => {
             rightSidebar.classList.toggle('collapsed');
             if (isMobile()) {
                 rightSidebar.classList.toggle('show-mobile');
+                document.body.classList.toggle('image-panel-open', !rightSidebar.classList.contains('collapsed'));
             }
         });
 
@@ -2686,6 +2751,15 @@
             rightSidebar.classList.remove('collapsed');
             if (isMobile()) {
                 rightSidebar.classList.add('show-mobile');
+                document.body.classList.add('image-panel-open');
+            }
+        });
+
+        sidebarImageToggle.addEventListener('click', () => {
+            rightSidebar.classList.remove('collapsed');
+            if (isMobile()) {
+                rightSidebar.classList.add('show-mobile');
+                document.body.classList.add('image-panel-open');
             }
         });
 

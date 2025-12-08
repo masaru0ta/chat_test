@@ -612,6 +612,23 @@
                     </div>
                 </div>
 
+                <div class="row">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="inpaint-use-lora" style="width: auto;">
+                            LoRA
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>LoRAモデル</label>
+                        <input type="text" id="inpaint-lora-model" value="msrot:123@1234" placeholder="例: civitai:123456@789012">
+                    </div>
+                    <div class="form-group">
+                        <label>Weight</label>
+                        <input type="number" id="inpaint-lora-weight" value="0.9" min="0" max="2" step="0.1">
+                    </div>
+                </div>
+
                 <button id="inpaint-btn" onclick="startInpainting()" disabled>ADetailer 実行</button>
 
                 <div class="status" id="inpaint-status-container" style="display: none;">
@@ -1497,6 +1514,9 @@
             const useIPAdapter = document.getElementById('inpaint-use-ipadapter').checked;
             const ipAdapterModel = document.getElementById('inpaint-ipadapter-model').value;
             const ipAdapterWeight = parseFloat(document.getElementById('inpaint-ipadapter-weight').value);
+            const useLora = document.getElementById('inpaint-use-lora').checked;
+            const loraModel = document.getElementById('inpaint-lora-model').value.trim();
+            const loraWeight = parseFloat(document.getElementById('inpaint-lora-weight').value);
 
             document.getElementById('inpaint-btn').disabled = true;
             document.getElementById('inpaint-status-container').style.display = 'block';
@@ -1612,6 +1632,16 @@
                         ];
                     }
 
+                    // LoRAを使用する場合
+                    if (useLora && loraModel) {
+                        requestData.lora = [
+                            {
+                                model: loraModel,
+                                weight: loraWeight
+                            }
+                        ];
+                    }
+
                     const requestBody = [requestData];
 
                     // Data URIは長いのでログ用に短縮
@@ -1625,7 +1655,8 @@
                     }
                     const borderInfo = useBorderMask ? `, 周囲保持=${borderWidth}px, フェザー=${featherWidth}px` : '';
                     const ipAdapterInfo = useIPAdapter ? `, IPAdapter=${ipAdapterWeight}` : '';
-                    log(`顔${i + 1}: モード=${mode}${borderInfo}${ipAdapterInfo}, Inpainting リクエスト: ` + JSON.stringify(logBody, null, 2));
+                    const loraInfo = (useLora && loraModel) ? `, LoRA=${loraModel}@${loraWeight}` : '';
+                    log(`顔${i + 1}: モード=${mode}${borderInfo}${ipAdapterInfo}${loraInfo}, Inpainting リクエスト: ` + JSON.stringify(logBody, null, 2));
                     log(`顔${i + 1}: seedImage長さ: ${seedDataURI.length}${maskDataURI ? ', maskImage長さ: ' + maskDataURI.length : ' (マスクなし)'}`);
 
                     const response = await fetch(API_BASE, {
