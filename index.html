@@ -1604,7 +1604,8 @@
                 chatHistory: chatHistory,
                 projectId: currentProjectId,
                 createdAt: currentSessionId,
-                images: currentSessionImages.length > 0 ? [...currentSessionImages] : []
+                images: currentSessionImages.length > 0 ? [...currentSessionImages] : [],
+                imageFormatV2: true  // 画像配列が古い順（先頭が最古）であることを示すフラグ
             };
 
             if (sessionIndex >= 0) {
@@ -1632,11 +1633,18 @@
                 clearImageSidebar();
                 // 新形式（images配列）と旧形式（lastImage）の両方に対応
                 if (session.images && session.images.length > 0) {
-                    currentSessionImages = [...session.images];
+                    // 旧形式（新しい画像が先頭）を新形式（古い画像が先頭）に変換
+                    if (!session.imageFormatV2) {
+                        currentSessionImages = [...session.images].reverse();
+                    } else {
+                        currentSessionImages = [...session.images];
+                    }
                     // 古い順から表示（上が古い、下が新しい）
-                    session.images.forEach(img => {
+                    currentSessionImages.forEach(img => {
                         addImageToSidebar(img.url, img.prompt || '', true);
                     });
+                    // 新形式で保存
+                    saveCurrentSession();
                 } else if (session.lastImage && session.lastImage.url) {
                     // 旧形式のデータを変換
                     currentSessionImages = [{ ...session.lastImage }];
@@ -3078,6 +3086,11 @@
 
         rightSidebarToggle.addEventListener('click', () => {
             rightSidebar.classList.toggle('collapsed');
+            // 閉じるときはインラインスタイルをリセット
+            if (rightSidebar.classList.contains('collapsed')) {
+                rightSidebar.style.width = '';
+                rightSidebar.style.height = '';
+            }
             if (isMobile()) {
                 rightSidebar.classList.toggle('show-mobile');
                 document.body.classList.toggle('image-panel-open', !rightSidebar.classList.contains('collapsed'));
