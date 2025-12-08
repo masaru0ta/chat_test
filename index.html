@@ -1380,7 +1380,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <div class="modal-footer-left"></div>
+                <div class="modal-footer-left">
+                    <a href="runware-test.html" target="_blank" style="color: #2d5a7b; font-size: 0.85rem;">🎨 Runware テストツール</a>
+                </div>
                 <div class="modal-footer-right">
                     <button class="btn btn-primary" id="settings-close">閉じる</button>
                 </div>
@@ -2393,7 +2395,10 @@
             });
         });
 
-        document.getElementById('image-modal-edit').addEventListener('click', () => {
+        document.getElementById('image-modal-edit').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const modal = document.getElementById('image-modal');
+            modal.classList.remove('show');
             const promptEl = document.getElementById('image-modal-prompt');
             openEditPromptModal(promptEl);
         });

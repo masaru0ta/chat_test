@@ -328,7 +328,11 @@
 <body>
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h1 style="margin: 0;">Runware API Test</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <h1 style="margin: 0;">Runware API Test</h1>
+                <a href="https://runware.ai/" target="_blank" style="color: #4a9eff; font-size: 0.9rem;">runware.ai →</a>
+                <a href="https://danbooru.donmai.us/" target="_blank" style="color: #4a9eff; font-size: 0.9rem;">danbooru →</a>
+            </div>
             <button onclick="clearAllHistory()" style="background: #e74c3c;">履歴を全て削除</button>
         </div>
 
@@ -346,12 +350,23 @@
                         <option value="civitai:481162@558910">Aoi-Realistic-Pony</option>
                         <option value="civitai:958009@1484125">RED-Zimage 1.5</option>
                         <option value="civitai:457669@691683" selected>PinkiePie Pony Mix</option>
+                        <option value="x:42@1240288">Hassaku XL (Illustrious)</option>
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label>ポジティブプロンプト（品質）</label>
                     <textarea id="prompt-quality" style="min-height: 60px;">score_9, score_8_up, score_7_up</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                        ポジティブプロンプト（キャラタグ）
+                        <button type="button" onclick="openCharaTagEditor()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">編集</button>
+                    </label>
+                    <select id="prompt-chara-tag" style="width: 100%;">
+                        <option value="">（なし）</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -508,6 +523,7 @@
                         <option value="civitai:481162@558910">Aoi-Realistic-Pony</option>
                         <option value="civitai:958009@1484125">RED-Zimage 1.5</option>
                         <option value="civitai:457669@691683" selected>PinkiePie Pony Mix</option>
+                        <option value="x:42@1240288">Hassaku XL (Illustrious)</option>
                     </select>
                 </div>
 
@@ -811,6 +827,11 @@
             negative: 'score_6, score_5, score_4, source_furry, source_pony, source_cartoon, 3d, blur'
         };
 
+        const ILLUSTRIOUS_QUALITY = {
+            positive: 'masterpiece, ultra-HD, cinematic lighting',
+            negative: 'worst quality, low quality, displeasing, watermark, bad anatomy, text, artist name, signature, hearts, deformed hands, missing finger'
+        };
+
         const MODEL_DEFAULTS = {
             'runware:z-image@turbo': {
                 steps: 9,
@@ -839,6 +860,13 @@
                 scheduler: 'Default',
                 qualityPositive: PONY_QUALITY.positive,
                 qualityNegative: PONY_QUALITY.negative
+            },
+            'x:42@1240288': {
+                steps: 30,
+                cfgScale: 7,
+                scheduler: 'Default',
+                qualityPositive: ILLUSTRIOUS_QUALITY.positive,
+                qualityNegative: ILLUSTRIOUS_QUALITY.negative
             }
         };
 
@@ -854,10 +882,16 @@
             }
         }
 
-        // ADetailer用の品質プロンプト
+        // ADetailer用の品質プロンプト（Pony系）
         const ADETAILER_QUALITY = {
             positive: 'score_9, score_8_up, score_7_up, detailed face, sharp focus, detailed eyes, clear skin',
             negative: 'score_6, score_5, score_4, blurry, low quality, distorted face, ugly'
+        };
+
+        // ADetailer用の品質プロンプト（Illustrious系）
+        const ADETAILER_ILLUSTRIOUS_QUALITY = {
+            positive: 'masterpiece, ultra-HD, cinematic lighting, detailed face, sharp focus, detailed eyes, clear skin',
+            negative: 'worst quality, low quality, displeasing, watermark, bad anatomy, blurry, distorted face, ugly'
         };
 
         function copyPromptFromGeneration(type) {
@@ -993,9 +1027,16 @@
             if (defaults) {
                 document.getElementById('inpaint-steps').value = defaults.steps;
                 document.getElementById('inpaint-cfg').value = defaults.cfgScale;
-                // ADetailer用品質プロンプト（Pony系は共通）
-                document.getElementById('inpaint-prompt-quality').value = ADETAILER_QUALITY.positive;
-                document.getElementById('inpaint-negative-prompt-quality').value = ADETAILER_QUALITY.negative;
+                // モデルに応じてADetailer用品質プロンプトを切り替え
+                if (model === 'x:42@1240288') {
+                    // Illustrious系
+                    document.getElementById('inpaint-prompt-quality').value = ADETAILER_ILLUSTRIOUS_QUALITY.positive;
+                    document.getElementById('inpaint-negative-prompt-quality').value = ADETAILER_ILLUSTRIOUS_QUALITY.negative;
+                } else {
+                    // Pony系
+                    document.getElementById('inpaint-prompt-quality').value = ADETAILER_QUALITY.positive;
+                    document.getElementById('inpaint-negative-prompt-quality').value = ADETAILER_QUALITY.negative;
+                }
             }
         }
 
@@ -1233,9 +1274,10 @@
             const apiKey = document.getElementById('api-key').value;
             const model = document.getElementById('model').value;
             const promptQuality = document.getElementById('prompt-quality').value.trim();
+            const promptCharaTag = document.getElementById('prompt-chara-tag').value.trim();
             const promptCustom1 = document.getElementById('prompt').value.trim();
             const promptCustom2 = document.getElementById('prompt2').value.trim();
-            const prompt = [promptQuality, promptCustom1, promptCustom2].filter(p => p).join(', ');
+            const prompt = [promptQuality, promptCharaTag, promptCustom1, promptCustom2].filter(p => p).join(', ');
             const negativePromptQuality = document.getElementById('negative-prompt-quality').value.trim();
             const negativePromptCustom = document.getElementById('negative-prompt').value.trim();
             const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p).join(', ');
@@ -1739,6 +1781,64 @@
                 fetchBalance();
             }
         }
+
+        // ========== キャラタグ機能 ==========
+        // カンマ区切りのタグリストを保存（編集用）
+        let charaTagSource = localStorage.getItem('runware_chara_tags_source') || '';
+
+        function initCharaTagSelect() {
+            const select = document.getElementById('prompt-chara-tag');
+            select.innerHTML = '<option value="">（なし）</option>';
+            // カンマで分解して個別のタグをプルダウンに追加
+            const tags = charaTagSource.split(',').map(t => t.trim()).filter(t => t);
+            // 重複を除去
+            const uniqueTags = [...new Set(tags)];
+            uniqueTags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag;
+                option.textContent = tag;
+                select.appendChild(option);
+            });
+        }
+
+        function openCharaTagEditor() {
+            const modal = document.getElementById('chara-tag-modal');
+            const textarea = document.getElementById('chara-tag-textarea');
+            textarea.value = charaTagSource;
+            modal.style.display = 'flex';
+        }
+
+        function closeCharaTagEditor() {
+            document.getElementById('chara-tag-modal').style.display = 'none';
+        }
+
+        function saveCharaTags() {
+            const textarea = document.getElementById('chara-tag-textarea');
+            charaTagSource = textarea.value;
+            localStorage.setItem('runware_chara_tags_source', charaTagSource);
+            initCharaTagSelect();
+            closeCharaTagEditor();
+        }
+
+        // 初期化時にセレクトボックスを更新
+        initCharaTagSelect();
     </script>
+
+    <!-- キャラタグ編集モーダル -->
+    <div id="chara-tag-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: #1a1a1a; border-radius: 0.5rem; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
+            <div style="padding: 1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #4a9eff;">キャラタグ編集</h3>
+                <div>
+                    <button onclick="saveCharaTags()" style="background: #4a9eff; padding: 0.5rem 1rem; margin-right: 0.5rem;">保存</button>
+                    <button onclick="closeCharaTagEditor()" style="background: #333; padding: 0.5rem 1rem;">キャンセル</button>
+                </div>
+            </div>
+            <div style="padding: 1rem; flex: 1; display: flex; flex-direction: column;">
+                <div style="color: #888; font-size: 0.85rem; margin-bottom: 0.5rem;">カンマ区切りでタグを入力（例: 1girl, blue hair, red eyes, 1boy, black hair）</div>
+                <textarea id="chara-tag-textarea" style="flex: 1; min-height: 300px; font-family: monospace;" placeholder="1girl, blue hair, red eyes, 1boy, black hair, green eyes"></textarea>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
