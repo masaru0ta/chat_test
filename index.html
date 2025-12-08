@@ -638,20 +638,20 @@
         }
 
         #generate-image-btn {
-            padding: 0.75rem 1rem;
-            background: #2d5a7b;
-            color: white;
+            padding: 0.5rem;
+            background: transparent;
             border: none;
-            border-radius: 0.5rem;
+            border-radius: 50%;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 1.25rem;
             transition: all 0.2s;
-            margin: 0.5rem;
-            width: calc(100% - 1rem);
+            color: #888;
+            line-height: 1;
         }
 
         #generate-image-btn:hover {
-            background: #3d6a8b;
+            background: #333;
+            color: #2d5a7b;
         }
 
         #generate-image-btn:disabled {
@@ -795,10 +795,6 @@
             overflow: hidden;
         }
 
-        #right-sidebar.collapsed #generate-image-btn {
-            display: none;
-        }
-
         /* サイドバーが開いている時はヘッダーのボタンを非表示 */
         body:has(#right-sidebar:not(.collapsed)) #header-image-toggle {
             display: none;
@@ -874,57 +870,6 @@
             opacity: 0.8;
         }
 
-        .image-prompt-container {
-            background: #111;
-            border-radius: 0 0 0.5rem 0.5rem;
-            overflow: hidden;
-        }
-
-        .image-prompt {
-            font-size: 0.75rem;
-            color: #888;
-            padding: 0.5rem;
-            word-break: break-word;
-            max-height: 4rem;
-            overflow-y: auto;
-        }
-
-
-        .image-prompt-buttons {
-            display: flex;
-            border-top: 1px solid #222;
-        }
-
-        .image-prompt-btn {
-            flex: 1;
-            padding: 0.4rem;
-            background: transparent;
-            border: none;
-            color: #888;
-            font-size: 0.7rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .image-prompt-btn:hover {
-            background: #222;
-            color: #2d5a7b;
-        }
-
-        .image-prompt-btn:not(:last-child) {
-            border-right: 1px solid #222;
-        }
-
-        .image-prompt-btn.active {
-            background: #2d5a7b;
-            color: white;
-        }
-
-        .image-prompt-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
         /* 画像拡大モーダル */
         .image-modal {
             display: none;
@@ -933,21 +878,87 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             z-index: 2000;
             cursor: pointer;
-            justify-content: center;
-            align-items: center;
+            overflow-y: auto;
+            padding: 1rem;
         }
 
         .image-modal.show {
             display: flex;
+            justify-content: center;
+            align-items: flex-start;
         }
 
-        .image-modal img {
+        .image-modal-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             max-width: 95%;
-            max-height: 95%;
+            cursor: default;
+            margin: auto;
+        }
+
+        .image-modal-content img {
+            max-width: 100%;
+            max-height: 70vh;
             object-fit: contain;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+
+        .image-modal-controls {
+            margin-top: 1rem;
+            background: #1a1a1a;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            max-width: 600px;
+            width: 100%;
+            flex-shrink: 0;
+        }
+
+        .image-modal-prompt {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 0.75rem;
+            max-height: 80px;
+            overflow-y: auto;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .image-modal-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .image-modal-btn {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            background: #333;
+            border: none;
+            color: #eee;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .image-modal-btn:hover {
+            background: #2d5a7b;
+        }
+
+        .image-modal-btn.active {
+            background: #2d5a7b;
+        }
+
+        .image-modal-btn.delete {
+            background: #4a2020;
+        }
+
+        .image-modal-btn.delete:hover {
+            background: #c0392b;
         }
 
         /* モバイル対応 */
@@ -1089,37 +1100,43 @@
                 padding-top: 0 !important;
             }
 
+            #right-sidebar {
+                display: flex;
+                flex-direction: column;
+            }
+
             #right-sidebar #image-container {
-                overflow: hidden;
-                padding: 0;
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding: 0.5rem;
                 flex: 1;
                 display: flex;
                 align-items: center;
-                justify-content: center;
+                justify-content: flex-start;
+                min-height: 0;
+                flex-direction: row;
+                gap: 0.5rem;
             }
 
             #right-sidebar .image-wrapper {
-                max-height: 100%;
-                margin: 0;
+                height: 100%;
+                width: auto;
+                margin: 0 !important;
                 display: flex;
-                flex-direction: column;
                 align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
             }
 
             #right-sidebar .generated-image {
-                max-height: calc(100% - 2rem);
-                max-width: 100%;
+                max-height: 100%;
+                max-width: none;
                 width: auto;
-                height: auto;
+                height: 100%;
                 object-fit: contain;
+                border-radius: 0.5rem;
             }
 
-            #right-sidebar .image-prompt {
-                font-size: 0.65rem;
-                padding: 0.25rem;
-                max-height: 2rem;
-                overflow: hidden;
-            }
         }
     </style>
 </head>
@@ -1370,6 +1387,7 @@
         <div id="chat-container"></div>
 
         <div id="input-container">
+            <button id="generate-image-btn" title="現在の状況から画像を生成">🎨</button>
             <input type="text" id="message-input" placeholder="メッセージを入力..." autocomplete="off">
             <button id="send-btn">送信</button>
         </div>
@@ -1385,12 +1403,22 @@
         <div id="image-container">
             <div class="empty-message">画像がありません</div>
         </div>
-        <button id="generate-image-btn" title="現在の状況から画像を生成">🎨 画像生成</button>
     </div>
 
     <!-- 画像拡大モーダル -->
-    <div id="image-modal" class="image-modal" onclick="closeImageModal()">
-        <img id="image-modal-img" src="" alt="">
+    <div id="image-modal" class="image-modal" onclick="closeImageModal(event)">
+        <div class="image-modal-content">
+            <img id="image-modal-img" src="" alt="">
+            <div id="image-modal-controls" class="image-modal-controls">
+                <div id="image-modal-prompt" class="image-modal-prompt"></div>
+                <div class="image-modal-buttons">
+                    <button id="image-modal-copy" class="image-modal-btn">📋 コピー</button>
+                    <button id="image-modal-edit" class="image-modal-btn">✎ 編集</button>
+                    <button id="image-modal-generate" class="image-modal-btn">🎨 再生成</button>
+                    <button id="image-modal-delete" class="image-modal-btn delete">🗑️ 削除</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1446,7 +1474,8 @@
         let currentProjectId = null;
         let messages = [];
         let chatHistory = [];
-        let currentSessionImage = { url: null, prompt: null };
+        let currentSessionImages = [];
+        const MAX_SESSION_IMAGES = 50; // セッションごとの最大画像保持枚数
 
         // グローバル統計
         let totalCost = 0;
@@ -1512,7 +1541,7 @@
                 chatHistory: chatHistory,
                 projectId: currentProjectId,
                 createdAt: currentSessionId,
-                lastImage: currentSessionImage.url ? { ...currentSessionImage } : null
+                images: currentSessionImages.length > 0 ? [...currentSessionImages] : []
             };
 
             if (sessionIndex >= 0) {
@@ -1538,11 +1567,19 @@
 
                 // 画像を復元
                 clearImageSidebar();
-                if (session.lastImage && session.lastImage.url) {
-                    currentSessionImage = { ...session.lastImage };
+                // 新形式（images配列）と旧形式（lastImage）の両方に対応
+                if (session.images && session.images.length > 0) {
+                    currentSessionImages = [...session.images];
+                    // 古い順に追加（最新が先頭に来るように）
+                    [...session.images].reverse().forEach(img => {
+                        addImageToSidebar(img.url, img.prompt || '', true);
+                    });
+                } else if (session.lastImage && session.lastImage.url) {
+                    // 旧形式のデータを変換
+                    currentSessionImages = [{ ...session.lastImage }];
                     addImageToSidebar(session.lastImage.url, session.lastImage.prompt || '', true);
                 } else {
-                    currentSessionImage = { url: null, prompt: null };
+                    currentSessionImages = [];
                 }
 
                 updateCurrentProjectDisplay();
@@ -1569,7 +1606,7 @@
             messages = [];
             chatHistory = [];
             chatContainer.innerHTML = '';
-            currentSessionImage = { url: null, prompt: null };
+            currentSessionImages = [];
             clearImageSidebar();
 
             // プロジェクトがある場合はシステムプロンプトを設定
@@ -2146,9 +2183,13 @@
 
         // 画像を右側サイドバーに追加
         function addImageToSidebar(imageUrl, prompt = '', skipSave = false) {
-            // 最後の画像情報を保持
+            // 画像情報を配列に追加
             if (!skipSave) {
-                currentSessionImage = { url: imageUrl, prompt: prompt };
+                currentSessionImages.unshift({ url: imageUrl, prompt: prompt });
+                // 最大枚数を超えたら古いものを削除
+                if (currentSessionImages.length > MAX_SESSION_IMAGES) {
+                    currentSessionImages = currentSessionImages.slice(0, MAX_SESSION_IMAGES);
+                }
                 saveCurrentSession();
             }
 
@@ -2165,62 +2206,10 @@
             img.src = imageUrl;
             img.className = 'generated-image';
             img.onclick = () => {
-                openImageModal(imageUrl);
+                openImageModal(imageUrl, prompt);
             };
 
             wrapper.appendChild(img);
-
-            if (prompt) {
-                const promptContainer = document.createElement('div');
-                promptContainer.className = 'image-prompt-container';
-
-                const promptEl = document.createElement('div');
-                promptEl.className = 'image-prompt';
-                promptEl.textContent = prompt;
-
-                const buttonsEl = document.createElement('div');
-                buttonsEl.className = 'image-prompt-buttons';
-
-                const copyBtn = document.createElement('button');
-                copyBtn.className = 'image-prompt-btn';
-                copyBtn.textContent = '📋 コピー';
-
-                const editBtn = document.createElement('button');
-                editBtn.className = 'image-prompt-btn';
-                editBtn.textContent = '✎ 編集';
-
-                const generateBtn = document.createElement('button');
-                generateBtn.className = 'image-prompt-btn';
-                generateBtn.textContent = '🎨 生成';
-
-                copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(promptEl.textContent).then(() => {
-                        const originalText = copyBtn.textContent;
-                        copyBtn.textContent = '✓ コピー済';
-                        copyBtn.classList.add('active');
-                        setTimeout(() => {
-                            copyBtn.textContent = originalText;
-                            copyBtn.classList.remove('active');
-                        }, 1500);
-                    });
-                };
-
-                editBtn.onclick = () => {
-                    openEditPromptModal(promptEl);
-                };
-
-                generateBtn.onclick = async () => {
-                    await generateImageWithPrompt(promptEl.textContent);
-                };
-
-                buttonsEl.appendChild(copyBtn);
-                buttonsEl.appendChild(editBtn);
-                buttonsEl.appendChild(generateBtn);
-
-                promptContainer.appendChild(promptEl);
-                promptContainer.appendChild(buttonsEl);
-                wrapper.appendChild(promptContainer);
-            }
 
             // 最新の画像を上に追加
             imageContainer.insertBefore(wrapper, imageContainer.firstChild);
@@ -2232,17 +2221,141 @@
         }
 
         // 画像拡大モーダル
-        function openImageModal(imageUrl) {
+        let currentModalPrompt = '';
+        let currentModalImageUrl = '';
+        let currentModalImageIndex = -1;
+
+        function openImageModal(imageUrl, prompt) {
             const modal = document.getElementById('image-modal');
             const modalImg = document.getElementById('image-modal-img');
+            const modalPrompt = document.getElementById('image-modal-prompt');
+            const controls = document.getElementById('image-modal-controls');
+
             modalImg.src = imageUrl;
+            currentModalImageUrl = imageUrl;
+            currentModalPrompt = prompt || '';
+
+            // 現在の画像インデックスを取得
+            currentModalImageIndex = currentSessionImages.findIndex(img => img.url === imageUrl);
+
+            if (prompt) {
+                modalPrompt.textContent = prompt;
+                controls.style.display = 'block';
+            } else {
+                controls.style.display = 'none';
+            }
+
             modal.classList.add('show');
         }
 
-        function closeImageModal() {
+        function navigateModalImage(direction) {
+            if (currentSessionImages.length === 0) return;
+
+            let newIndex = currentModalImageIndex + direction;
+
+            // 範囲外なら循環
+            if (newIndex < 0) {
+                newIndex = currentSessionImages.length - 1;
+            } else if (newIndex >= currentSessionImages.length) {
+                newIndex = 0;
+            }
+
+            const newImage = currentSessionImages[newIndex];
+            if (newImage) {
+                const modalImg = document.getElementById('image-modal-img');
+                const modalPrompt = document.getElementById('image-modal-prompt');
+                const controls = document.getElementById('image-modal-controls');
+
+                modalImg.src = newImage.url;
+                currentModalImageUrl = newImage.url;
+                currentModalPrompt = newImage.prompt || '';
+                currentModalImageIndex = newIndex;
+
+                if (newImage.prompt) {
+                    modalPrompt.textContent = newImage.prompt;
+                    controls.style.display = 'block';
+                } else {
+                    controls.style.display = 'none';
+                }
+            }
+        }
+
+        function closeImageModal(event) {
+            // コントロール部分をクリックした場合は閉じない
+            if (event && event.target.closest('.image-modal-content')) {
+                return;
+            }
             const modal = document.getElementById('image-modal');
             modal.classList.remove('show');
         }
+
+        // モーダルボタンのイベント設定
+        document.getElementById('image-modal-copy').addEventListener('click', () => {
+            const btn = document.getElementById('image-modal-copy');
+            navigator.clipboard.writeText(currentModalPrompt).then(() => {
+                const originalText = btn.textContent;
+                btn.textContent = '✓ コピー済';
+                btn.classList.add('active');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('active');
+                }, 1500);
+            });
+        });
+
+        document.getElementById('image-modal-edit').addEventListener('click', () => {
+            const promptEl = document.getElementById('image-modal-prompt');
+            openEditPromptModal(promptEl);
+        });
+
+        document.getElementById('image-modal-generate').addEventListener('click', async () => {
+            await generateImageWithPrompt(currentModalPrompt);
+        });
+
+        document.getElementById('image-modal-delete').addEventListener('click', () => {
+            if (!currentModalImageUrl) return;
+
+            // 配列から削除
+            const index = currentSessionImages.findIndex(img => img.url === currentModalImageUrl);
+            if (index !== -1) {
+                currentSessionImages.splice(index, 1);
+                saveCurrentSession();
+            }
+
+            // DOMから削除
+            const images = imageContainer.querySelectorAll('.generated-image');
+            images.forEach(img => {
+                if (img.src === currentModalImageUrl) {
+                    img.closest('.image-wrapper').remove();
+                }
+            });
+
+            // 画像がなくなったら空メッセージを表示
+            if (imageContainer.querySelectorAll('.image-wrapper').length === 0) {
+                imageContainer.innerHTML = '<div class="empty-message">画像がありません</div>';
+            }
+
+            // モーダルを閉じる
+            closeImageModal();
+        });
+
+        // 画像クリックで前後の画像に移動
+        document.getElementById('image-modal-img').addEventListener('click', (e) => {
+            if (currentSessionImages.length <= 1) return;
+
+            const img = e.target;
+            const rect = img.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const halfWidth = rect.width / 2;
+
+            if (clickX < halfWidth) {
+                // 左半分クリック: 前の画像
+                navigateModalImage(-1);
+            } else {
+                // 右半分クリック: 次の画像
+                navigateModalImage(1);
+            }
+        });
 
         // プロンプト編集モーダル
         const editPromptModal = document.getElementById('edit-prompt-modal');
@@ -2266,7 +2379,12 @@
 
         document.getElementById('edit-prompt-save').addEventListener('click', () => {
             if (currentEditingPromptEl) {
-                currentEditingPromptEl.textContent = editPromptTextarea.value.trim();
+                const newPrompt = editPromptTextarea.value.trim();
+                currentEditingPromptEl.textContent = newPrompt;
+                // モーダルから編集した場合はcurrentModalPromptも更新
+                if (currentEditingPromptEl.id === 'image-modal-prompt') {
+                    currentModalPrompt = newPrompt;
+                }
             }
             closeEditPromptModal();
         });
@@ -2275,6 +2393,10 @@
             const newPrompt = editPromptTextarea.value.trim();
             if (currentEditingPromptEl && newPrompt) {
                 currentEditingPromptEl.textContent = newPrompt;
+                // モーダルから編集した場合はcurrentModalPromptも更新
+                if (currentEditingPromptEl.id === 'image-modal-prompt') {
+                    currentModalPrompt = newPrompt;
+                }
                 closeEditPromptModal();
                 await generateImageWithPrompt(newPrompt);
             }
@@ -2678,6 +2800,11 @@
                     saveCurrentSession();
                     // 最終的なパース処理を適用
                     updateStreamingMessage(div, fullContent, reasoning, true);
+
+                    // 画像パネルが開いていれば自動で画像生成
+                    if (!rightSidebar.classList.contains('collapsed')) {
+                        generateImageFromContext();
+                    }
                 }
 
             } catch (error) {
@@ -2886,9 +3013,14 @@
                 chatHistory.forEach(item => {
                     addMessageToDOM(item.role, item.content, item.reasoning);
                 });
-                // 画像を復元
-                if (session.lastImage && session.lastImage.url) {
-                    currentSessionImage = { ...session.lastImage };
+                // 画像を復元（新形式と旧形式の両方に対応）
+                if (session.images && session.images.length > 0) {
+                    currentSessionImages = [...session.images];
+                    [...session.images].reverse().forEach(img => {
+                        addImageToSidebar(img.url, img.prompt || '', true);
+                    });
+                } else if (session.lastImage && session.lastImage.url) {
+                    currentSessionImages = [{ ...session.lastImage }];
                     addImageToSidebar(session.lastImage.url, session.lastImage.prompt || '', true);
                 }
             }
