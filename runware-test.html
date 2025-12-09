@@ -153,7 +153,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
+            z-index: 2000;
             cursor: pointer;
             justify-content: center;
             align-items: center;
@@ -161,10 +161,63 @@
         .modal.active {
             display: flex;
         }
-        .modal img {
+        .modal-content {
+            display: flex;
+            gap: 1.5rem;
             max-width: 95%;
             max-height: 95%;
+            align-items: flex-start;
+        }
+        .modal-content img {
+            max-width: 65%;
+            max-height: 90vh;
             object-fit: contain;
+            border-radius: 0.5rem;
+        }
+        .modal-prompt-panel {
+            background: rgba(30, 30, 30, 0.95);
+            color: #fff;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            min-width: 300px;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .modal-prompt-panel .prompt-section {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #444;
+        }
+        .modal-prompt-panel .prompt-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .modal-prompt-panel .prompt-label {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+        .modal-prompt-panel .prompt-value {
+            word-break: break-word;
+        }
+        @media (max-width: 900px) {
+            .modal-content {
+                flex-direction: column;
+                align-items: center;
+            }
+            .modal-content img {
+                max-width: 90%;
+                max-height: 50vh;
+            }
+            .modal-prompt-panel {
+                min-width: unset;
+                max-width: 90%;
+                max-height: 40vh;
+            }
         }
         .time-info {
             color: #888;
@@ -192,6 +245,16 @@
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 1rem;
             margin-top: 1rem;
+        }
+        .images-grid-small {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.5rem;
+        }
+        .images-grid-small .image-card {
+            font-size: 0.75rem;
+        }
+        .images-grid-small .image-url-container {
+            display: none;
         }
         .section-divider {
             border: none;
@@ -350,7 +413,8 @@
                         <option value="civitai:481162@558910">Aoi-Realistic-Pony</option>
                         <option value="civitai:958009@1484125">RED-Zimage 1.5</option>
                         <option value="civitai:457669@691683" selected>PinkiePie Pony Mix</option>
-                        <option value="x:42@1240288">Hassaku XL (Illustrious)</option>
+                        <option value="x:42@1240288">Hassaku XL (Illustrious) v1.3 - Style A</option>
+                        <option value="x:42@1761560">WAI-NSFW-illustrious-SDXL v14</option>
                     </select>
                 </div>
 
@@ -359,18 +423,29 @@
                     <textarea id="prompt-quality" style="min-height: 60px;">score_9, score_8_up, score_7_up</textarea>
                 </div>
 
-                <div class="form-group">
-                    <label style="display: flex; justify-content: space-between; align-items: center;">
-                        ポジティブプロンプト（キャラタグ）
-                        <button type="button" onclick="openCharaTagEditor()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">編集</button>
-                    </label>
-                    <select id="prompt-chara-tag" style="width: 100%;">
-                        <option value="">（なし）</option>
-                    </select>
+                <div class="row">
+                    <div class="form-group">
+                        <label style="display: flex; justify-content: space-between; align-items: center;">
+                            キャラタグ１
+                            <button type="button" onclick="openCharaTagEditor()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">編集</button>
+                        </label>
+                        <select id="prompt-chara-tag1" style="width: 100%;">
+                            <option value="">（なし）</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>キャラタグ２</label>
+                        <select id="prompt-chara-tag2" style="width: 100%;">
+                            <option value="">（なし）</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label>ポジティブプロンプト（任意１）</label>
+                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                        ポジティブプロンプト（任意１）
+                        <button type="button" onclick="openExtraEdit()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">Extra Edit</button>
+                    </label>
                     <textarea id="prompt">a cute cat sitting on a window</textarea>
                 </div>
 
@@ -439,7 +514,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Seed (-1 = ランダム)</label>
+                        <label>Seed <span onclick="document.getElementById('seed').value = -1;" style="color: #4a9eff; cursor: pointer; text-decoration: underline;">[ランダム]</span></label>
                         <input type="number" id="seed" value="-1">
                     </div>
                 </div>
@@ -459,9 +534,12 @@
                     </div>
                 </div>
 
-                <div class="log" id="log"></div>
+                <div id="latest-result"></div>
 
-                <div class="images-grid" id="result"></div>
+                <div id="history-section" style="display: none;">
+                    <h4 style="color: #888; margin: 1rem 0 0.5rem; font-size: 0.9rem;">履歴</h4>
+                    <div class="images-grid images-grid-small" id="result-history"></div>
+                </div>
 
                 <hr class="section-divider">
 
@@ -523,7 +601,8 @@
                         <option value="civitai:481162@558910">Aoi-Realistic-Pony</option>
                         <option value="civitai:958009@1484125">RED-Zimage 1.5</option>
                         <option value="civitai:457669@691683" selected>PinkiePie Pony Mix</option>
-                        <option value="x:42@1240288">Hassaku XL (Illustrious)</option>
+                        <option value="x:42@1240288">Hassaku XL (Illustrious) v1.3 - Style A</option>
+                        <option value="x:42@1761560">WAI-NSFW-illustrious-SDXL v14</option>
                     </select>
                 </div>
 
@@ -655,10 +734,110 @@
                 <div class="images-grid" id="inpaint-result"></div>
             </div>
         </div>
+
+        <h3 class="section-title">ログ</h3>
+        <div class="log" id="log"></div>
     </div>
 
     <div class="modal" id="modal" onclick="closeModal()">
-        <img id="modal-image" src="" alt="">
+        <div class="modal-content">
+            <img id="modal-image" src="" alt="" onclick="closeModal()">
+            <div id="modal-prompt" class="modal-prompt-panel" onclick="event.stopPropagation()"></div>
+        </div>
+    </div>
+
+    <!-- 比較結果モーダル -->
+    <div id="compare-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 2000; cursor: pointer;" onclick="closeCompareModal()">
+        <div style="display: flex; width: 100%; height: 100%; padding: 1rem; box-sizing: border-box; gap: 1rem;">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div id="compare-modal-label-with" style="color: #2ecc71; font-weight: bold; margin-bottom: 0.5rem;"></div>
+                <img id="compare-modal-img-with" src="" style="max-width: 100%; max-height: calc(100vh - 80px); object-fit: contain;">
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div id="compare-modal-label-without" style="color: #e74c3c; font-weight: bold; margin-bottom: 0.5rem;"></div>
+                <img id="compare-modal-img-without" src="" style="max-width: 100%; max-height: calc(100vh - 80px); object-fit: contain;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Extra Edit モーダル -->
+    <div id="extra-edit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1a1a1a; z-index: 1000; overflow: hidden;">
+        <div style="display: flex; height: 100%;">
+            <!-- 左ペイン -->
+            <div style="flex: 1; padding: 2rem; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="margin: 0; color: #4a9eff;">Extra Edit</h2>
+                    <button onclick="closeExtraEdit()" style="background: #555; padding: 0.5rem 1rem;">← 戻る</button>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                    <button onclick="analyzePrompts()" id="analyze-btn" style="background: #4a9eff;">プロンプト解析</button>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label style="color: #888; font-size: 0.85rem;">OpenRouter APIキー:</label>
+                        <input type="password" id="extra-edit-api-key" placeholder="sk-or-..." style="width: 200px; padding: 0.5rem;">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label style="color: #888; font-size: 0.85rem;">モデル:</label>
+                        <select id="extra-edit-model" style="padding: 0.5rem;">
+                            <option value="x-ai/grok-3-mini">Grok 3 Mini ($0.30/$0.50)</option>
+                            <option value="x-ai/grok-4-fast">Grok 4 Fast ($0.20/$0.50)</option>
+                            <option value="x-ai/grok-4.1-fast" selected>Grok 4.1 Fast ($0.20/$0.50)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h3 style="color: #4a9eff; margin-bottom: 1rem;">利用タグ</h3>
+                <table id="extra-edit-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888; width: 40px;">#</th>
+                            <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888; width: 150px;">操作</th>
+                            <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888;">タグ</th>
+                            <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888;">日本語訳</th>
+                        </tr>
+                    </thead>
+                    <tbody id="extra-edit-tbody"></tbody>
+                </table>
+
+                <div id="suggested-tags-section" style="display: none; margin-top: 2rem;">
+                    <h3 style="color: #2ecc71; margin-bottom: 1rem;">おすすめタグ</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888; width: 40px;">#</th>
+                                <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888; width: 150px;">操作</th>
+                                <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888;">タグ</th>
+                                <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888;">日本語訳</th>
+                            </tr>
+                        </thead>
+                        <tbody id="suggested-tags-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 右ペイン（比較結果） -->
+            <div id="compare-pane" style="width: 400px; background: #252525; padding: 1.5rem; overflow-y: auto; border-left: 1px solid #444;">
+                <h3 style="color: #e67e22; margin-bottom: 1rem;">比較結果</h3>
+                <div id="compare-result" style="color: #888;">比較するタグの [あり無し比較] をクリックしてください</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- キャラタグ編集モーダル -->
+    <div id="chara-tag-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: #1a1a1a; border-radius: 0.5rem; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
+            <div style="padding: 1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #4a9eff;">キャラタグ編集</h3>
+                <div>
+                    <button onclick="saveCharaTags()" style="background: #4a9eff; padding: 0.5rem 1rem; margin-right: 0.5rem;">保存</button>
+                    <button onclick="closeCharaTagEditor()" style="background: #333; padding: 0.5rem 1rem;">キャンセル</button>
+                </div>
+            </div>
+            <div style="padding: 1rem; flex: 1; display: flex; flex-direction: column;">
+                <div style="color: #888; font-size: 0.85rem; margin-bottom: 0.5rem;">カンマ区切りでタグを入力（例: 1girl, blue hair, red eyes, 1boy, black hair）</div>
+                <textarea id="chara-tag-textarea" style="flex: 1; min-height: 300px; font-family: monospace;" placeholder="1girl, blue hair, red eyes, 1boy, black hair, green eyes"></textarea>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -666,11 +845,14 @@
         const STORAGE_KEY = 'runware_api_key';
         const IMAGES_STORAGE_KEY = 'runware_images';
         const PROMPTS_STORAGE_KEY = 'runware_prompts';
+        const MODEL_STORAGE_KEY = 'runware_model';
         const USD_TO_JPY = 150;
         let startTime = null;
         let generatedImages = [];
         let selectedMaskingImage = null;
         let inpaintSeedImage = null;
+        let currentModalImageData = null;
+        let currentModalImageIndex = -1;
         let inpaintMaskImage = null;
         let inpaintImageSize = { width: 1024, height: 1024 };
         let lastMaskResult = null;
@@ -695,7 +877,9 @@
             lastDetections = null;
 
             // UIをリセット
-            document.getElementById('result').innerHTML = '';
+            document.getElementById('latest-result').innerHTML = '';
+            document.getElementById('result-history').innerHTML = '';
+            document.getElementById('history-section').style.display = 'none';
             document.getElementById('masking-source-images').innerHTML = '<div style="color: #666; font-size: 0.85rem;">上で画像を生成してください</div>';
             document.getElementById('masking-btn').disabled = true;
             document.getElementById('masking-result').innerHTML = '';
@@ -709,7 +893,10 @@
 
         function saveImageState() {
             // Data URI（data:で始まる）は容量が大きいので保存から除外
-            const filteredImages = generatedImages.filter(url => !url.startsWith('data:'));
+            const filteredImages = generatedImages.filter(item => {
+                const url = typeof item === 'string' ? item : item.url;
+                return !url.startsWith('data:');
+            });
             const state = {
                 generatedImages: filteredImages,
                 selectedMaskingImage: selectedMaskingImage?.startsWith('data:') ? null : selectedMaskingImage,
@@ -754,19 +941,40 @@
         }
 
         function restoreUI() {
-            // 生成画像を復元
+            // 生成画像を復元（最新1枚と履歴を分ける）
             if (generatedImages.length > 0) {
-                const resultEl = document.getElementById('result');
-                resultEl.innerHTML = '';
-                for (const url of generatedImages) {
-                    resultEl.innerHTML +=
-                        `<div class="image-card">
-                            <img src="${url}" class="result-image" onclick="openModal('${url}')">
-                            <div class="image-url-container">
-                                <span class="image-url" title="${url}">${url}</span>
-                                <button class="copy-btn" onclick="copyToClipboard('${url}', this)">コピー</button>
-                            </div>
-                        </div>`;
+                const latestResultEl = document.getElementById('latest-result');
+                const historyEl = document.getElementById('result-history');
+                const historySectionEl = document.getElementById('history-section');
+
+                // 最新の画像（配列の最後）
+                const latest = generatedImages[generatedImages.length - 1];
+                const latestUrl = typeof latest === 'string' ? latest : latest.url;
+                latestResultEl.innerHTML =
+                    `<div class="image-card">
+                        <img src="${latestUrl}" class="result-image" onclick="openModalByUrl('${latestUrl}')">
+                        <div class="image-url-container">
+                            <span class="image-url" title="${latestUrl}">${latestUrl}</span>
+                            <button class="copy-btn" onclick="copyToClipboard('${latestUrl}', this)">コピー</button>
+                        </div>
+                    </div>`;
+
+                // 履歴（最新以外、新しい順）
+                if (generatedImages.length > 1) {
+                    historyEl.innerHTML = '';
+                    for (let i = generatedImages.length - 2; i >= 0; i--) {
+                        const item = generatedImages[i];
+                        const url = typeof item === 'string' ? item : item.url;
+                        historyEl.innerHTML +=
+                            `<div class="image-card">
+                                <img src="${url}" class="result-image" onclick="openModalByUrl('${url}')">
+                                <div class="image-url-container">
+                                    <span class="image-url" title="${url}">${url}</span>
+                                    <button class="copy-btn" onclick="copyToClipboard('${url}', this)">コピー</button>
+                                </div>
+                            </div>`;
+                    }
+                    historySectionEl.style.display = 'block';
                 }
                 updateMaskingSourceImages();
             }
@@ -795,6 +1003,16 @@
                 fetchBalance();
             }
 
+            // モデルを復元
+            const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+            if (savedModel) {
+                const modelSelect = document.getElementById('model');
+                if ([...modelSelect.options].some(opt => opt.value === savedModel)) {
+                    modelSelect.value = savedModel;
+                    applyModelDefaults();
+                }
+            }
+
             // 画像状態を復元
             if (loadImageState()) {
                 restoreUI();
@@ -807,6 +1025,8 @@
             // プロンプト変更時に保存
             document.getElementById('prompt').addEventListener('input', savePrompts);
             document.getElementById('inpaint-prompt').addEventListener('input', savePrompts);
+            document.getElementById('prompt-chara-tag1').addEventListener('change', savePrompts);
+            document.getElementById('prompt-chara-tag2').addEventListener('change', savePrompts);
 
             // IPAdapter ドロップゾーンの設定
             setupIPAdapterDropzone();
@@ -821,6 +1041,11 @@
             }
         });
 
+        // モデル変更時に保存
+        document.getElementById('model').addEventListener('change', (e) => {
+            localStorage.setItem(MODEL_STORAGE_KEY, e.target.value);
+        });
+
         // モデル別の最適パラメータ
         const PONY_QUALITY = {
             positive: 'score_9, score_8_up, score_7_up',
@@ -829,7 +1054,7 @@
 
         const ILLUSTRIOUS_QUALITY = {
             positive: 'masterpiece, ultra-HD, cinematic lighting',
-            negative: 'worst quality, low quality, displeasing, watermark, bad anatomy, text, artist name, signature, hearts, deformed hands, missing finger'
+            negative: 'bad anatomy, deformed hands, missing finger, worst quality, low quality, displeasing, watermark, text, artist name, signature, hearts'
         };
 
         const MODEL_DEFAULTS = {
@@ -867,6 +1092,13 @@
                 scheduler: 'Default',
                 qualityPositive: ILLUSTRIOUS_QUALITY.positive,
                 qualityNegative: ILLUSTRIOUS_QUALITY.negative
+            },
+            'x:42@1761560': {
+                steps: 30,
+                cfgScale: 7,
+                scheduler: 'Default',
+                qualityPositive: ILLUSTRIOUS_QUALITY.positive,
+                qualityNegative: ILLUSTRIOUS_QUALITY.negative
             }
         };
 
@@ -891,7 +1123,7 @@
         // ADetailer用の品質プロンプト（Illustrious系）
         const ADETAILER_ILLUSTRIOUS_QUALITY = {
             positive: 'masterpiece, ultra-HD, cinematic lighting, detailed face, sharp focus, detailed eyes, clear skin',
-            negative: 'worst quality, low quality, displeasing, watermark, bad anatomy, blurry, distorted face, ugly'
+            negative: 'bad anatomy, deformed hands, missing finger, worst quality, low quality, displeasing, watermark, text, artist name, signature, hearts, blurry, distorted face, ugly'
         };
 
         function copyPromptFromGeneration(type) {
@@ -999,7 +1231,9 @@
         function savePrompts() {
             const prompts = {
                 prompt1: document.getElementById('prompt').value,
-                adetailerPrompt: document.getElementById('inpaint-prompt').value
+                adetailerPrompt: document.getElementById('inpaint-prompt').value,
+                charaTag1: document.getElementById('prompt-chara-tag1').value,
+                charaTag2: document.getElementById('prompt-chara-tag2').value
             };
             localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(prompts));
         }
@@ -1015,6 +1249,12 @@
                     if (prompts.adetailerPrompt) {
                         document.getElementById('inpaint-prompt').value = prompts.adetailerPrompt;
                     }
+                    if (prompts.charaTag1) {
+                        document.getElementById('prompt-chara-tag1').value = prompts.charaTag1;
+                    }
+                    if (prompts.charaTag2) {
+                        document.getElementById('prompt-chara-tag2').value = prompts.charaTag2;
+                    }
                 } catch (e) {
                     console.error('Failed to load prompts:', e);
                 }
@@ -1028,7 +1268,7 @@
                 document.getElementById('inpaint-steps').value = defaults.steps;
                 document.getElementById('inpaint-cfg').value = defaults.cfgScale;
                 // モデルに応じてADetailer用品質プロンプトを切り替え
-                if (model === 'x:42@1240288') {
+                if (model === 'x:42@1240288' || model === 'x:42@1761560') {
                     // Illustrious系
                     document.getElementById('inpaint-prompt-quality').value = ADETAILER_ILLUSTRIOUS_QUALITY.positive;
                     document.getElementById('inpaint-negative-prompt-quality').value = ADETAILER_ILLUSTRIOUS_QUALITY.negative;
@@ -1096,18 +1336,220 @@
 
         function copyToClipboard(text, btn) {
             navigator.clipboard.writeText(text).then(() => {
-                btn.textContent = 'コピー済';
+                btn.textContent = 'copied';
                 btn.classList.add('copied');
                 setTimeout(() => {
-                    btn.textContent = 'コピー';
+                    btn.textContent = 'copy';
                     btn.classList.remove('copied');
                 }, 2000);
             });
         }
 
-        function openModal(url) {
+        function openModal(url, imageData = null) {
             document.getElementById('modal-image').src = url;
+            const promptEl = document.getElementById('modal-prompt');
+
+            if (imageData && imageData.prompts) {
+                // 構造化されたプロンプトデータを表示
+                let html = '';
+
+                // コピーボタン付きセクションを生成するヘルパー
+                const makeSection = (label, value, color) => {
+                    const escaped = value.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+                    return `<div class="prompt-section">
+                        <div class="prompt-label" style="color: ${color}; display: flex; justify-content: space-between; align-items: center;">
+                            ${label}
+                            <button onclick="copyToClipboard(\`${escaped}\`, this)" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; margin: 0; background: #555; color: #fff;">copy</button>
+                        </div>
+                        <div class="prompt-value">${value}</div>
+                    </div>`;
+                };
+
+                // モデル情報
+                if (imageData.model) {
+                    const modelName = getModelDisplayName(imageData.model);
+                    html += `<div class="prompt-section">
+                        <div class="prompt-label" style="color: #4a9eff;">モデル</div>
+                        <div class="prompt-value">${modelName}</div>
+                    </div>`;
+                }
+
+                // シード値
+                if (imageData.seed) {
+                    html += makeSection('Seed', String(imageData.seed), '#3498db');
+                }
+
+                // ポジティブプロンプト（品質）
+                if (imageData.prompts.quality) {
+                    html += makeSection('ポジティブ（品質）', imageData.prompts.quality, '#2ecc71');
+                }
+
+                // キャラタグ1
+                if (imageData.prompts.charaTag1) {
+                    html += makeSection('キャラタグ１', imageData.prompts.charaTag1, '#e67e22');
+                }
+
+                // キャラタグ2
+                if (imageData.prompts.charaTag2) {
+                    html += makeSection('キャラタグ２', imageData.prompts.charaTag2, '#e67e22');
+                }
+
+                // 任意1
+                if (imageData.prompts.custom1) {
+                    html += makeSection('ポジティブ（任意１）', imageData.prompts.custom1, '#9b59b6');
+                }
+
+                // 任意2
+                if (imageData.prompts.custom2) {
+                    html += makeSection('ポジティブ（任意２）', imageData.prompts.custom2, '#9b59b6');
+                }
+
+                // ネガティブ（品質）
+                if (imageData.prompts.negativeQuality) {
+                    html += makeSection('ネガティブ（品質）', imageData.prompts.negativeQuality, '#e74c3c');
+                }
+
+                // ネガティブ（任意）
+                if (imageData.prompts.negativeCustom) {
+                    html += makeSection('ネガティブ（任意）', imageData.prompts.negativeCustom, '#e74c3c');
+                }
+
+                // この設定に戻すボタン
+                html += `<div class="prompt-section" style="border-bottom: none; text-align: center;">
+                    <button onclick="restoreSettings(currentModalImageData); closeModal();" style="background: #2ecc71; padding: 0.75rem 1.5rem; font-size: 1rem; width: 100%;">この設定に戻す</button>
+                </div>`;
+
+                // 現在表示中の画像データを保存
+                currentModalImageData = imageData;
+
+                promptEl.innerHTML = html;
+                promptEl.style.display = 'block';
+            } else if (imageData && imageData.prompt && typeof imageData.prompt === 'string') {
+                // 旧形式（{url, prompt}で promptが文字列）
+                promptEl.innerHTML = `<div class="prompt-section">
+                    <div class="prompt-label">プロンプト</div>
+                    <div class="prompt-value">${imageData.prompt}</div>
+                </div>`;
+                promptEl.style.display = 'block';
+            } else if (typeof imageData === 'string') {
+                // 直接文字列が渡された場合
+                promptEl.innerHTML = `<div class="prompt-section">
+                    <div class="prompt-label">プロンプト</div>
+                    <div class="prompt-value">${imageData}</div>
+                </div>`;
+                promptEl.style.display = 'block';
+            } else {
+                promptEl.style.display = 'none';
+            }
             document.getElementById('modal').classList.add('active');
+        }
+
+        function openModalByUrl(url) {
+            // URLからgeneratedImagesで該当するデータとインデックスを検索
+            const index = generatedImages.findIndex(item => {
+                if (typeof item === 'string') return item === url;
+                return item.url === url;
+            });
+
+            currentModalImageIndex = index;
+            const imageData = index >= 0 ? generatedImages[index] : null;
+
+            if (imageData && typeof imageData !== 'string') {
+                openModal(url, imageData);
+            } else {
+                openModal(url, null);
+            }
+        }
+
+        function navigateModal(direction) {
+            if (generatedImages.length === 0) return;
+
+            let newIndex = currentModalImageIndex + direction;
+
+            // 範囲をループ
+            if (newIndex < 0) newIndex = generatedImages.length - 1;
+            if (newIndex >= generatedImages.length) newIndex = 0;
+
+            const item = generatedImages[newIndex];
+            const url = typeof item === 'string' ? item : item.url;
+            openModalByUrl(url);
+        }
+
+        // キーボードイベント
+        document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('modal');
+            if (!modal.classList.contains('active')) return;
+
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                navigateModal(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                navigateModal(1);
+            } else if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        function getModelDisplayName(modelId) {
+            const modelNames = {
+                'runware:z-image@turbo': 'Z-Image Turbo',
+                'civitai:481162@558910': 'Aoi-Realistic-Pony',
+                'civitai:958009@1484125': 'RED-Zimage 1.5',
+                'civitai:457669@691683': 'PinkiePie Pony Mix',
+                'x:42@1240288': 'Hassaku XL (Illustrious) v1.3 - Style A',
+                'x:42@1761560': 'WAI-NSFW-illustrious-SDXL v14'
+            };
+            return modelNames[modelId] || modelId;
+        }
+
+        function restoreSettings(imageData) {
+            if (!imageData) return;
+
+            // モデルを復元
+            if (imageData.model) {
+                const modelSelect = document.getElementById('model');
+                if ([...modelSelect.options].some(opt => opt.value === imageData.model)) {
+                    modelSelect.value = imageData.model;
+                    localStorage.setItem(MODEL_STORAGE_KEY, imageData.model);
+                    applyModelDefaults(); // モデルのデフォルト値を適用（ただし、すぐに上書きする）
+                }
+            }
+
+            // シード値を復元
+            if (imageData.seed) {
+                document.getElementById('seed').value = imageData.seed;
+            }
+
+            // プロンプトを復元
+            if (imageData.prompts) {
+                if (imageData.prompts.quality !== undefined) {
+                    document.getElementById('prompt-quality').value = imageData.prompts.quality;
+                }
+                if (imageData.prompts.charaTag1 !== undefined) {
+                    document.getElementById('prompt-chara-tag1').value = imageData.prompts.charaTag1;
+                }
+                if (imageData.prompts.charaTag2 !== undefined) {
+                    document.getElementById('prompt-chara-tag2').value = imageData.prompts.charaTag2;
+                }
+                if (imageData.prompts.custom1 !== undefined) {
+                    document.getElementById('prompt').value = imageData.prompts.custom1;
+                }
+                if (imageData.prompts.custom2 !== undefined) {
+                    document.getElementById('prompt2').value = imageData.prompts.custom2;
+                }
+                if (imageData.prompts.negativeQuality !== undefined) {
+                    document.getElementById('negative-prompt-quality').value = imageData.prompts.negativeQuality;
+                }
+                if (imageData.prompts.negativeCustom !== undefined) {
+                    document.getElementById('negative-prompt').value = imageData.prompts.negativeCustom;
+                }
+            }
+
+            // プロンプトを保存
+            savePrompts();
+
+            log('設定を復元しました: ' + getModelDisplayName(imageData.model), 'success');
         }
 
         function closeModal() {
@@ -1274,10 +1716,11 @@
             const apiKey = document.getElementById('api-key').value;
             const model = document.getElementById('model').value;
             const promptQuality = document.getElementById('prompt-quality').value.trim();
-            const promptCharaTag = document.getElementById('prompt-chara-tag').value.trim();
+            const promptCharaTag1 = document.getElementById('prompt-chara-tag1').value.trim();
+            const promptCharaTag2 = document.getElementById('prompt-chara-tag2').value.trim();
             const promptCustom1 = document.getElementById('prompt').value.trim();
             const promptCustom2 = document.getElementById('prompt2').value.trim();
-            const prompt = [promptQuality, promptCharaTag, promptCustom1, promptCustom2].filter(p => p).join(', ');
+            const prompt = [promptQuality, promptCharaTag1, promptCharaTag2, promptCustom1, promptCustom2].filter(p => p).join(', ');
             const negativePromptQuality = document.getElementById('negative-prompt-quality').value.trim();
             const negativePromptCustom = document.getElementById('negative-prompt').value.trim();
             const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p).join(', ');
@@ -1296,7 +1739,6 @@
 
             document.getElementById('start-btn').disabled = true;
             document.getElementById('log').innerHTML = '';
-            document.getElementById('result').innerHTML = '';
             document.getElementById('cost-info').textContent = '';
             startTime = Date.now();
 
@@ -1358,13 +1800,38 @@
                 const results = Array.isArray(data.data) ? data.data : [data.data];
                 let totalCost = 0;
 
+                // 現在の最新結果を履歴に移動
+                const latestResultEl = document.getElementById('latest-result');
+                const historyEl = document.getElementById('result-history');
+                const historySectionEl = document.getElementById('history-section');
+                if (latestResultEl.innerHTML.trim()) {
+                    historyEl.innerHTML = latestResultEl.innerHTML + historyEl.innerHTML;
+                    historySectionEl.style.display = 'block';
+                }
+                latestResultEl.innerHTML = '';
+
                 for (const result of results) {
                     if (result.imageURL) {
                         const cardId = 'card-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-                        generatedImages.push(result.imageURL);
-                        document.getElementById('result').innerHTML +=
+                        // 各フィールドを個別に保存
+                        const imageData = {
+                            url: result.imageURL,
+                            model: model,
+                            seed: result.seed || null,
+                            prompts: {
+                                quality: promptQuality,
+                                charaTag1: promptCharaTag1,
+                                charaTag2: promptCharaTag2,
+                                custom1: promptCustom1,
+                                custom2: promptCustom2,
+                                negativeQuality: negativePromptQuality,
+                                negativeCustom: negativePromptCustom
+                            }
+                        };
+                        generatedImages.push(imageData);
+                        latestResultEl.innerHTML +=
                             `<div class="image-card">
-                                <img src="${result.imageURL}" class="result-image" onclick="openModal('${result.imageURL}')">
+                                <img src="${result.imageURL}" class="result-image" onclick="openModalByUrl('${result.imageURL}')">
                                 <div class="image-url-container">
                                     <span class="image-url" title="${result.imageURL}">${result.imageURL}</span>
                                     <button class="copy-btn" onclick="copyToClipboard('${result.imageURL}', this)">コピー</button>
@@ -1405,11 +1872,12 @@
                 return;
             }
 
-            container.innerHTML = generatedImages.map((url, index) =>
-                `<div class="image-select-item ${selectedMaskingImage === url ? 'selected' : ''}" onclick="selectMaskingImage('${url}')">
+            container.innerHTML = generatedImages.map((item, index) => {
+                const url = typeof item === 'string' ? item : item.url;
+                return `<div class="image-select-item ${selectedMaskingImage === url ? 'selected' : ''}" onclick="selectMaskingImage('${url}')">
                     <img src="${url}" alt="Image ${index + 1}">
-                </div>`
-            ).join('');
+                </div>`;
+            }).join('');
         }
 
         function selectMaskingImage(url) {
@@ -1782,22 +2250,465 @@
             }
         }
 
+        // ========== Extra Edit機能 ==========
+        const EXTRA_EDIT_API_KEY_STORAGE = 'extra_edit_openrouter_key';
+        const EXTRA_EDIT_MODEL_STORAGE = 'extra_edit_model';
+        let extraEditTags = [];
+
+        function openExtraEdit() {
+            // APIキーとモデルを復元
+            const savedApiKey = localStorage.getItem(EXTRA_EDIT_API_KEY_STORAGE);
+            const savedModel = localStorage.getItem(EXTRA_EDIT_MODEL_STORAGE);
+            if (savedApiKey) {
+                document.getElementById('extra-edit-api-key').value = savedApiKey;
+            }
+            if (savedModel) {
+                document.getElementById('extra-edit-model').value = savedModel;
+            }
+
+            const prompt = document.getElementById('prompt').value;
+            extraEditTags = prompt.split(',').map(t => t.trim()).filter(t => t);
+
+            renderExtraEditTable();
+
+            document.getElementById('extra-edit-modal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function renderExtraEditTable() {
+            const tbody = document.getElementById('extra-edit-tbody');
+            tbody.innerHTML = '';
+
+            extraEditTags.forEach((tag, index) => {
+                const tr = document.createElement('tr');
+                tr.id = `extra-edit-row-${index}`;
+                tr.innerHTML = `
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #333; color: #666;">${index + 1}</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #333; white-space: nowrap;">
+                        <button onclick="deleteTag(${index})" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; background: #e74c3c; margin-right: 0.25rem;">削除</button>
+                        <button onclick="compareTag(${index})" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; background: #9b59b6;">あり無し比較</button>
+                    </td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #333;">${tag}</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #333; color: #888;" id="extra-edit-translation-${index}"></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteTag(index) {
+            extraEditTags.splice(index, 1);
+            renderExtraEditTable();
+            // 元のプロンプトも更新
+            document.getElementById('prompt').value = extraEditTags.join(', ');
+            savePrompts();
+        }
+
+        function addSuggestedTag(tag) {
+            extraEditTags.push(tag);
+            renderExtraEditTable();
+            // 元のプロンプトも更新
+            document.getElementById('prompt').value = extraEditTags.join(', ');
+            savePrompts();
+        }
+
+        async function compareSuggestedTag(tag) {
+            const runwareApiKey = localStorage.getItem(STORAGE_KEY);
+            if (!runwareApiKey) {
+                alert('Runware APIキーが設定されていません');
+                return;
+            }
+
+            const compareResult = document.getElementById('compare-result');
+
+            // 現在の設定を取得
+            const model = document.getElementById('model').value;
+            const promptQuality = document.getElementById('prompt-quality').value;
+            const promptCharaTag1 = document.getElementById('prompt-chara-tag1').value;
+            const promptCharaTag2 = document.getElementById('prompt-chara-tag2').value;
+            const promptCustom2 = document.getElementById('prompt2').value;
+            const negativePromptQuality = document.getElementById('negative-prompt-quality').value;
+            const negativePromptCustom = document.getElementById('negative-prompt').value;
+            const steps = parseInt(document.getElementById('steps').value);
+            const cfgScale = parseFloat(document.getElementById('cfg-scale').value);
+            const scheduler = document.getElementById('scheduler').value;
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+
+            // シード: 現在の設定が-1ならランダム生成、それ以外は設定値を使用
+            const currentSeed = parseInt(document.getElementById('seed').value);
+            const fixedSeed = (currentSeed === -1) ? Math.floor(Math.random() * 2147483647) : currentSeed;
+
+            // タグなしのプロンプト（現在の利用タグのみ）
+            const promptWithout = [promptQuality, promptCharaTag1, promptCharaTag2, extraEditTags.join(', '), promptCustom2]
+                .filter(p => p && p.trim()).join(', ');
+
+            // タグありのプロンプト（おすすめタグを追加）
+            const tagsWithSuggested = [...extraEditTags, tag];
+            const promptWith = [promptQuality, promptCharaTag1, promptCharaTag2, tagsWithSuggested.join(', '), promptCustom2]
+                .filter(p => p && p.trim()).join(', ');
+
+            const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p && p.trim()).join(', ');
+
+            compareResult.innerHTML = `<div style="color: #4a9eff;">比較生成中... (タグ: ${tag})</div>`;
+
+            try {
+                const generateImage = async (prompt) => {
+                    const task = {
+                        taskType: 'imageInference',
+                        taskUUID: generateUUID(),
+                        positivePrompt: prompt,
+                        negativePrompt: negativePrompt || undefined,
+                        model: model,
+                        width: width,
+                        height: height,
+                        steps: steps,
+                        CFGScale: cfgScale,
+                        seed: fixedSeed,
+                        scheduler: (scheduler && scheduler !== 'Default') ? scheduler : undefined,
+                        numberResults: 1,
+                        outputType: 'URL',
+                        includeCost: true
+                    };
+
+                    const cleanTask = Object.fromEntries(
+                        Object.entries(task).filter(([_, v]) => v !== undefined)
+                    );
+
+                    const response = await fetch(API_BASE, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${runwareApiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify([cleanTask])
+                    });
+
+                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                    const data = await response.json();
+                    const result = Array.isArray(data.data) ? data.data[0] : data.data;
+                    return result.imageURL;
+                };
+
+                const [withUrl, withoutUrl] = await Promise.all([
+                    generateImage(promptWith),
+                    generateImage(promptWithout)
+                ]);
+
+                // 比較画像を保存
+                lastCompareImages = { with: withUrl, without: withoutUrl, tag: tag };
+
+                // 比較対象タグを赤字でハイライト
+                const highlightedPromptWith = promptWith.replace(
+                    new RegExp(`(${tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g'),
+                    '<span style="color: #e74c3c; font-weight: bold;">$1</span>'
+                );
+
+                compareResult.innerHTML = `
+                    <div style="margin-bottom: 1rem; padding: 0.5rem; background: #333; border-radius: 0.25rem;">
+                        <strong style="color: #e67e22;">比較タグ:</strong> ${tag}<br>
+                        <strong style="color: #888;">Seed:</strong> ${fixedSeed}
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="color: #2ecc71; margin-bottom: 0.5rem; font-weight: bold;">タグあり</div>
+                        <img src="${withUrl}" style="width: 100%; border-radius: 0.25rem; cursor: pointer; margin-bottom: 0.5rem;" onclick="openCompareModal()">
+                        <div style="padding: 0.5rem; background: #2a2a2a; border-radius: 0.25rem; font-size: 0.75rem; color: #aaa; word-break: break-all;">${highlightedPromptWith}</div>
+                    </div>
+                    <div>
+                        <div style="color: #e74c3c; margin-bottom: 0.5rem; font-weight: bold;">タグなし</div>
+                        <img src="${withoutUrl}" style="width: 100%; border-radius: 0.25rem; cursor: pointer; margin-bottom: 0.5rem;" onclick="openCompareModal()">
+                        <div style="padding: 0.5rem; background: #2a2a2a; border-radius: 0.25rem; font-size: 0.75rem; color: #aaa; word-break: break-all;">${promptWithout}</div>
+                    </div>
+                `;
+
+            } catch (error) {
+                compareResult.innerHTML = `<div style="color: #e74c3c;">エラー: ${error.message}</div>`;
+            }
+        }
+
+        let lastCompareImages = { with: '', without: '', tag: '' };
+
+        async function compareTag(index) {
+            const runwareApiKey = localStorage.getItem(STORAGE_KEY);
+            if (!runwareApiKey) {
+                alert('Runware APIキーが設定されていません');
+                return;
+            }
+
+            const targetTag = extraEditTags[index];
+            const compareResult = document.getElementById('compare-result');
+
+            // 現在の設定を取得
+            const model = document.getElementById('model').value;
+            const promptQuality = document.getElementById('prompt-quality').value;
+            const promptCharaTag1 = document.getElementById('prompt-chara-tag1').value;
+            const promptCharaTag2 = document.getElementById('prompt-chara-tag2').value;
+            const promptCustom2 = document.getElementById('prompt2').value;
+            const negativePromptQuality = document.getElementById('negative-prompt-quality').value;
+            const negativePromptCustom = document.getElementById('negative-prompt').value;
+            const steps = parseInt(document.getElementById('steps').value);
+            const cfgScale = parseFloat(document.getElementById('cfg-scale').value);
+            const scheduler = document.getElementById('scheduler').value;
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+
+            // シード: 現在の設定が-1ならランダム生成、それ以外は設定値を使用
+            const currentSeed = parseInt(document.getElementById('seed').value);
+            const fixedSeed = (currentSeed === -1) ? Math.floor(Math.random() * 2147483647) : currentSeed;
+
+            // タグありのプロンプト
+            const promptWith = [promptQuality, promptCharaTag1, promptCharaTag2, extraEditTags.join(', '), promptCustom2]
+                .filter(p => p && p.trim()).join(', ');
+
+            // タグなしのプロンプト（対象タグを除外）
+            const tagsWithout = extraEditTags.filter((_, i) => i !== index);
+            const promptWithout = [promptQuality, promptCharaTag1, promptCharaTag2, tagsWithout.join(', '), promptCustom2]
+                .filter(p => p && p.trim()).join(', ');
+
+            const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p && p.trim()).join(', ');
+
+            console.log('タグあり:', promptWith);
+            console.log('タグなし:', promptWithout);
+            console.log('ネガティブ:', negativePrompt);
+
+            compareResult.innerHTML = `<div style="color: #4a9eff;">比較生成中... (タグ: ${targetTag})</div>`;
+
+            try {
+                // 2枚同時に生成
+                const generateImage = async (prompt, label) => {
+                    const task = {
+                        taskType: 'imageInference',
+                        taskUUID: generateUUID(),
+                        positivePrompt: prompt,
+                        negativePrompt: negativePrompt || undefined,
+                        model: model,
+                        width: width,
+                        height: height,
+                        steps: steps,
+                        CFGScale: cfgScale,
+                        seed: fixedSeed,
+                        scheduler: (scheduler && scheduler !== 'Default') ? scheduler : undefined,
+                        numberResults: 1,
+                        outputType: 'URL',
+                        includeCost: true
+                    };
+
+                    // undefinedのプロパティを削除
+                    const cleanTask = Object.fromEntries(
+                        Object.entries(task).filter(([_, v]) => v !== undefined)
+                    );
+
+                    const response = await fetch(API_BASE, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${runwareApiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify([cleanTask])
+                    });
+
+                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                    const data = await response.json();
+                    const result = Array.isArray(data.data) ? data.data[0] : data.data;
+                    return { url: result.imageURL, label };
+                };
+
+                const [withResult, withoutResult] = await Promise.all([
+                    generateImage(promptWith, 'タグあり'),
+                    generateImage(promptWithout, 'タグなし')
+                ]);
+
+                // 比較画像を保存
+                lastCompareImages = { with: withResult.url, without: withoutResult.url, tag: targetTag };
+
+                // 比較対象タグを赤字でハイライト
+                const highlightedPromptWith = promptWith.replace(
+                    new RegExp(`(${targetTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g'),
+                    '<span style="color: #e74c3c; font-weight: bold;">$1</span>'
+                );
+
+                compareResult.innerHTML = `
+                    <div style="margin-bottom: 1rem; padding: 0.5rem; background: #333; border-radius: 0.25rem;">
+                        <strong style="color: #e67e22;">比較タグ:</strong> ${targetTag}<br>
+                        <strong style="color: #888;">Seed:</strong> ${fixedSeed}
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="color: #2ecc71; margin-bottom: 0.5rem; font-weight: bold;">タグあり</div>
+                        <img src="${withResult.url}" style="width: 100%; border-radius: 0.25rem; cursor: pointer; margin-bottom: 0.5rem;" onclick="openCompareModal()">
+                        <div style="padding: 0.5rem; background: #2a2a2a; border-radius: 0.25rem; font-size: 0.75rem; color: #aaa; word-break: break-all;">${highlightedPromptWith}</div>
+                    </div>
+                    <div>
+                        <div style="color: #e74c3c; margin-bottom: 0.5rem; font-weight: bold;">タグなし</div>
+                        <img src="${withoutResult.url}" style="width: 100%; border-radius: 0.25rem; cursor: pointer; margin-bottom: 0.5rem;" onclick="openCompareModal()">
+                        <div style="padding: 0.5rem; background: #2a2a2a; border-radius: 0.25rem; font-size: 0.75rem; color: #aaa; word-break: break-all;">${promptWithout}</div>
+                    </div>
+                `;
+
+            } catch (error) {
+                compareResult.innerHTML = `<div style="color: #e74c3c;">エラー: ${error.message}</div>`;
+            }
+        }
+
+        function closeExtraEdit() {
+            document.getElementById('extra-edit-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function openCompareModal() {
+            document.getElementById('compare-modal-img-with').src = lastCompareImages.with;
+            document.getElementById('compare-modal-img-without').src = lastCompareImages.without;
+            document.getElementById('compare-modal-label-with').textContent = lastCompareImages.tag + ' あり';
+            document.getElementById('compare-modal-label-without').textContent = lastCompareImages.tag + ' なし';
+            document.getElementById('compare-modal').style.display = 'block';
+        }
+
+        function closeCompareModal() {
+            document.getElementById('compare-modal').style.display = 'none';
+        }
+
+        async function analyzePrompts() {
+            const apiKey = document.getElementById('extra-edit-api-key').value;
+            const model = document.getElementById('extra-edit-model').value;
+
+            if (!apiKey) {
+                alert('OpenRouter APIキーを入力してください');
+                return;
+            }
+
+            if (extraEditTags.length === 0) {
+                alert('解析するプロンプトがありません');
+                return;
+            }
+
+            // 設定を保存
+            localStorage.setItem(EXTRA_EDIT_API_KEY_STORAGE, apiKey);
+            localStorage.setItem(EXTRA_EDIT_MODEL_STORAGE, model);
+
+            const analyzeBtn = document.getElementById('analyze-btn');
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = '解析中...';
+
+            try {
+                // 全タグをまとめて翻訳リクエスト
+                const tagList = extraEditTags.map((tag, i) => `${i + 1}. ${tag}`).join('\n');
+                const prompt = `以下の画像生成プロンプト（英語タグ）について2つのタスクを実行してください。
+
+【タスク1】各タグを日本語に翻訳
+【タスク2】このシーンに追加でおすすめのタグを30個提案（explicit, nipples, spread legs, nude などのNSFW系タグを中心に、英語タグと日本語説明）
+
+現在のタグ:
+${tagList}
+
+以下の形式で回答してください：
+
+[翻訳]
+1. 日本語訳
+2. 日本語訳
+...
+
+[おすすめ]
+1. english_tag | 日本語説明
+2. english_tag | 日本語説明
+...`;
+
+                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [{ role: 'user', content: prompt }]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const content = data.choices?.[0]?.message?.content || '';
+
+                // 翻訳とおすすめを分離
+                const translationMatch = content.match(/\[翻訳\]([\s\S]*?)(?=\[おすすめ\]|$)/);
+                const suggestMatch = content.match(/\[おすすめ\]([\s\S]*?)$/);
+
+                // 翻訳をパース
+                if (translationMatch) {
+                    const lines = translationMatch[1].split('\n').filter(l => l.trim());
+                    lines.forEach(line => {
+                        const match = line.match(/^(\d+)\.\s*(.+)$/);
+                        if (match) {
+                            const index = parseInt(match[1]) - 1;
+                            const translation = match[2].trim();
+                            const cell = document.getElementById(`extra-edit-translation-${index}`);
+                            if (cell) {
+                                cell.textContent = translation;
+                            }
+                        }
+                    });
+                }
+
+                // おすすめタグをパース
+                if (suggestMatch) {
+                    const suggestTbody = document.getElementById('suggested-tags-tbody');
+                    suggestTbody.innerHTML = '';
+                    const lines = suggestMatch[1].split('\n').filter(l => l.trim());
+                    let count = 0;
+                    lines.forEach(line => {
+                        const match = line.match(/^(\d+)\.\s*([^|]+)\s*\|\s*(.+)$/);
+                        if (match && count < 30) {
+                            count++;
+                            const tag = match[2].trim();
+                            const desc = match[3].trim();
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td style="padding: 0.5rem; border-bottom: 1px solid #333; color: #666;">${count}</td>
+                                <td style="padding: 0.5rem; border-bottom: 1px solid #333; white-space: nowrap;">
+                                    <button onclick="addSuggestedTag('${tag.replace(/'/g, "\\'")}')" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; background: #27ae60; margin-right: 0.25rem;">追加</button>
+                                    <button onclick="compareSuggestedTag('${tag.replace(/'/g, "\\'")}')" style="padding: 0.2rem 0.4rem; font-size: 0.75rem; background: #9b59b6;">あり無し比較</button>
+                                </td>
+                                <td style="padding: 0.5rem; border-bottom: 1px solid #333;">${tag}</td>
+                                <td style="padding: 0.5rem; border-bottom: 1px solid #333; color: #888;">${desc}</td>
+                            `;
+                            suggestTbody.appendChild(tr);
+                        }
+                    });
+                    document.getElementById('suggested-tags-section').style.display = 'block';
+                }
+
+            } catch (error) {
+                alert('エラー: ' + error.message);
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'プロンプト解析';
+            }
+        }
+
         // ========== キャラタグ機能 ==========
         // カンマ区切りのタグリストを保存（編集用）
         let charaTagSource = localStorage.getItem('runware_chara_tags_source') || '';
 
         function initCharaTagSelect() {
-            const select = document.getElementById('prompt-chara-tag');
-            select.innerHTML = '<option value="">（なし）</option>';
+            const select1 = document.getElementById('prompt-chara-tag1');
+            const select2 = document.getElementById('prompt-chara-tag2');
+            const baseOptions = '<option value="">（なし）</option>';
+            select1.innerHTML = baseOptions;
+            select2.innerHTML = baseOptions;
             // カンマで分解して個別のタグをプルダウンに追加
             const tags = charaTagSource.split(',').map(t => t.trim()).filter(t => t);
             // 重複を除去
             const uniqueTags = [...new Set(tags)];
             uniqueTags.forEach(tag => {
-                const option = document.createElement('option');
-                option.value = tag;
-                option.textContent = tag;
-                select.appendChild(option);
+                const option1 = document.createElement('option');
+                option1.value = tag;
+                option1.textContent = tag;
+                select1.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = tag;
+                option2.textContent = tag;
+                select2.appendChild(option2);
             });
         }
 
@@ -1823,22 +2734,5 @@
         // 初期化時にセレクトボックスを更新
         initCharaTagSelect();
     </script>
-
-    <!-- キャラタグ編集モーダル -->
-    <div id="chara-tag-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background: #1a1a1a; border-radius: 0.5rem; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
-            <div style="padding: 1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #4a9eff;">キャラタグ編集</h3>
-                <div>
-                    <button onclick="saveCharaTags()" style="background: #4a9eff; padding: 0.5rem 1rem; margin-right: 0.5rem;">保存</button>
-                    <button onclick="closeCharaTagEditor()" style="background: #333; padding: 0.5rem 1rem;">キャンセル</button>
-                </div>
-            </div>
-            <div style="padding: 1rem; flex: 1; display: flex; flex-direction: column;">
-                <div style="color: #888; font-size: 0.85rem; margin-bottom: 0.5rem;">カンマ区切りでタグを入力（例: 1girl, blue hair, red eyes, 1boy, black hair）</div>
-                <textarea id="chara-tag-textarea" style="flex: 1; min-height: 300px; font-family: monospace;" placeholder="1girl, blue hair, red eyes, 1boy, black hair, green eyes"></textarea>
-            </div>
-        </div>
-    </div>
 </body>
 </html>

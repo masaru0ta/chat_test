@@ -1324,6 +1324,7 @@
                         <option value="runware:z-image@turbo">Runware / Z-Image Turbo</option>
                         <option value="civitai:481162@558910">Runware / Aoi-Realistic-Pony</option>
                         <option value="civitai:457669@691683">Runware / PinkiePie Pony Mix</option>
+                        <option value="x:42@1761560">Runware / WAI-NSFW-illustrious-SDXL v14</option>
                     </select>
                 </div>
                 <div class="form-group" id="runware-api-key-group" style="display: none;">
@@ -2001,7 +2002,7 @@
         }
 
         function updateRunwareApiKeyVisibility() {
-            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:');
+            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:') || imageModelSelect.value.startsWith('x:');
             runwareApiKeyGroup.style.display = isRunware ? 'block' : 'none';
             runwareBalanceItem.style.display = isRunware ? 'flex' : 'none';
             runwareCostItem.style.display = isRunware ? 'flex' : 'none';
@@ -2566,6 +2567,13 @@
                     scheduler: 'Default',
                     positivePrefix: 'score_9, score_8_up, score_7_up, ',
                     negativePrompt: 'score_6, score_5, score_4, source_furry, source_pony, source_cartoon, 3d, blur,'
+                },
+                'x:42@1761560': {
+                    steps: 30,
+                    CFGScale: 7,
+                    scheduler: 'Default',
+                    positivePrefix: 'masterpiece, ultra-HD, cinematic lighting, ',
+                    negativePrompt: 'bad anatomy, deformed hands, missing finger, worst quality, low quality, displeasing, watermark, text, artist name, signature, hearts,'
                 }
             };
             const params = modelParams[selectedModel] || modelParams['runware:z-image@turbo'];
@@ -2636,7 +2644,7 @@
                 return;
             }
 
-            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:');
+            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:') || imageModelSelect.value.startsWith('x:');
             if (isRunware && !runwareApiKey) {
                 alert('Runware APIキーが設定されていません。');
                 return;
@@ -2718,7 +2726,7 @@
                 return;
             }
 
-            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:');
+            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:') || imageModelSelect.value.startsWith('x:');
             if (isRunware && !runwareApiKey) {
                 alert('Runware APIキーが設定されていません。設定画面で入力してください。');
                 document.getElementById('settings-modal').classList.add('show');
