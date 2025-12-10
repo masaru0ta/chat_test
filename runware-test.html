@@ -441,6 +441,28 @@
                     </div>
                 </div>
 
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            場所
+                            <button type="button" onclick="openLocationEditor()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">編集</button>
+                        </label>
+                        <select id="prompt-location" style="width: 100%;">
+                            <option value="">（なし）</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="flex: 1;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            構図
+                            <button type="button" onclick="openCompositionEditor()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">編集</button>
+                        </label>
+                        <select id="prompt-composition" style="width: 100%;">
+                            <option value="">（なし）</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label style="display: flex; justify-content: space-between; align-items: center;">
                         ポジティブプロンプト（任意１）
@@ -452,6 +474,24 @@
                 <div class="form-group">
                     <label>ポジティブプロンプト（任意２）</label>
                     <textarea id="prompt2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        アクション
+                        <button type="button" onclick="openActionEditor()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">編集</button>
+                    </label>
+                    <select id="prompt-action" style="width: 100%;">
+                        <option value="">（なし）</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        場所補完タグ
+                        <button type="button" onclick="openLocationComplementEditor()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">編集</button>
+                    </label>
+                    <input type="text" id="prompt-location-complement" readonly style="width: 100%; background: #2a2a2a; color: #888; cursor: not-allowed;" placeholder="場所を選択すると自動設定">
                 </div>
 
                 <div class="form-group">
@@ -840,6 +880,145 @@
         </div>
     </div>
 
+    <!-- アクション編集モーダル -->
+    <div id="action-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1a1a1a; z-index: 1000; overflow: hidden;">
+        <div style="display: flex; height: 100%;">
+            <!-- 左ペイン: アクション編集 -->
+            <div style="flex: 2; padding: 2rem; overflow-y: auto; border-right: 1px solid #333;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="margin: 0; color: #9b59b6;">アクション編集</h2>
+                    <div>
+                        <button onclick="addActionRow()" style="background: #27ae60; padding: 0.5rem 1rem; margin-right: 0.5rem;">＋ 追加</button>
+                        <button onclick="saveActionTags()" style="background: #9b59b6; padding: 0.5rem 1rem; margin-right: 0.5rem;">保存</button>
+                        <button onclick="closeActionEditor()" style="background: #555; padding: 0.5rem 1rem;">← 戻る</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: #2a2a2a; border-radius: 0.5rem;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;">キャラタグ１</label>
+                        <select id="action-modal-chara-tag1" onchange="syncCharaTag1FromModal()" style="width: 100%; padding: 0.5rem; background: #333; border: 1px solid #555; color: #fff; border-radius: 0.25rem;">
+                            <option value="">（なし）</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;">場所</label>
+                        <select id="action-modal-location" onchange="syncLocationFromModal()" style="width: 100%; padding: 0.5rem; background: #333; border: 1px solid #555; color: #fff; border-radius: 0.25rem;">
+                            <option value="">（なし）</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="flex: 1; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #444; color: #888; width: 50px;">#</th>
+                                <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #444; color: #888; width: 200px;">アクション名</th>
+                                <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #444; color: #888;">プロンプト</th>
+                                <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #444; color: #888; width: 260px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="action-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- 右ペイン: 全構図確認結果 -->
+            <div style="width: 500px; padding: 1.5rem; overflow-y: auto; background: #222;">
+                <div style="margin-bottom: 1rem;">
+                    <h3 style="margin: 0 0 0.5rem 0; color: #e74c3c;">全構図確認</h3>
+                    <div style="color: #666; font-size: 0.8rem;">
+                        アクション行の「全構図確認」ボタンで生成
+                    </div>
+                </div>
+                <div id="all-compositions-result" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 構図設定モーダル -->
+    <div id="composition-settings-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1100; justify-content: center; align-items: center;">
+        <div style="background: #1a1a1a; border-radius: 0.5rem; width: 90%; max-width: 700px; max-height: 85vh; display: flex; flex-direction: column;">
+            <div style="padding: 1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #3498db;">構図設定: <span id="composition-settings-action-name" style="color: #9b59b6;"></span></h3>
+                <div>
+                    <button type="button" onclick="saveCompositionSettings()" style="background: #3498db; padding: 0.5rem 1rem; margin-right: 0.5rem;">保存</button>
+                    <button type="button" onclick="closeCompositionSettingsEditor()" style="background: #555; padding: 0.5rem 1rem;">キャンセル</button>
+                </div>
+            </div>
+            <div style="padding: 1rem; flex: 1; overflow-y: auto;">
+                <div style="color: #888; font-size: 0.85rem; margin-bottom: 1rem;">各構図に対して禁止フラグと追加タグを設定できます。追加タグはこのアクションでその構図を使うときのみプロンプトに追加されます。</div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888; width: 150px;">構図</th>
+                            <th style="text-align: center; padding: 0.5rem; border-bottom: 1px solid #444; color: #888; width: 60px;">禁止</th>
+                            <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888;">追加タグ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="composition-settings-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 場所編集モーダル -->
+    <div id="location-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: #1a1a1a; border-radius: 0.5rem; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
+            <div style="padding: 1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #16a085;">場所編集</h3>
+                <div>
+                    <button onclick="saveLocationTags()" style="background: #16a085; padding: 0.5rem 1rem; margin-right: 0.5rem;">保存</button>
+                    <button onclick="closeLocationEditor()" style="background: #333; padding: 0.5rem 1rem;">キャンセル</button>
+                </div>
+            </div>
+            <div style="padding: 1rem; flex: 1; display: flex; flex-direction: column;">
+                <div style="color: #888; font-size: 0.85rem; margin-bottom: 0.5rem;">カンマ区切りで場所を入力（例: bedroom, bathroom, outdoors, school, office）</div>
+                <textarea id="location-textarea" style="flex: 1; min-height: 300px; font-family: monospace;" placeholder="bedroom, bathroom, outdoors, school, office, beach"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- 構図編集モーダル -->
+    <div id="composition-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: #1a1a1a; border-radius: 0.5rem; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
+            <div style="padding: 1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #e74c3c;">構図編集</h3>
+                <div>
+                    <button type="button" onclick="saveCompositionTags()" style="background: #e74c3c; padding: 0.5rem 1rem; margin-right: 0.5rem;">保存</button>
+                    <button type="button" onclick="closeCompositionEditor()" style="background: #333; padding: 0.5rem 1rem;">キャンセル</button>
+                </div>
+            </div>
+            <div style="padding: 1rem; flex: 1; display: flex; flex-direction: column;">
+                <div style="color: #888; font-size: 0.85rem; margin-bottom: 0.5rem;">カンマ区切りで構図を入力（例: cowboy shot, full body, upper body, from above, from below）</div>
+                <textarea id="composition-textarea" style="flex: 1; min-height: 300px; font-family: monospace;" placeholder="cowboy shot, full body, upper body, close-up, from above, from below, from side, pov"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- 場所補完タグ編集モーダル -->
+    <div id="location-complement-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: #1a1a1a; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 80vh; display: flex; flex-direction: column; position: relative; z-index: 1001;">
+            <div style="padding: 1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #f39c12;">場所補完タグ編集</h3>
+                <div>
+                    <button type="button" onclick="console.log('Save clicked'); saveLocationComplement();" style="background: #f39c12; padding: 0.5rem 1rem; margin-right: 0.5rem; cursor: pointer;">保存</button>
+                    <button type="button" onclick="console.log('Cancel clicked'); closeLocationComplementEditor();" style="background: #333; padding: 0.5rem 1rem; cursor: pointer;">キャンセル</button>
+                </div>
+            </div>
+            <div style="padding: 1rem; flex: 1; overflow-y: auto;">
+                <div style="color: #888; font-size: 0.85rem; margin-bottom: 1rem;">各場所に対応する補完タグを設定します。場所を選択すると自動的に補完タグがプロンプトに追加されます。</div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888; width: 150px;">場所</th>
+                            <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #444; color: #888;">補完タグ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="location-complement-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = 'https://api.runware.ai/v1';
         const STORAGE_KEY = 'runware_api_key';
@@ -1021,12 +1200,21 @@
 
             // プロンプトを復元
             loadPrompts();
+            // 場所補完タグを更新
+            updateLocationComplement();
 
             // プロンプト変更時に保存
             document.getElementById('prompt').addEventListener('input', savePrompts);
             document.getElementById('inpaint-prompt').addEventListener('input', savePrompts);
             document.getElementById('prompt-chara-tag1').addEventListener('change', savePrompts);
             document.getElementById('prompt-chara-tag2').addEventListener('change', savePrompts);
+            document.getElementById('prompt-location').addEventListener('change', () => {
+                console.log('Location changed to:', document.getElementById('prompt-location').value);
+                savePrompts();
+                updateLocationComplement();
+            });
+            document.getElementById('prompt-composition').addEventListener('change', savePrompts);
+            document.getElementById('prompt-action').addEventListener('change', savePrompts);
 
             // IPAdapter ドロップゾーンの設定
             setupIPAdapterDropzone();
@@ -1233,8 +1421,12 @@
                 prompt1: document.getElementById('prompt').value,
                 adetailerPrompt: document.getElementById('inpaint-prompt').value,
                 charaTag1: document.getElementById('prompt-chara-tag1').value,
-                charaTag2: document.getElementById('prompt-chara-tag2').value
+                charaTag2: document.getElementById('prompt-chara-tag2').value,
+                location: document.getElementById('prompt-location').value,
+                composition: document.getElementById('prompt-composition').value,
+                action: document.getElementById('prompt-action').value
             };
+            console.log('Saving prompts, action:', prompts.action);
             localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(prompts));
         }
 
@@ -1243,17 +1435,30 @@
             if (saved) {
                 try {
                     const prompts = JSON.parse(saved);
-                    if (prompts.prompt1) {
+                    if (prompts.prompt1 !== undefined) {
                         document.getElementById('prompt').value = prompts.prompt1;
                     }
-                    if (prompts.adetailerPrompt) {
+                    if (prompts.adetailerPrompt !== undefined) {
                         document.getElementById('inpaint-prompt').value = prompts.adetailerPrompt;
                     }
-                    if (prompts.charaTag1) {
+                    if (prompts.charaTag1 !== undefined) {
                         document.getElementById('prompt-chara-tag1').value = prompts.charaTag1;
                     }
-                    if (prompts.charaTag2) {
+                    if (prompts.charaTag2 !== undefined) {
                         document.getElementById('prompt-chara-tag2').value = prompts.charaTag2;
+                    }
+                    if (prompts.location !== undefined) {
+                        document.getElementById('prompt-location').value = prompts.location;
+                    }
+                    if (prompts.composition !== undefined) {
+                        document.getElementById('prompt-composition').value = prompts.composition;
+                    }
+                    if (prompts.action !== undefined) {
+                        console.log('Restoring action:', prompts.action);
+                        const actionSelect = document.getElementById('prompt-action');
+                        console.log('Available options:', Array.from(actionSelect.options).map(o => o.value));
+                        actionSelect.value = prompts.action;
+                        console.log('Action set to:', actionSelect.value);
                     }
                 } catch (e) {
                     console.error('Failed to load prompts:', e);
@@ -1394,6 +1599,26 @@
                     html += makeSection('キャラタグ２', imageData.prompts.charaTag2, '#e67e22');
                 }
 
+                // 場所
+                if (imageData.prompts.location) {
+                    html += makeSection('場所', imageData.prompts.location, '#1abc9c');
+                }
+
+                // 構図
+                if (imageData.prompts.composition) {
+                    html += makeSection('構図', imageData.prompts.composition, '#e74c3c');
+                }
+
+                // 構図補正タグ
+                if (imageData.prompts.compositionAdditional) {
+                    html += makeSection('構図補正タグ', imageData.prompts.compositionAdditional, '#c0392b');
+                }
+
+                // 場所補完タグ
+                if (imageData.prompts.locationComplement) {
+                    html += makeSection('場所補完タグ', imageData.prompts.locationComplement, '#f39c12');
+                }
+
                 // 任意1
                 if (imageData.prompts.custom1) {
                     html += makeSection('ポジティブ（任意１）', imageData.prompts.custom1, '#9b59b6');
@@ -1402,6 +1627,14 @@
                 // 任意2
                 if (imageData.prompts.custom2) {
                     html += makeSection('ポジティブ（任意２）', imageData.prompts.custom2, '#9b59b6');
+                }
+
+                // アクション
+                if (imageData.prompts.action || imageData.prompts.actionName) {
+                    const actionDisplay = imageData.prompts.actionName
+                        ? `${imageData.prompts.actionName}: ${imageData.prompts.action || ''}`
+                        : imageData.prompts.action;
+                    html += makeSection('アクション', actionDisplay, '#16a085');
                 }
 
                 // ネガティブ（品質）
@@ -1532,11 +1765,29 @@
                 if (imageData.prompts.charaTag2 !== undefined) {
                     document.getElementById('prompt-chara-tag2').value = imageData.prompts.charaTag2;
                 }
+                if (imageData.prompts.location !== undefined) {
+                    document.getElementById('prompt-location').value = imageData.prompts.location;
+                    updateLocationComplement();
+                }
+                if (imageData.prompts.composition !== undefined) {
+                    document.getElementById('prompt-composition').value = imageData.prompts.composition;
+                }
                 if (imageData.prompts.custom1 !== undefined) {
                     document.getElementById('prompt').value = imageData.prompts.custom1;
                 }
                 if (imageData.prompts.custom2 !== undefined) {
                     document.getElementById('prompt2').value = imageData.prompts.custom2;
+                }
+                // アクションを復元（名前でマッチング）
+                if (imageData.prompts.actionName) {
+                    const actionIndex = actionList.findIndex(a => a.name === imageData.prompts.actionName);
+                    if (actionIndex >= 0) {
+                        document.getElementById('prompt-action').value = actionIndex.toString();
+                    } else {
+                        document.getElementById('prompt-action').value = '';
+                    }
+                } else {
+                    document.getElementById('prompt-action').value = '';
                 }
                 if (imageData.prompts.negativeQuality !== undefined) {
                     document.getElementById('negative-prompt-quality').value = imageData.prompts.negativeQuality;
@@ -1718,9 +1969,14 @@
             const promptQuality = document.getElementById('prompt-quality').value.trim();
             const promptCharaTag1 = document.getElementById('prompt-chara-tag1').value.trim();
             const promptCharaTag2 = document.getElementById('prompt-chara-tag2').value.trim();
+            const promptLocation = document.getElementById('prompt-location').value.trim();
+            const promptComposition = document.getElementById('prompt-composition').value.trim();
+            const promptLocationComplement = document.getElementById('prompt-location-complement').value.trim();
             const promptCustom1 = document.getElementById('prompt').value.trim();
             const promptCustom2 = document.getElementById('prompt2').value.trim();
-            const prompt = [promptQuality, promptCharaTag1, promptCharaTag2, promptCustom1, promptCustom2].filter(p => p).join(', ');
+            const promptAction = getSelectedActionPrompt();
+            const compositionAdditionalTags = getCompositionAdditionalTags();
+            const prompt = [promptQuality, promptCharaTag1, promptCharaTag2, promptLocation, promptComposition, promptLocationComplement, promptCustom1, promptCustom2, promptAction, compositionAdditionalTags].filter(p => p).join(', ');
             const negativePromptQuality = document.getElementById('negative-prompt-quality').value.trim();
             const negativePromptCustom = document.getElementById('negative-prompt').value.trim();
             const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p).join(', ');
@@ -1814,6 +2070,9 @@
                     if (result.imageURL) {
                         const cardId = 'card-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
                         // 各フィールドを個別に保存
+                        const actionSelect = document.getElementById('prompt-action');
+                        const actionIndex = parseInt(actionSelect.value);
+                        const actionName = (!isNaN(actionIndex) && actionList[actionIndex]) ? actionList[actionIndex].name : '';
                         const imageData = {
                             url: result.imageURL,
                             model: model,
@@ -1822,8 +2081,14 @@
                                 quality: promptQuality,
                                 charaTag1: promptCharaTag1,
                                 charaTag2: promptCharaTag2,
+                                location: promptLocation,
+                                composition: promptComposition,
+                                compositionAdditional: compositionAdditionalTags,
+                                locationComplement: promptLocationComplement,
                                 custom1: promptCustom1,
                                 custom2: promptCustom2,
+                                action: promptAction,
+                                actionName: actionName,
                                 negativeQuality: negativePromptQuality,
                                 negativeCustom: negativePromptCustom
                             }
@@ -2325,7 +2590,11 @@
             const promptQuality = document.getElementById('prompt-quality').value;
             const promptCharaTag1 = document.getElementById('prompt-chara-tag1').value;
             const promptCharaTag2 = document.getElementById('prompt-chara-tag2').value;
+            const promptLocation = document.getElementById('prompt-location').value;
+            const promptComposition = document.getElementById('prompt-composition').value;
+            const promptLocationComplement = document.getElementById('prompt-location-complement').value;
             const promptCustom2 = document.getElementById('prompt2').value;
+            const promptAction = getSelectedActionPrompt();
             const negativePromptQuality = document.getElementById('negative-prompt-quality').value;
             const negativePromptCustom = document.getElementById('negative-prompt').value;
             const steps = parseInt(document.getElementById('steps').value);
@@ -2339,12 +2608,12 @@
             const fixedSeed = (currentSeed === -1) ? Math.floor(Math.random() * 2147483647) : currentSeed;
 
             // タグなしのプロンプト（現在の利用タグのみ）
-            const promptWithout = [promptQuality, promptCharaTag1, promptCharaTag2, extraEditTags.join(', '), promptCustom2]
+            const promptWithout = [promptQuality, promptCharaTag1, promptCharaTag2, promptLocation, promptComposition, promptLocationComplement, extraEditTags.join(', '), promptCustom2, promptAction]
                 .filter(p => p && p.trim()).join(', ');
 
             // タグありのプロンプト（おすすめタグを追加）
             const tagsWithSuggested = [...extraEditTags, tag];
-            const promptWith = [promptQuality, promptCharaTag1, promptCharaTag2, tagsWithSuggested.join(', '), promptCustom2]
+            const promptWith = [promptQuality, promptCharaTag1, promptCharaTag2, promptLocation, promptComposition, promptLocationComplement, tagsWithSuggested.join(', '), promptCustom2, promptAction]
                 .filter(p => p && p.trim()).join(', ');
 
             const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p && p.trim()).join(', ');
@@ -2442,7 +2711,11 @@
             const promptQuality = document.getElementById('prompt-quality').value;
             const promptCharaTag1 = document.getElementById('prompt-chara-tag1').value;
             const promptCharaTag2 = document.getElementById('prompt-chara-tag2').value;
+            const promptLocation = document.getElementById('prompt-location').value;
+            const promptComposition = document.getElementById('prompt-composition').value;
+            const promptLocationComplement = document.getElementById('prompt-location-complement').value;
             const promptCustom2 = document.getElementById('prompt2').value;
+            const promptAction = getSelectedActionPrompt();
             const negativePromptQuality = document.getElementById('negative-prompt-quality').value;
             const negativePromptCustom = document.getElementById('negative-prompt').value;
             const steps = parseInt(document.getElementById('steps').value);
@@ -2456,12 +2729,12 @@
             const fixedSeed = (currentSeed === -1) ? Math.floor(Math.random() * 2147483647) : currentSeed;
 
             // タグありのプロンプト
-            const promptWith = [promptQuality, promptCharaTag1, promptCharaTag2, extraEditTags.join(', '), promptCustom2]
+            const promptWith = [promptQuality, promptCharaTag1, promptCharaTag2, promptLocation, promptComposition, promptLocationComplement, extraEditTags.join(', '), promptCustom2, promptAction]
                 .filter(p => p && p.trim()).join(', ');
 
             // タグなしのプロンプト（対象タグを除外）
             const tagsWithout = extraEditTags.filter((_, i) => i !== index);
-            const promptWithout = [promptQuality, promptCharaTag1, promptCharaTag2, tagsWithout.join(', '), promptCustom2]
+            const promptWithout = [promptQuality, promptCharaTag1, promptCharaTag2, promptLocation, promptComposition, promptLocationComplement, tagsWithout.join(', '), promptCustom2, promptAction]
                 .filter(p => p && p.trim()).join(', ');
 
             const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p && p.trim()).join(', ');
@@ -2688,6 +2961,10 @@ ${tagList}
         // ========== キャラタグ機能 ==========
         // カンマ区切りのタグリストを保存（編集用）
         let charaTagSource = localStorage.getItem('runware_chara_tags_source') || '';
+        let actionList = JSON.parse(localStorage.getItem('runware_action_list') || '[]');
+        let locationTagSource = localStorage.getItem('runware_location_tags_source') || '';
+        let compositionTagSource = localStorage.getItem('runware_composition_tags_source') || '';
+        let locationComplementMap = JSON.parse(localStorage.getItem('runware_location_complement_map') || '{}');
 
         function initCharaTagSelect() {
             const select1 = document.getElementById('prompt-chara-tag1');
@@ -2731,8 +3008,614 @@ ${tagList}
             closeCharaTagEditor();
         }
 
+        // ========== 場所機能 ==========
+        function initLocationSelect() {
+            const select = document.getElementById('prompt-location');
+            const baseOptions = '<option value="">（なし）</option>';
+            select.innerHTML = baseOptions;
+            const tags = locationTagSource.split(',').map(t => t.trim()).filter(t => t);
+            const uniqueTags = [...new Set(tags)];
+            uniqueTags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag;
+                option.textContent = tag;
+                select.appendChild(option);
+            });
+        }
+
+        function openLocationEditor() {
+            const modal = document.getElementById('location-modal');
+            const textarea = document.getElementById('location-textarea');
+            textarea.value = locationTagSource;
+            modal.style.display = 'flex';
+        }
+
+        function closeLocationEditor() {
+            document.getElementById('location-modal').style.display = 'none';
+        }
+
+        function saveLocationTags() {
+            const textarea = document.getElementById('location-textarea');
+            locationTagSource = textarea.value;
+            localStorage.setItem('runware_location_tags_source', locationTagSource);
+            initLocationSelect();
+            closeLocationEditor();
+        }
+
+        // ========== 構図機能 ==========
+        function initCompositionSelect() {
+            const select = document.getElementById('prompt-composition');
+            const baseOptions = '<option value="">（なし）</option>';
+            select.innerHTML = baseOptions;
+            const tags = compositionTagSource.split(',').map(t => t.trim()).filter(t => t);
+            const uniqueTags = [...new Set(tags)];
+            uniqueTags.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag;
+                option.textContent = tag;
+                select.appendChild(option);
+            });
+        }
+
+        function openCompositionEditor() {
+            const modal = document.getElementById('composition-modal');
+            const textarea = document.getElementById('composition-textarea');
+            textarea.value = compositionTagSource;
+            modal.style.display = 'flex';
+        }
+
+        function closeCompositionEditor() {
+            document.getElementById('composition-modal').style.display = 'none';
+        }
+
+        function saveCompositionTags() {
+            const textarea = document.getElementById('composition-textarea');
+            compositionTagSource = textarea.value;
+            localStorage.setItem('runware_composition_tags_source', compositionTagSource);
+            initCompositionSelect();
+            closeCompositionEditor();
+        }
+
+        // ========== 場所補完タグ機能 ==========
+        function updateLocationComplement() {
+            const location = document.getElementById('prompt-location').value;
+            const complementInput = document.getElementById('prompt-location-complement');
+            console.log('updateLocationComplement called:', location, 'Map:', locationComplementMap);
+            if (location && locationComplementMap[location]) {
+                complementInput.value = locationComplementMap[location];
+                console.log('Complement set to:', locationComplementMap[location]);
+            } else {
+                complementInput.value = '';
+                console.log('No complement found for location:', location);
+            }
+        }
+
+        function openLocationComplementEditor() {
+            console.log('openLocationComplementEditor called');
+            renderLocationComplementTable();
+            const modal = document.getElementById('location-complement-modal');
+            modal.style.display = 'flex';
+            console.log('Modal display set to:', modal.style.display);
+        }
+
+        function closeLocationComplementEditor() {
+            document.getElementById('location-complement-modal').style.display = 'none';
+        }
+
+        function renderLocationComplementTable() {
+            const tbody = document.getElementById('location-complement-tbody');
+            tbody.innerHTML = '';
+            const locations = locationTagSource.split(',').map(t => t.trim()).filter(t => t);
+            const uniqueLocations = [...new Set(locations)];
+
+            uniqueLocations.forEach((location, index) => {
+                const complement = locationComplementMap[location] || '';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #333; color: #1abc9c; font-weight: bold;">${location}</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #333;">
+                        <input type="text" id="location-complement-${index}" data-location="${location}" value="${complement.replace(/"/g, '&quot;')}" style="width: 100%; padding: 0.25rem; background: #333; border: 1px solid #555; color: #fff; border-radius: 0.25rem;" placeholder="indoors, bed, pillow...">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (uniqueLocations.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="2" style="padding: 1rem; text-align: center; color: #888;">場所が登録されていません。先に「場所」の編集で場所を追加してください。</td>`;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function saveLocationComplement() {
+            console.log('saveLocationComplement called');
+            const inputs = document.querySelectorAll('input[id^="location-complement-"]');
+            console.log('Found inputs:', inputs.length);
+            const newMap = {};
+            inputs.forEach(input => {
+                const location = input.dataset.location;
+                const complement = input.value.trim();
+                if (location && complement) {
+                    newMap[location] = complement;
+                }
+            });
+            locationComplementMap = newMap;
+            localStorage.setItem('runware_location_complement_map', JSON.stringify(locationComplementMap));
+            updateLocationComplement();
+            closeLocationComplementEditor();
+        }
+
+        // ========== アクション機能 ==========
+        function initActionSelect() {
+            const select = document.getElementById('prompt-action');
+            const baseOptions = '<option value="">（なし）</option>';
+            select.innerHTML = baseOptions;
+            actionList.forEach((action, index) => {
+                const option = document.createElement('option');
+                option.value = index.toString();
+                option.textContent = action.name;
+                select.appendChild(option);
+            });
+        }
+
+        function getSelectedActionPrompt() {
+            const select = document.getElementById('prompt-action');
+            const index = parseInt(select.value);
+            if (!isNaN(index) && actionList[index]) {
+                return actionList[index].prompt;
+            }
+            return '';
+        }
+
+        // 現在選択されているアクションと構図に対応する追加タグを取得
+        function getCompositionAdditionalTags() {
+            const actionSelect = document.getElementById('prompt-action');
+            const actionIndex = parseInt(actionSelect.value);
+            if (isNaN(actionIndex) || !actionList[actionIndex]) {
+                return '';
+            }
+
+            const composition = document.getElementById('prompt-composition').value.trim();
+            if (!composition) {
+                return '';
+            }
+
+            const compositionSettings = actionList[actionIndex].compositionSettings || {};
+            const setting = compositionSettings[composition];
+            return setting?.additionalTags || '';
+        }
+
+        function openActionEditor() {
+            const modal = document.getElementById('action-modal');
+            renderActionTable();
+            syncActionModalSelects();
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeActionEditor() {
+            document.getElementById('action-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // アクションモーダル内のセレクトボックスを同期
+        function syncActionModalSelects() {
+            // キャラタグ1の選択肢をコピー
+            const mainCharaTag1 = document.getElementById('prompt-chara-tag1');
+            const modalCharaTag1 = document.getElementById('action-modal-chara-tag1');
+            modalCharaTag1.innerHTML = mainCharaTag1.innerHTML;
+            modalCharaTag1.value = mainCharaTag1.value;
+
+            // 場所の選択肢をコピー
+            const mainLocation = document.getElementById('prompt-location');
+            const modalLocation = document.getElementById('action-modal-location');
+            modalLocation.innerHTML = mainLocation.innerHTML;
+            modalLocation.value = mainLocation.value;
+        }
+
+        // モーダルからメイン画面へ同期
+        function syncCharaTag1FromModal() {
+            const modalValue = document.getElementById('action-modal-chara-tag1').value;
+            document.getElementById('prompt-chara-tag1').value = modalValue;
+            savePrompts();
+        }
+
+        function syncLocationFromModal() {
+            const modalValue = document.getElementById('action-modal-location').value;
+            const mainLocation = document.getElementById('prompt-location');
+            mainLocation.value = modalValue;
+            // 場所補完タグを更新
+            updateLocationComplement();
+            savePrompts();
+        }
+
+        function renderActionTable() {
+            const tbody = document.getElementById('action-tbody');
+            tbody.innerHTML = '';
+            actionList.forEach((action, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333; color: #666; font-size: 1rem;">${index + 1}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333;">
+                        <input type="text" id="action-name-${index}" value="${action.name.replace(/"/g, '&quot;')}" style="width: 100%; padding: 0.5rem; background: #333; border: 1px solid #555; color: #fff; border-radius: 0.25rem; font-size: 1rem;">
+                    </td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333;">
+                        <input type="text" id="action-prompt-${index}" value="${action.prompt.replace(/"/g, '&quot;')}" style="width: 100%; padding: 0.5rem; background: #333; border: 1px solid #555; color: #fff; border-radius: 0.25rem; font-size: 1rem;">
+                    </td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333; white-space: nowrap;">
+                        <button onclick="openCompositionSettingsEditor(${index})" style="padding: 0.4rem 0.6rem; background: #3498db; margin-right: 0.25rem;">構図設定</button>
+                        <button onclick="generateAllCompositionsForAction(${index})" style="padding: 0.4rem 0.6rem; background: #e74c3c; margin-right: 0.25rem;">全構図確認</button>
+                        <button onclick="deleteActionRow(${index})" style="padding: 0.4rem 0.6rem; background: #666;">削除</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addActionRow() {
+            actionList.push({ name: '', prompt: '' });
+            renderActionTable();
+            // 新しい行の名前フィールドにフォーカス
+            const newIndex = actionList.length - 1;
+            document.getElementById(`action-name-${newIndex}`).focus();
+        }
+
+        function deleteActionRow(index) {
+            actionList.splice(index, 1);
+            renderActionTable();
+        }
+
+        // 構図設定編集
+        let currentEditingActionIndex = -1;
+
+        function openCompositionSettingsEditor(actionIndex) {
+            currentEditingActionIndex = actionIndex;
+            const action = actionList[actionIndex];
+            const actionNameEl = document.getElementById(`action-name-${actionIndex}`);
+            const actionName = actionNameEl ? actionNameEl.value.trim() : action.name;
+
+            document.getElementById('composition-settings-action-name').textContent = actionName || '(名前なし)';
+            renderCompositionSettingsTable(actionIndex);
+            document.getElementById('composition-settings-modal').style.display = 'flex';
+        }
+
+        function closeCompositionSettingsEditor() {
+            document.getElementById('composition-settings-modal').style.display = 'none';
+            currentEditingActionIndex = -1;
+        }
+
+        function renderCompositionSettingsTable(actionIndex) {
+            const tbody = document.getElementById('composition-settings-tbody');
+            tbody.innerHTML = '';
+
+            const compositions = compositionTagSource.split(',').map(t => t.trim()).filter(t => t);
+            const action = actionList[actionIndex];
+            const settings = action.compositionSettings || {};
+
+            if (compositions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="padding: 1rem; text-align: center; color: #888;">構図が登録されていません。先に構図を編集してください。</td></tr>';
+                return;
+            }
+
+            compositions.forEach((composition, index) => {
+                const setting = settings[composition] || { forbidden: false, additionalTags: '' };
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #333; color: #e74c3c; font-weight: bold;">${composition}</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #333; text-align: center;">
+                        <input type="checkbox" id="comp-setting-forbidden-${index}" ${setting.forbidden ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                    </td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #333;">
+                        <input type="text" id="comp-setting-tags-${index}" data-composition="${composition}" value="${(setting.additionalTags || '').replace(/"/g, '&quot;')}" style="width: 100%; padding: 0.4rem; background: #333; border: 1px solid #555; color: #fff; border-radius: 0.25rem;" placeholder="追加タグ（カンマ区切り）">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function saveCompositionSettings() {
+            if (currentEditingActionIndex < 0) return;
+
+            const compositions = compositionTagSource.split(',').map(t => t.trim()).filter(t => t);
+            const newSettings = {};
+
+            compositions.forEach((composition, index) => {
+                const forbiddenEl = document.getElementById(`comp-setting-forbidden-${index}`);
+                const tagsEl = document.getElementById(`comp-setting-tags-${index}`);
+
+                if (forbiddenEl && tagsEl) {
+                    const forbidden = forbiddenEl.checked;
+                    const additionalTags = tagsEl.value.trim();
+
+                    // 設定がある場合のみ保存
+                    if (forbidden || additionalTags) {
+                        newSettings[composition] = {
+                            forbidden: forbidden,
+                            additionalTags: additionalTags
+                        };
+                    }
+                }
+            });
+
+            actionList[currentEditingActionIndex].compositionSettings = newSettings;
+            closeCompositionSettingsEditor();
+        }
+
+        function saveActionTags() {
+            // テーブルから値を収集（compositionSettingsを保持）
+            const newList = [];
+            for (let i = 0; i < actionList.length; i++) {
+                const nameEl = document.getElementById(`action-name-${i}`);
+                const promptEl = document.getElementById(`action-prompt-${i}`);
+                if (nameEl && promptEl) {
+                    const name = nameEl.value.trim();
+                    const prompt = promptEl.value.trim();
+                    if (name || prompt) {
+                        newList.push({
+                            name,
+                            prompt,
+                            compositionSettings: actionList[i].compositionSettings || {}
+                        });
+                    }
+                }
+            }
+            actionList = newList;
+            localStorage.setItem('runware_action_list', JSON.stringify(actionList));
+            initActionSelect();
+            closeActionEditor();
+        }
+
+        // 全構図確認（アクション行ごと）
+        async function generateAllCompositionsForAction(actionIndex) {
+            const runwareApiKey = localStorage.getItem(STORAGE_KEY);
+            if (!runwareApiKey) {
+                alert('Runware APIキーが設定されていません');
+                return;
+            }
+
+            // 入力フィールドから現在の値を取得
+            const actionNameEl = document.getElementById(`action-name-${actionIndex}`);
+            const actionPromptEl = document.getElementById(`action-prompt-${actionIndex}`);
+            const actionName = actionNameEl ? actionNameEl.value.trim() : '';
+            const actionPrompt = actionPromptEl ? actionPromptEl.value.trim() : '';
+
+            if (!actionPrompt) {
+                alert('アクションのプロンプトが空です');
+                return;
+            }
+
+            // 構図リストを取得
+            const compositions = compositionTagSource.split(',').map(t => t.trim()).filter(t => t);
+            if (compositions.length === 0) {
+                alert('構図が登録されていません。先に構図を編集してください。');
+                return;
+            }
+
+            const resultContainer = document.getElementById('all-compositions-result');
+            resultContainer.innerHTML = `<div style="color: #4a9eff; grid-column: 1 / -1;">「${actionName || actionPrompt}」で構図なし＋全${compositions.length}構図を生成中...</div>`;
+
+            // 現在の設定を取得
+            const model = document.getElementById('model').value;
+            const promptQuality = document.getElementById('prompt-quality').value;
+            const promptCharaTag1 = document.getElementById('prompt-chara-tag1').value;
+            const promptCharaTag2 = document.getElementById('prompt-chara-tag2').value;
+            const promptLocation = document.getElementById('prompt-location').value;
+            const promptLocationComplement = document.getElementById('prompt-location-complement').value;
+            const promptCustom1 = document.getElementById('prompt').value;
+            const promptCustom2 = document.getElementById('prompt2').value;
+            const negativePromptQuality = document.getElementById('negative-prompt-quality').value;
+            const negativePromptCustom = document.getElementById('negative-prompt').value;
+            const negativePrompt = [negativePromptQuality, negativePromptCustom].filter(p => p && p.trim()).join(', ');
+            const steps = parseInt(document.getElementById('steps').value);
+            const cfgScale = parseFloat(document.getElementById('cfg-scale').value);
+            const scheduler = document.getElementById('scheduler').value;
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+
+            // 固定Seed（現在の設定が-1ならランダム生成）
+            const currentSeed = parseInt(document.getElementById('seed').value);
+            const fixedSeed = (currentSeed === -1) ? Math.floor(Math.random() * 2147483647) : currentSeed;
+
+            resultContainer.innerHTML = `<div style="grid-column: 1 / -1; margin-bottom: 0.5rem; padding: 0.5rem; background: #333; border-radius: 0.25rem;">
+                <div style="color: #9b59b6; font-weight: bold; font-size: 0.9rem;">${actionName || '(名前なし)'}</div>
+                <div style="color: #666; font-size: 0.75rem;">Seed: ${fixedSeed}</div>
+            </div>`;
+
+            // 構図なし + 全構図のリスト
+            const allCompositions = ['', ...compositions];
+
+            // アクションの構図設定を取得
+            const compositionSettings = actionList[actionIndex]?.compositionSettings || {};
+
+            // 個別生成用のパラメータを保存
+            const generationParams = {
+                model, promptQuality, promptCharaTag1, promptCharaTag2, promptLocation,
+                promptLocationComplement, promptCustom1, promptCustom2, actionPrompt,
+                negativePrompt, steps, cfgScale, scheduler, width, height, fixedSeed
+            };
+
+            try {
+                for (let i = 0; i < allCompositions.length; i++) {
+                    const composition = allCompositions[i];
+                    const compositionLabel = composition || '（構図なし）';
+
+                    // 構図ごとの設定を取得
+                    const compSetting = composition ? compositionSettings[composition] : null;
+                    const isForbidden = compSetting?.forbidden || false;
+                    const additionalTags = compSetting?.additionalTags || '';
+
+                    // 禁止構図はスキップしてプレースホルダーを表示
+                    if (isForbidden) {
+                        const cardId = `forbidden-card-${Date.now()}-${i}`;
+                        const card = document.createElement('div');
+                        card.id = cardId;
+                        card.style.cssText = 'background: #2a2a2a; border-radius: 0.25rem; overflow: hidden; position: relative; cursor: pointer;';
+                        card.innerHTML = `
+                            <div style="aspect-ratio: ${width}/${height}; background: #1a1a1a; display: flex; align-items: center; justify-content: center; color: #666;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 2rem;">🚫</div>
+                                    <div style="font-size: 0.75rem; margin-top: 0.5rem;">クリックで生成</div>
+                                </div>
+                            </div>
+                            <div style="padding: 0.25rem 0.5rem; text-align: center; background: #333;">
+                                <div style="color: #666; font-weight: bold; font-size: 0.8rem;">${compositionLabel} (禁止)</div>
+                            </div>
+                        `;
+                        card.onclick = () => generateForbiddenComposition(cardId, composition, compositionLabel, additionalTags, generationParams);
+                        resultContainer.appendChild(card);
+                        continue;
+                    }
+
+                    const prompt = [promptQuality, promptCharaTag1, promptCharaTag2, promptLocation, composition, promptLocationComplement, promptCustom1, promptCustom2, actionPrompt, additionalTags]
+                        .filter(p => p && p.trim()).join(', ');
+
+                    const task = {
+                        taskType: 'imageInference',
+                        taskUUID: generateUUID(),
+                        positivePrompt: prompt,
+                        negativePrompt: negativePrompt || undefined,
+                        model: model,
+                        width: width,
+                        height: height,
+                        steps: steps,
+                        CFGScale: cfgScale,
+                        seed: fixedSeed,
+                        scheduler: (scheduler && scheduler !== 'Default') ? scheduler : undefined,
+                        numberResults: 1,
+                        outputType: 'URL',
+                        includeCost: true
+                    };
+
+                    const cleanTask = Object.fromEntries(
+                        Object.entries(task).filter(([_, v]) => v !== undefined)
+                    );
+
+                    const response = await fetch(API_BASE, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${runwareApiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify([cleanTask])
+                    });
+
+                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                    const data = await response.json();
+                    const result = Array.isArray(data.data) ? data.data[0] : data.data;
+
+                    // 結果を表示
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background: #2a2a2a; border-radius: 0.25rem; overflow: hidden;';
+                    card.innerHTML = `
+                        <img src="${result.imageURL}" style="width: 100%; cursor: pointer;" onclick="window.open('${result.imageURL}', '_blank')">
+                        <div style="padding: 0.25rem 0.5rem; text-align: center; background: #333;">
+                            <div style="color: ${composition ? '#e74c3c' : '#888'}; font-weight: bold; font-size: 0.8rem;">${compositionLabel}</div>
+                        </div>
+                    `;
+                    resultContainer.appendChild(card);
+                }
+
+            } catch (error) {
+                console.error('Generation error:', error);
+                resultContainer.innerHTML += `<div style="color: #e74c3c; grid-column: 1 / -1;">エラー: ${error.message}</div>`;
+            }
+        }
+
+        // 禁止構図を個別に生成
+        async function generateForbiddenComposition(cardId, composition, compositionLabel, additionalTags, params) {
+            const runwareApiKey = localStorage.getItem(STORAGE_KEY);
+            if (!runwareApiKey) {
+                alert('Runware APIキーが設定されていません');
+                return;
+            }
+
+            const card = document.getElementById(cardId);
+            if (!card) return;
+
+            // ローディング表示
+            card.innerHTML = `
+                <div style="aspect-ratio: ${params.width}/${params.height}; background: #1a1a1a; display: flex; align-items: center; justify-content: center; color: #4a9eff;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem;">⏳</div>
+                        <div style="font-size: 0.75rem; margin-top: 0.5rem;">生成中...</div>
+                    </div>
+                </div>
+                <div style="padding: 0.25rem 0.5rem; text-align: center; background: #333;">
+                    <div style="color: #666; font-weight: bold; font-size: 0.8rem;">${compositionLabel} (禁止)</div>
+                </div>
+            `;
+            card.style.cursor = 'default';
+            card.onclick = null;
+
+            try {
+                const prompt = [params.promptQuality, params.promptCharaTag1, params.promptCharaTag2, params.promptLocation, composition, params.promptLocationComplement, params.promptCustom1, params.promptCustom2, params.actionPrompt, additionalTags]
+                    .filter(p => p && p.trim()).join(', ');
+
+                const task = {
+                    taskType: 'imageInference',
+                    taskUUID: generateUUID(),
+                    positivePrompt: prompt,
+                    negativePrompt: params.negativePrompt || undefined,
+                    model: params.model,
+                    width: params.width,
+                    height: params.height,
+                    steps: params.steps,
+                    CFGScale: params.cfgScale,
+                    seed: params.fixedSeed,
+                    scheduler: (params.scheduler && params.scheduler !== 'Default') ? params.scheduler : undefined,
+                    numberResults: 1,
+                    outputType: 'URL',
+                    includeCost: true
+                };
+
+                const cleanTask = Object.fromEntries(
+                    Object.entries(task).filter(([_, v]) => v !== undefined)
+                );
+
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${runwareApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify([cleanTask])
+                });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const data = await response.json();
+                const result = Array.isArray(data.data) ? data.data[0] : data.data;
+
+                // 生成結果を表示（グレー表示）
+                card.style.cssText = 'background: #2a2a2a; border-radius: 0.25rem; overflow: hidden; position: relative;';
+                card.innerHTML = `
+                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1; pointer-events: none;"></div>
+                    <img src="${result.imageURL}" style="width: 100%; cursor: pointer; filter: grayscale(70%);" onclick="window.open('${result.imageURL}', '_blank')">
+                    <div style="padding: 0.25rem 0.5rem; text-align: center; background: #333;">
+                        <div style="color: #666; font-weight: bold; font-size: 0.8rem;">${compositionLabel} 🚫</div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Generation error:', error);
+                card.innerHTML = `
+                    <div style="aspect-ratio: ${params.width}/${params.height}; background: #1a1a1a; display: flex; align-items: center; justify-content: center; color: #e74c3c;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem;">❌</div>
+                            <div style="font-size: 0.75rem; margin-top: 0.5rem;">エラー</div>
+                        </div>
+                    </div>
+                    <div style="padding: 0.25rem 0.5rem; text-align: center; background: #333;">
+                        <div style="color: #666; font-weight: bold; font-size: 0.8rem;">${compositionLabel} (禁止)</div>
+                    </div>
+                `;
+            }
+        }
+
         // 初期化時にセレクトボックスを更新
         initCharaTagSelect();
+        initLocationSelect();
+        initCompositionSelect();
+        initActionSelect();
     </script>
 </body>
 </html>
