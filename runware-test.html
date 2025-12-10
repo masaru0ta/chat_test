@@ -888,6 +888,8 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 style="margin: 0; color: #9b59b6;">アクション編集</h2>
                     <div>
+                        <button onclick="openGasSettings()" style="background: #007bff; padding: 0.5rem 1rem; margin-right: 0.5rem;">GAS設定</button>
+                        <button onclick="saveActionToGas()" style="background: #17a2b8; padding: 0.5rem 1rem; margin-right: 0.5rem;">GASで保存</button>
                         <button onclick="addActionRow()" style="background: #27ae60; padding: 0.5rem 1rem; margin-right: 0.5rem;">＋ 追加</button>
                         <button onclick="saveActionTags()" style="background: #9b59b6; padding: 0.5rem 1rem; margin-right: 0.5rem;">保存</button>
                         <button onclick="closeActionEditor()" style="background: #555; padding: 0.5rem 1rem;">← 戻る</button>
@@ -1019,9 +1021,29 @@
         </div>
     </div>
 
+    <!-- GAS設定モーダル -->
+    <div id="gas-settings-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1100; justify-content: center; align-items: center;">
+        <div style="background: #1a1a1a; border-radius: 0.5rem; width: 90%; max-width: 500px; display: flex; flex-direction: column;">
+            <div style="padding: 1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #007bff;">GAS API設定</h3>
+                <button onclick="closeGasSettings()" style="background: #333; padding: 0.5rem 1rem;">閉じる</button>
+            </div>
+            <div style="padding: 1rem;">
+                <label style="display: block; font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">GAS ウェブアプリの URL:</label>
+                <input type="text" id="gas-api-url" placeholder="https://script.google.com/macros/s/xxxxxx/exec" style="width: 100%; padding: 0.75rem; background: #333; border: 1px solid #555; color: #fff; border-radius: 0.25rem; box-sizing: border-box;">
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button onclick="saveGasUrl()" style="flex: 1; background: #007bff; padding: 0.75rem;">URLを保存</button>
+                    <button onclick="loadActionFromGas()" style="flex: 1; background: #28a745; padding: 0.75rem;">GASから読込</button>
+                </div>
+                <div id="gas-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 0.25rem; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = 'https://api.runware.ai/v1';
         const STORAGE_KEY = 'runware_api_key';
+        const GAS_URL_KEY = 'runware_gas_api_url';
         const IMAGES_STORAGE_KEY = 'runware_images';
         const PROMPTS_STORAGE_KEY = 'runware_prompts';
         const MODEL_STORAGE_KEY = 'runware_model';
@@ -3363,6 +3385,178 @@ ${tagList}
             localStorage.setItem('runware_action_list', JSON.stringify(actionList));
             initActionSelect();
             closeActionEditor();
+        }
+
+        // GAS設定関連
+        function openGasSettings() {
+            const modal = document.getElementById('gas-settings-modal');
+            modal.style.display = 'flex';
+            const savedUrl = localStorage.getItem(GAS_URL_KEY);
+            if (savedUrl) {
+                document.getElementById('gas-api-url').value = savedUrl;
+            }
+            document.getElementById('gas-status').style.display = 'none';
+        }
+
+        function closeGasSettings() {
+            document.getElementById('gas-settings-modal').style.display = 'none';
+        }
+
+        function showGasStatus(msg, isError = false) {
+            const el = document.getElementById('gas-status');
+            el.textContent = msg;
+            el.style.display = 'block';
+            el.style.background = isError ? '#f8d7da' : '#d4edda';
+            el.style.color = isError ? '#721c24' : '#155724';
+        }
+
+        function saveGasUrl() {
+            const url = document.getElementById('gas-api-url').value.trim();
+            if (url) {
+                localStorage.setItem(GAS_URL_KEY, url);
+                showGasStatus('URLを保存しました');
+            } else {
+                showGasStatus('URLを入力してください', true);
+            }
+        }
+
+        // GASカラム名と構図名のマッピング
+        const GAS_COMPOSITION_MAP = {
+            'pov': 'pov',
+            'front view': 'front view',
+            'side view': 'side view',
+            'from above': 'from above',
+            'low angle': 'low angle',
+            'from behind': 'from behind',
+            'crotch focus': 'crotch focus'
+        };
+
+        async function loadActionFromGas() {
+            const url = localStorage.getItem(GAS_URL_KEY);
+            if (!url) {
+                showGasStatus('GAS URLが設定されていません', true);
+                return;
+            }
+
+            showGasStatus('読み込み中...');
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const data = await response.json();
+
+                // GASの構図名でローカルの構図リストを更新
+                const gasCompositions = Object.keys(GAS_COMPOSITION_MAP);
+                compositionTagSource = gasCompositions.join(', ');
+                localStorage.setItem('runware_composition_tags_source', compositionTagSource);
+                initCompositionSelect();
+
+                // GASからのデータをactionListの形式に変換
+                // GASは { "action name", "prompt", "構図名 quality", "構図名 tag" } 形式
+                const newList = data.map(item => {
+                    const name = item['action name'] || '';
+                    const prompt = item['prompt'] || '';
+
+                    // 構図設定を復元
+                    const compositionSettings = {};
+
+                    Object.keys(GAS_COMPOSITION_MAP).forEach(gasName => {
+                        const localName = GAS_COMPOSITION_MAP[gasName];
+                        const qualityKey = `${gasName} quality`;
+                        const tagKey = `${gasName} tag`;
+
+                        if (item[qualityKey] !== undefined || item[tagKey] !== undefined) {
+                            compositionSettings[localName] = {
+                                forbidden: item[qualityKey] === 'NG',
+                                additionalTags: item[tagKey] || ''
+                            };
+                        }
+                    });
+
+                    return { name, prompt, compositionSettings };
+                });
+
+                actionList = newList;
+                localStorage.setItem('runware_action_list', JSON.stringify(actionList));
+                renderActionTable();
+                initActionSelect();
+
+                showGasStatus(`読み込み成功: ${data.length} 件（構図リストも更新）`);
+            } catch (error) {
+                console.error(error);
+                showGasStatus('読み込みエラー: ' + error.message, true);
+            }
+        }
+
+        async function saveActionToGas() {
+            const url = localStorage.getItem(GAS_URL_KEY);
+            if (!url) {
+                alert('GAS URLが設定されていません。先に「GAS設定」からURLを設定してください。');
+                return;
+            }
+
+            // テーブルから現在の値を収集
+            const currentList = [];
+            for (let i = 0; i < actionList.length; i++) {
+                const nameEl = document.getElementById(`action-name-${i}`);
+                const promptEl = document.getElementById(`action-prompt-${i}`);
+                if (nameEl && promptEl) {
+                    const name = nameEl.value.trim();
+                    const prompt = promptEl.value.trim();
+                    if (name || prompt) {
+                        const item = {
+                            'action name': name,
+                            'prompt': prompt
+                        };
+
+                        // 構図ごとの設定を追加（GASのカラム名に合わせる）
+                        const compSettings = actionList[i].compositionSettings || {};
+                        Object.keys(GAS_COMPOSITION_MAP).forEach(gasName => {
+                            const localName = GAS_COMPOSITION_MAP[gasName];
+                            const setting = compSettings[localName] || {};
+                            // 禁止フラグ: forbidden=trueなら"NG"、それ以外は空
+                            item[`${gasName} quality`] = setting.forbidden ? 'NG' : '';
+                            // 追加タグ
+                            item[`${gasName} tag`] = setting.additionalTags || '';
+                        });
+
+                        currentList.push(item);
+                    }
+                }
+            }
+
+            if (currentList.length === 0) {
+                alert('保存するデータがありません');
+                return;
+            }
+
+            if (!confirm(`${currentList.length} 件のアクションをGASに保存しますか？\n※ GAS側のデータは全て上書きされます`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify(currentList)
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    alert('GASへの保存が完了しました: ' + result.message);
+                    // ローカルにも保存
+                    saveActionTags();
+                } else {
+                    alert('GASエラー: ' + result.message);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('送信エラー: ' + error.message);
+            }
         }
 
         // 全構図確認（アクション行ごと）
