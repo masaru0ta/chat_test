@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>キャラクター一覧</title>
+    <title>キャラクター設定</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -83,8 +83,8 @@
         /* キャラクターカード */
         .character-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
         }
 
         .character-card {
@@ -118,49 +118,55 @@
 
         .character-image .placeholder {
             color: #666;
-            font-size: 0.9rem;
+            font-size: 0.65rem;
         }
 
         .character-image .generating {
             color: #4a9eff;
-            font-size: 0.9rem;
+            font-size: 0.65rem;
         }
 
         .character-info {
-            padding: 15px;
+            padding: 8px;
         }
 
         .character-name {
-            font-size: 1.2rem;
+            font-size: 0.8rem;
             font-weight: bold;
             color: #4a9eff;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .character-series {
-            font-size: 0.85rem;
+            font-size: 0.7rem;
             color: #888;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .character-profile {
-            font-size: 0.85rem;
+            font-size: 0.65rem;
             color: #aaa;
-            line-height: 1.5;
-            max-height: 80px;
+            line-height: 1.3;
+            max-height: 40px;
             overflow-y: auto;
         }
 
         .character-actions {
-            padding: 10px 15px;
+            padding: 6px 8px;
             border-top: 1px solid #333;
             display: flex;
-            gap: 10px;
+            gap: 5px;
         }
 
         .btn-small {
-            padding: 6px 12px;
-            font-size: 0.8rem;
+            padding: 4px 8px;
+            font-size: 0.65rem;
         }
 
         .empty-message {
@@ -170,15 +176,264 @@
             font-size: 1.1rem;
             grid-column: 1 / -1;
         }
+
+        /* 詳細ページ */
+        .detail-page {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .detail-page.active {
+            display: block;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .detail-back {
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-right: 20px;
+        }
+
+        .detail-back:hover {
+            background: #444;
+        }
+
+        .detail-title {
+            color: #4a9eff;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .detail-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .detail-main {
+            display: flex;
+            gap: 30px;
+        }
+
+        .detail-image-section {
+            flex: 0 0 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .detail-image-section .btn-generate {
+            width: 100%;
+        }
+
+        .detail-image-area img {
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .detail-image-area .placeholder {
+            width: 400px;
+            height: 400px;
+            background: #111;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .detail-info {
+            flex: 1;
+        }
+
+        .detail-info .series {
+            color: #888;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .detail-info .field-label {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .detail-info .field-value {
+            background: #1a1a1a;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 1rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 1px solid #333;
+        }
+
+        .detail-info .field-input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            border: 1px solid #333;
+            background: #222;
+            color: #e0e0e0;
+            box-sizing: border-box;
+        }
+
+        .detail-info .field-input:focus,
+        .detail-info .field-textarea:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .detail-info .field-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            border: 1px solid #333;
+            background: #222;
+            color: #e0e0e0;
+            box-sizing: border-box;
+            min-height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .detail-nav {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        .btn-nav {
+            background: #333;
+            padding: 8px 16px;
+        }
+
+        .btn-nav:hover:not(:disabled) {
+            background: #444;
+        }
+
+        /* 全身画像セクション */
+        .fullbody-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #333;
+        }
+
+        .fullbody-title {
+            color: #4a9eff;
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+        }
+
+        .fullbody-settings {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .fullbody-settings label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .fullbody-select {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #222;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            min-width: 200px;
+        }
+
+        .fullbody-select:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .fullbody-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .fullbody-item {
+            text-align: center;
+        }
+
+        .fullbody-label {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .fullbody-image {
+            width: 100%;
+            aspect-ratio: 832 / 1216;
+            background: #111;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .fullbody-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+        }
+
+        .fullbody-image .placeholder {
+            color: #666;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>キャラクター一覧</h1>
+    <h1>キャラクター設定</h1>
+
+    <!-- キャラクターグリッド -->
+    <div id="character-grid" class="character-grid">
+        <div class="empty-message">「GASから読み込み」ボタンでキャラクターデータを読み込んでください</div>
+    </div>
 
     <!-- 設定バー -->
-    <div class="settings-bar">
+    <div class="settings-bar" style="margin-top: 20px;">
         <div class="settings-row">
             <label>GAS URL:</label>
             <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec">
@@ -196,10 +451,62 @@
         </div>
         <div id="status"></div>
     </div>
+</div>
 
-    <!-- キャラクターグリッド -->
-    <div id="character-grid" class="character-grid">
-        <div class="empty-message">「GASから読み込み」ボタンでキャラクターデータを読み込んでください</div>
+<!-- キャラクター詳細ページ -->
+<div id="detail-page" class="detail-page">
+    <div class="detail-header">
+        <button class="detail-back" onclick="closeDetailPage()">← 戻る</button>
+        <h1 class="detail-title" id="detail-title"></h1>
+        <div class="detail-nav">
+            <button class="btn btn-nav" onclick="navigateCharacter(-1)" id="btn-prev">← 前</button>
+            <button class="btn btn-nav" onclick="navigateCharacter(1)" id="btn-next">次 →</button>
+        </div>
+    </div>
+    <div class="detail-content">
+        <div class="detail-main">
+            <div class="detail-image-section">
+                <div class="detail-image-area" id="detail-image"></div>
+                <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
+            </div>
+            <div class="detail-info">
+                <div class="field-label">シリーズ</div>
+                <input type="text" class="field-input" id="detail-series" onchange="updateCharacterField('series', this.value)">
+                <div class="field-label">キャラタグ</div>
+                <input type="text" class="field-input" id="detail-tag" onchange="updateCharacterField('tag', this.value)">
+                <div class="field-label">プロフィール</div>
+                <textarea class="field-textarea" id="detail-profile" onchange="updateCharacterField('profile', this.value)"></textarea>
+                <div class="field-label">ユニフォーム1</div>
+                <input type="text" class="field-input" id="detail-uniform1" onchange="updateCharacterField('uniform1', this.value)">
+                <div class="field-label">ユニフォーム2</div>
+                <input type="text" class="field-input" id="detail-uniform2" onchange="updateCharacterField('uniform2', this.value)">
+            </div>
+        </div>
+        <!-- 全身画像エリア -->
+        <div class="fullbody-section">
+            <h3 class="fullbody-title">全身画像</h3>
+            <div class="fullbody-settings">
+                <label>場所:</label>
+                <select id="fullbody-place" class="fullbody-select"></select>
+            </div>
+            <div class="fullbody-grid">
+                <div class="fullbody-item">
+                    <div class="fullbody-label">通常</div>
+                    <div class="fullbody-image" id="fullbody-normal"></div>
+                    <button class="btn btn-generate btn-small" onclick="generateFullbodyImage('normal')">生成</button>
+                </div>
+                <div class="fullbody-item">
+                    <div class="fullbody-label">ユニフォーム1</div>
+                    <div class="fullbody-image" id="fullbody-uniform1"></div>
+                    <button class="btn btn-generate btn-small" onclick="generateFullbodyImage('uniform1')">生成</button>
+                </div>
+                <div class="fullbody-item">
+                    <div class="fullbody-label">ユニフォーム2</div>
+                    <div class="fullbody-image" id="fullbody-uniform2"></div>
+                    <button class="btn btn-generate btn-small" onclick="generateFullbodyImage('uniform2')">生成</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -210,6 +517,7 @@
     const IMAGE_UPLOAD_URL_KEY = 'image_upload_gas_url';
     const GAS_DATA_KEY = 'gas_data_cache';
     const CHAR_IMAGES_KEY = 'character_images';
+    const FULLBODY_IMAGES_KEY = 'fullbody_images';
 
     // データストア
     let models = {};
@@ -218,6 +526,7 @@
     let actions = [];
     let characterImages = {}; // キャラ名 -> 画像URL
     let originalGasImages = {}; // キャラ名 -> GASから読み込んだ元の画像URL
+    let fullbodyImages = {}; // キャラ名 -> { normal: url, uniform1: url, uniform2: url }
 
     // 構図のカラム名一覧
     const COMPOSITION_KEYS = ['pov', 'front view', 'side view', 'from above', 'low angle', 'from behind', 'crotch focus'];
@@ -251,6 +560,7 @@
         };
         localStorage.setItem(GAS_DATA_KEY, JSON.stringify(data));
         localStorage.setItem(CHAR_IMAGES_KEY, JSON.stringify(characterImages));
+        localStorage.setItem(FULLBODY_IMAGES_KEY, JSON.stringify(fullbodyImages));
     }
 
     // キャッシュデータを復元
@@ -268,6 +578,11 @@
             const cachedImages = localStorage.getItem(CHAR_IMAGES_KEY);
             if (cachedImages) {
                 characterImages = JSON.parse(cachedImages);
+            }
+
+            const cachedFullbody = localStorage.getItem(FULLBODY_IMAGES_KEY);
+            if (cachedFullbody) {
+                fullbodyImages = JSON.parse(cachedFullbody);
             }
 
             // データがあればグリッドを描画
@@ -337,7 +652,9 @@
                     name: item.name || '',
                     series: item.series || '',
                     tag: item.tag || '',
-                    profile: item.profile || ''
+                    profile: item.profile || '',
+                    uniform1: item.uniform1 || '',
+                    uniform2: item.uniform2 || ''
                 };
                 // 画像URLがあればcharacterImagesに設定
                 if (item.image) {
@@ -516,7 +833,7 @@
                         // カード画像も更新
                         const imageDiv = document.getElementById(`image-${i}`);
                         if (imageDiv) {
-                            imageDiv.innerHTML = `<img src="${gasUrl}" alt="${char.name}" onclick="window.open('${gasUrl}', '_blank')">`;
+                            imageDiv.innerHTML = `<img src="${gasUrl}" alt="${char.name}" onclick="openDetailPage(${i})">`;
                         }
                     } catch (error) {
                         console.error(`${char.name}の画像アップロード失敗:`, error);
@@ -530,6 +847,8 @@
                 series: char.series,
                 tag: char.tag,
                 profile: char.profile,
+                uniform1: char.uniform1 || '',
+                uniform2: char.uniform2 || '',
                 image: characterImages[char.name] || ''
             }));
 
@@ -571,8 +890,8 @@
             <div class="character-card" id="card-${index}">
                 <div class="character-image" id="image-${index}">
                     ${characterImages[char.name]
-                        ? `<img src="${characterImages[char.name]}" alt="${char.name}" onclick="window.open('${characterImages[char.name]}', '_blank')">`
-                        : '<div class="placeholder">画像未生成</div>'
+                        ? `<img src="${characterImages[char.name]}" alt="${char.name}" onclick="openDetailPage(${index})">`
+                        : `<div class="placeholder" onclick="openDetailPage(${index})" style="cursor:pointer;">画像未生成</div>`
                     }
                 </div>
                 <div class="character-info">
@@ -612,14 +931,24 @@
         const action = actions[0] || {};
         const compositionTag = getFrontViewTag(action);
 
+        // デバッグ出力
+        console.log('=== buildCharacterPrompt デバッグ ===');
+        console.log('action:', action);
+        console.log('action.prompt:', action.prompt);
+        console.log('place:', place);
+        console.log('char.uniform1:', char.uniform1);
+
         const parts = [
             model.qualityPositive || '',
             char.tag || '',
             place.tag || '',
             action.prompt || '',
             compositionTag,
+            char.uniform1 || '',  // ユニフォーム1のタグ
             place.additionalTag || ''
         ].filter(p => p);
+
+        console.log('生成されるプロンプト:', parts.join(', '));
 
         return parts.join(', ');
     }
@@ -648,7 +977,7 @@
             const imageUrl = await generateImageForCharacter(charIndex, modelId, apiKey);
             characterImages[char.name] = imageUrl;
             saveCachedData(); // 画像URLを保存
-            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="openDetailPage(${charIndex})">`;
         } catch (error) {
             console.error(error);
             imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
@@ -690,7 +1019,7 @@
                 const imageUrl = await generateImageForCharacter(i, modelId, apiKey);
                 characterImages[char.name] = imageUrl;
                 saveCachedData(); // 画像URLを保存
-                imageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+                imageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="openDetailPage(${i})">`;
                 showStatus(`画像生成中: ${i + 1}/${characters.length}`, 'loading');
             } catch (error) {
                 console.error(error);
@@ -705,6 +1034,273 @@
 
         btn.disabled = false;
         showStatus(`画像生成完了: ${characters.length}件`);
+    }
+
+    // 詳細ページ関連
+    let currentDetailIndex = -1;
+
+    function openDetailPage(index) {
+        const char = characters[index];
+        if (!char) return;
+
+        currentDetailIndex = index;
+        updateDetailPage();
+
+        // 詳細ページを表示
+        document.getElementById('detail-page').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function updateDetailPage() {
+        const char = characters[currentDetailIndex];
+        if (!char) return;
+
+        // データを設定
+        document.getElementById('detail-title').textContent = char.name || '(名前未設定)';
+        document.getElementById('detail-series').value = char.series || '';
+        document.getElementById('detail-tag').value = char.tag || '';
+        document.getElementById('detail-profile').value = char.profile || '';
+        document.getElementById('detail-uniform1').value = char.uniform1 || '';
+        document.getElementById('detail-uniform2').value = char.uniform2 || '';
+
+        // 画像を設定
+        const imageDiv = document.getElementById('detail-image');
+        const imageUrl = characterImages[char.name];
+        if (imageUrl) {
+            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+        } else {
+            imageDiv.innerHTML = '<div class="placeholder">画像未生成</div>';
+        }
+
+        // 全身画像を設定
+        const charFullbody = fullbodyImages[char.name] || {};
+        updateFullbodyImage('normal', charFullbody.normal);
+        updateFullbodyImage('uniform1', charFullbody.uniform1);
+        updateFullbodyImage('uniform2', charFullbody.uniform2);
+
+        // 場所プルダウンを更新
+        updatePlaceSelect();
+
+        // ナビゲーションボタンの状態を更新
+        document.getElementById('btn-prev').disabled = currentDetailIndex <= 0;
+        document.getElementById('btn-next').disabled = currentDetailIndex >= characters.length - 1;
+    }
+
+    function updateFullbodyImage(type, url) {
+        const div = document.getElementById(`fullbody-${type}`);
+        if (url) {
+            div.innerHTML = `<img src="${url}" alt="${type}" onclick="window.open('${url}', '_blank')">`;
+        } else {
+            div.innerHTML = '<div class="placeholder">未生成</div>';
+        }
+    }
+
+    function updatePlaceSelect() {
+        const select = document.getElementById('fullbody-place');
+        const currentValue = select.value;
+
+        select.innerHTML = places.map((place, index) =>
+            `<option value="${index}">${place.name || '(名前なし)'}</option>`
+        ).join('');
+
+        // 以前の選択を維持
+        if (currentValue && currentValue < places.length) {
+            select.value = currentValue;
+        }
+    }
+
+    function closeDetailPage() {
+        document.getElementById('detail-page').classList.remove('active');
+        document.body.style.overflow = '';
+        currentDetailIndex = -1;
+    }
+
+    // キャラクターフィールドを更新
+    function updateCharacterField(field, value) {
+        if (currentDetailIndex < 0) return;
+
+        const char = characters[currentDetailIndex];
+        if (!char) return;
+
+        char[field] = value;
+        saveCachedData();
+
+        // カードのグリッド表示も更新（シリーズやプロフィールが変わった場合）
+        renderCharacterGrid();
+    }
+
+    function navigateCharacter(direction) {
+        const newIndex = currentDetailIndex + direction;
+        if (newIndex >= 0 && newIndex < characters.length) {
+            currentDetailIndex = newIndex;
+            updateDetailPage();
+        }
+    }
+
+    async function generateDetailImage() {
+        if (currentDetailIndex < 0) return;
+
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        saveSettings();
+
+        const char = characters[currentDetailIndex];
+        const detailImageDiv = document.getElementById('detail-image');
+        const cardImageDiv = document.getElementById(`image-${currentDetailIndex}`);
+
+        detailImageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
+
+        try {
+            const imageUrl = await generateImageForCharacter(currentDetailIndex, modelId, apiKey);
+            characterImages[char.name] = imageUrl;
+            saveCachedData();
+
+            // 詳細ページ画像を更新
+            detailImageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+
+            // カード画像も更新
+            cardImageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="openDetailPage(${currentDetailIndex})">`;
+        } catch (error) {
+            console.error(error);
+            detailImageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+        }
+    }
+
+    // 全身画像生成
+    async function generateFullbodyImage(type) {
+        if (currentDetailIndex < 0) return;
+
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        if (actions.length < 2) {
+            alert('アクションデータが不足しています（2番目のアクションが必要）');
+            return;
+        }
+
+        if (places.length < 1) {
+            alert('場所データが不足しています');
+            return;
+        }
+
+        saveSettings();
+
+        const char = characters[currentDetailIndex];
+        const imageDiv = document.getElementById(`fullbody-${type}`);
+        imageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
+
+        try {
+            const prompt = buildFullbodyPrompt(currentDetailIndex, type);
+            const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+
+            // 保存
+            if (!fullbodyImages[char.name]) {
+                fullbodyImages[char.name] = {};
+            }
+            fullbodyImages[char.name][type] = imageUrl;
+            saveCachedData();
+
+            // 表示更新
+            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${type}" onclick="window.open('${imageUrl}', '_blank')">`;
+        } catch (error) {
+            console.error(error);
+            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー</div>`;
+        }
+    }
+
+    // 全身画像用プロンプト生成
+    function buildFullbodyPrompt(charIndex, type) {
+        const char = characters[charIndex];
+        const modelId = getFirstModel();
+        const model = models[modelId] || {};
+
+        // アクションリストの2番目、選択された場所
+        const action = actions[1] || {};
+        const placeIndex = parseInt(document.getElementById('fullbody-place').value) || 0;
+        const place = places[placeIndex] || {};
+
+        // 衣装タグの選択
+        let outfitTag = '';
+        if (type === 'uniform1' && char.uniform1) {
+            outfitTag = char.uniform1;
+        } else if (type === 'uniform2' && char.uniform2) {
+            outfitTag = char.uniform2;
+        }
+        // normalの場合はoutfitTagは空のまま
+
+        const parts = [
+            model.qualityPositive || '',
+            char.tag || '',
+            outfitTag,
+            place.tag || '',
+            action.prompt || '',
+            'full body',
+            place.additionalTag || ''
+        ].filter(p => p);
+
+        return parts.join(', ');
+    }
+
+    // プロンプト指定で画像生成
+    async function generateImageWithPrompt(modelId, apiKey, prompt) {
+        const model = models[modelId];
+        const negativePrompt = model?.qualityNegative || '';
+
+        const requestBody = {
+            taskType: 'imageInference',
+            taskUUID: crypto.randomUUID(),
+            model: modelId,
+            positivePrompt: prompt,
+            steps: model?.steps || 20,
+            CFGScale: model?.cfgScale || 7,
+            scheduler: model?.scheduler || 'Default',
+            width: 832,
+            height: 1216,
+            seed: Math.floor(Math.random() * 2147483647),
+            numberResults: 1
+        };
+
+        if (negativePrompt && negativePrompt.length >= 2) {
+            requestBody.negativePrompt = negativePrompt;
+        }
+
+        const response = await fetch(API_BASE, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify([requestBody])
+        });
+
+        const result = await response.json();
+
+        if (result.data && result.data.length > 0 && result.data[0].imageURL) {
+            return result.data[0].imageURL;
+        } else if (result.errors) {
+            throw new Error(result.errors.map(e => e.message).join(', '));
+        } else {
+            throw new Error('画像の生成に失敗しました');
+        }
     }
 
     // 画像生成API呼び出し
