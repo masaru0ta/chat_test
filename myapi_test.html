@@ -45,6 +45,14 @@
 
     <div class="card">
         <h2>📂 データの読み込み (GET)</h2>
+        <div style="margin-bottom: 15px;">
+            <label style="display: inline; margin-right: 20px;">
+                <input type="radio" name="sheetType" value="action" checked> action シート
+            </label>
+            <label style="display: inline;">
+                <input type="radio" name="sheetType" value="character"> character シート
+            </label>
+        </div>
         <button class="btn btn-get" onclick="loadData()">データを取得して表示</button>
         <div id="table-container"></div>
     </div>
@@ -101,23 +109,30 @@
 
     // GET: データ読み込み
     async function loadData() {
-        const url = document.getElementById('apiUrl').value.trim();
+        const baseUrl = document.getElementById('apiUrl').value.trim();
         const container = document.getElementById('table-container');
-        
-        if (!url) { alert('URLを入力してください'); return; }
+        const sheetType = document.querySelector('input[name="sheetType"]:checked').value;
+
+        if (!baseUrl) { alert('URLを入力してください'); return; }
 
         saveApiUrl();
         showStatus('読み込み中...');
         container.innerHTML = '';
 
+        // シートタイプに応じてURLを構築
+        let url = baseUrl;
+        if (sheetType === 'character') {
+            url += (baseUrl.includes('?') ? '&' : '?') + 'sheet=character';
+        }
+
         try {
             const response = await fetch(url);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
+
             const data = await response.json();
-            showStatus(`取得成功: ${data.length} 件`);
+            showStatus(`取得成功 (${sheetType}): ${data.length} 件`);
             renderTable(data);
-            
+
             // 読み込んだデータを書き込み用エリアにも反映（編集しやすくするため）
             if(data.length > 0) {
                 document.getElementById('jsonInput').value = JSON.stringify(data, null, 2);

@@ -407,7 +407,10 @@
                 </div>
 
                 <div class="form-group">
-                    <label>モデル</label>
+                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                        モデル
+                        <button type="button" onclick="openModelSettingsEditor()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin: 0;">編集</button>
+                    </label>
                     <select id="model" onchange="applyModelDefaults()">
                         <option value="runware:z-image@turbo">Z-Image Turbo</option>
                         <option value="civitai:481162@558910">Aoi-Realistic-Pony</option>
@@ -1040,6 +1043,43 @@
         </div>
     </div>
 
+    <!-- モデル設定編集モーダル -->
+    <div id="model-settings-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1100; justify-content: center; align-items: center;">
+        <div style="background: #1a1a1a; border-radius: 0.5rem; width: 95%; max-width: 1000px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div style="padding: 1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #4a9eff;">モデル設定</h3>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="openModelGasSettings()" style="background: #007bff; padding: 0.5rem 1rem;">GAS設定</button>
+                    <button onclick="loadModelFromGas()" style="background: #28a745; padding: 0.5rem 1rem;">GASから取得</button>
+                    <button onclick="closeModelSettingsEditor()" style="background: #333; padding: 0.5rem 1rem;">閉じる</button>
+                </div>
+            </div>
+            <div id="model-gas-settings" style="display: none; padding: 1rem; background: #222; border-bottom: 1px solid #333;">
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <label style="color: #888; white-space: nowrap;">GAS URL:</label>
+                    <input type="text" id="model-gas-url" placeholder="https://script.google.com/macros/s/xxxxxx/exec" style="flex: 1; padding: 0.5rem; background: #333; border: 1px solid #555; color: #fff; border-radius: 0.25rem;">
+                    <button onclick="saveModelGasUrl()" style="background: #007bff; padding: 0.5rem 1rem;">保存</button>
+                </div>
+                <div id="model-gas-status" style="margin-top: 0.5rem; padding: 0.5rem; border-radius: 0.25rem; display: none;"></div>
+            </div>
+            <div style="padding: 1rem; flex: 1; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #444; color: #888;">モデル名</th>
+                            <th style="text-align: center; padding: 0.75rem; border-bottom: 2px solid #444; color: #888; width: 80px;">Steps</th>
+                            <th style="text-align: center; padding: 0.75rem; border-bottom: 2px solid #444; color: #888; width: 80px;">CFG</th>
+                            <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #444; color: #888; width: 120px;">Scheduler</th>
+                            <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #444; color: #888;">品質プロンプト(+)</th>
+                            <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #444; color: #888;">品質プロンプト(-)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="model-settings-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = 'https://api.runware.ai/v1';
         const STORAGE_KEY = 'runware_api_key';
@@ -1263,7 +1303,7 @@
         };
 
         const ILLUSTRIOUS_QUALITY = {
-            positive: 'masterpiece, ultra-HD, cinematic lighting',
+            positive: 'masterpiece',
             negative: 'bad anatomy, deformed hands, missing finger, worst quality, low quality, displeasing, watermark, text, artist name, signature, hearts'
         };
 
@@ -1324,6 +1364,160 @@
             }
         }
 
+        // モデル名のマッピング
+        const MODEL_NAMES = {
+            'runware:z-image@turbo': 'Z-Image Turbo',
+            'civitai:481162@558910': 'Aoi-Realistic-Pony',
+            'civitai:958009@1484125': 'RED-Zimage 1.5',
+            'civitai:457669@691683': 'PinkiePie Pony Mix',
+            'x:42@1240288': 'Hassaku XL (Illustrious) v1.3 - Style A',
+            'x:42@1761560': 'WAI-NSFW-illustrious-SDXL v14'
+        };
+
+        function openModelSettingsEditor() {
+            const modal = document.getElementById('model-settings-modal');
+            modal.style.display = 'flex';
+            renderModelSettingsTable();
+        }
+
+        function closeModelSettingsEditor() {
+            document.getElementById('model-settings-modal').style.display = 'none';
+        }
+
+        function renderModelSettingsTable() {
+            const tbody = document.getElementById('model-settings-tbody');
+            tbody.innerHTML = '';
+
+            Object.keys(MODEL_DEFAULTS).forEach(modelId => {
+                const defaults = MODEL_DEFAULTS[modelId];
+                const modelName = MODEL_NAMES[modelId] || modelId;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333;">
+                        <div style="font-weight: bold; color: #4a9eff;">${modelName}</div>
+                        <div style="font-size: 0.7rem; color: #666; word-break: break-all;">${modelId}</div>
+                    </td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333; text-align: center; color: #e0e0e0;">${defaults.steps}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333; text-align: center; color: #e0e0e0;">${defaults.cfgScale}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333; color: #e0e0e0;">${defaults.scheduler || '(なし)'}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333;">
+                        <div style="font-size: 0.8rem; color: #27ae60; max-width: 200px; word-break: break-word;">${defaults.qualityPositive || '(なし)'}</div>
+                    </td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #333;">
+                        <div style="font-size: 0.8rem; color: #e74c3c; max-width: 200px; word-break: break-word;">${defaults.qualityNegative || '(なし)'}</div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // モデルGAS設定関連
+        const MODEL_GAS_URL_KEY = 'runware_model_gas_url';
+
+        function openModelGasSettings() {
+            const settingsDiv = document.getElementById('model-gas-settings');
+            settingsDiv.style.display = settingsDiv.style.display === 'none' ? 'block' : 'none';
+            const savedUrl = localStorage.getItem(MODEL_GAS_URL_KEY) || localStorage.getItem(GAS_URL_KEY);
+            if (savedUrl) {
+                document.getElementById('model-gas-url').value = savedUrl;
+            }
+        }
+
+        function saveModelGasUrl() {
+            const url = document.getElementById('model-gas-url').value.trim();
+            if (url) {
+                localStorage.setItem(MODEL_GAS_URL_KEY, url);
+                showModelGasStatus('URLを保存しました');
+            } else {
+                showModelGasStatus('URLを入力してください', true);
+            }
+        }
+
+        function showModelGasStatus(msg, isError = false) {
+            const el = document.getElementById('model-gas-status');
+            el.textContent = msg;
+            el.style.display = 'block';
+            el.style.background = isError ? '#f8d7da' : '#d4edda';
+            el.style.color = isError ? '#721c24' : '#155724';
+        }
+
+        async function loadModelFromGas() {
+            const url = localStorage.getItem(MODEL_GAS_URL_KEY) || localStorage.getItem(GAS_URL_KEY);
+            if (!url) {
+                alert('GAS URLが設定されていません。先に「GAS設定」からURLを設定してください。');
+                return;
+            }
+
+            showModelGasStatus('読み込み中...');
+            document.getElementById('model-gas-settings').style.display = 'block';
+
+            const fetchUrl = url + (url.includes('?') ? '&' : '?') + 'sheet=model';
+
+            try {
+                const response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const data = await response.json();
+
+                // GASからのデータでMODEL_DEFAULTSとMODEL_NAMESを更新
+                // 期待するカラム: model_id, name, steps, cfg, scheduler, prompt positive, prompt negative
+                data.forEach(item => {
+                    const modelId = item.model_id || item.id;
+                    if (!modelId) return;
+
+                    MODEL_DEFAULTS[modelId] = {
+                        steps: parseInt(item.steps) || 20,
+                        cfgScale: parseFloat(item.cfg) || 7,
+                        scheduler: item.scheduler || 'Default',
+                        qualityPositive: item['prompt positive'] || '',
+                        qualityNegative: item['prompt negative'] || ''
+                    };
+
+                    if (item.name) {
+                        MODEL_NAMES[modelId] = item.name;
+                    }
+                });
+
+                // モデルセレクトボックスを更新
+                updateModelSelect();
+                renderModelSettingsTable();
+                showModelGasStatus(`読み込み成功: ${data.length} 件のモデル設定`);
+
+            } catch (error) {
+                console.error(error);
+                showModelGasStatus('読み込みエラー: ' + error.message, true);
+            }
+        }
+
+        function updateModelSelect() {
+            const select = document.getElementById('model');
+            const currentValue = select.value;
+            select.innerHTML = '';
+
+            Object.keys(MODEL_DEFAULTS).forEach(modelId => {
+                const option = document.createElement('option');
+                option.value = modelId;
+                option.textContent = MODEL_NAMES[modelId] || modelId;
+                select.appendChild(option);
+            });
+
+            // 以前の選択を復元、なければ最初のモデルを選択
+            if ([...select.options].some(opt => opt.value === currentValue)) {
+                select.value = currentValue;
+            }
+
+            // ADetailer用のモデルセレクトも更新
+            const inpaintSelect = document.getElementById('inpaint-model');
+            if (inpaintSelect) {
+                const inpaintValue = inpaintSelect.value;
+                inpaintSelect.innerHTML = select.innerHTML;
+                if ([...inpaintSelect.options].some(opt => opt.value === inpaintValue)) {
+                    inpaintSelect.value = inpaintValue;
+                }
+            }
+        }
+
         // ADetailer用の品質プロンプト（Pony系）
         const ADETAILER_QUALITY = {
             positive: 'score_9, score_8_up, score_7_up, detailed face, sharp focus, detailed eyes, clear skin',
@@ -1332,7 +1526,7 @@
 
         // ADetailer用の品質プロンプト（Illustrious系）
         const ADETAILER_ILLUSTRIOUS_QUALITY = {
-            positive: 'masterpiece, ultra-HD, cinematic lighting, detailed face, sharp focus, detailed eyes, clear skin',
+            positive: 'masterpiece, detailed face, sharp focus, detailed eyes, clear skin',
             negative: 'bad anatomy, deformed hands, missing finger, worst quality, low quality, displeasing, watermark, text, artist name, signature, hearts, blurry, distorted face, ugly'
         };
 

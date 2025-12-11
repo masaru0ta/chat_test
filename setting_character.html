@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>キャラクター一覧</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 20px;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            margin: 0;
+        }
+        h1 { color: #4a9eff; margin-bottom: 20px; }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        .settings-bar {
+            background: #1a1a1a;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .settings-row:last-child { margin-bottom: 0; }
+
+        .settings-bar label {
+            font-weight: bold;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .settings-bar input[type="text"],
+        .settings-bar input[type="password"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary { background-color: #4a9eff; }
+        .btn-primary:hover:not(:disabled) { background-color: #3a8eef; }
+        .btn-save { background-color: #27ae60; }
+        .btn-save:hover:not(:disabled) { background-color: #219a52; }
+        .btn-generate { background-color: #9b59b6; }
+        .btn-generate:hover:not(:disabled) { background-color: #8e44ad; }
+
+        #status {
+            padding: 10px 15px;
+            border-radius: 4px;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .status-ok { background-color: #155724; color: #d4edda; display: inline-block !important; }
+        .status-err { background-color: #721c24; color: #f8d7da; display: inline-block !important; }
+        .status-loading { background-color: #0c5460; color: #d1ecf1; display: inline-block !important; }
+
+        /* キャラクターカード */
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .character-card {
+            background: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #333;
+            transition: border-color 0.2s;
+        }
+
+        .character-card:hover {
+            border-color: #4a9eff;
+        }
+
+        .character-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .character-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .character-image .placeholder {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .character-image .generating {
+            color: #4a9eff;
+            font-size: 0.9rem;
+        }
+
+        .character-info {
+            padding: 15px;
+        }
+
+        .character-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4a9eff;
+            margin-bottom: 5px;
+        }
+
+        .character-series {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .character-profile {
+            font-size: 0.85rem;
+            color: #aaa;
+            line-height: 1.5;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+
+        .character-actions {
+            padding: 10px 15px;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+            font-size: 1.1rem;
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>キャラクター一覧</h1>
+
+    <!-- 設定バー -->
+    <div class="settings-bar">
+        <div class="settings-row">
+            <label>GAS URL:</label>
+            <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec">
+            <button class="btn btn-primary" onclick="loadAllFromGas()">GASから読み込み</button>
+            <button class="btn btn-save" onclick="saveImagesToGas()">GASに保存</button>
+            <button class="btn btn-generate" onclick="generateAllImages()" id="generateAllBtn">全キャラ画像生成</button>
+        </div>
+        <div class="settings-row">
+            <label>Runware API Key:</label>
+            <input type="password" id="apiKey" placeholder="Runware API Keyを入力">
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <!-- キャラクターグリッド -->
+    <div id="character-grid" class="character-grid">
+        <div class="empty-message">「GASから読み込み」ボタンでキャラクターデータを読み込んでください</div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'https://api.runware.ai/v1';
+    const GAS_URL_KEY = 'gas_api_url';
+    const API_KEY_KEY = 'runware_api_key';
+    const GAS_DATA_KEY = 'gas_data_cache';
+    const CHAR_IMAGES_KEY = 'character_images';
+
+    // データストア
+    let models = {};
+    let characters = [];
+    let places = [];
+    let actions = [];
+    let characterImages = {}; // キャラ名 -> 画像URL
+
+    // 構図のカラム名一覧
+    const COMPOSITION_KEYS = ['pov', 'front view', 'side view', 'from above', 'low angle', 'from behind', 'crotch focus'];
+
+    // 初期化
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedUrl = localStorage.getItem(GAS_URL_KEY);
+        if (savedUrl) {
+            document.getElementById('apiUrl').value = savedUrl;
+        }
+        const savedApiKey = localStorage.getItem(API_KEY_KEY);
+        if (savedApiKey) {
+            document.getElementById('apiKey').value = savedApiKey;
+        }
+
+        // 保存されたGASデータを復元
+        loadCachedData();
+    });
+
+    // キャッシュデータを保存
+    function saveCachedData() {
+        const data = {
+            models: models,
+            characters: characters,
+            places: places,
+            actions: actions
+        };
+        localStorage.setItem(GAS_DATA_KEY, JSON.stringify(data));
+        localStorage.setItem(CHAR_IMAGES_KEY, JSON.stringify(characterImages));
+    }
+
+    // キャッシュデータを復元
+    function loadCachedData() {
+        try {
+            const cachedData = localStorage.getItem(GAS_DATA_KEY);
+            if (cachedData) {
+                const data = JSON.parse(cachedData);
+                models = data.models || {};
+                characters = data.characters || [];
+                places = data.places || [];
+                actions = data.actions || [];
+            }
+
+            const cachedImages = localStorage.getItem(CHAR_IMAGES_KEY);
+            if (cachedImages) {
+                characterImages = JSON.parse(cachedImages);
+            }
+
+            // データがあればグリッドを描画
+            if (characters.length > 0) {
+                renderCharacterGrid();
+                showStatus(`キャッシュから復元: モデル${Object.keys(models).length}件, キャラ${characters.length}件`);
+            }
+        } catch (error) {
+            console.error('キャッシュ復元エラー:', error);
+        }
+    }
+
+    function saveSettings() {
+        const gasUrl = document.getElementById('apiUrl').value.trim();
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (gasUrl) localStorage.setItem(GAS_URL_KEY, gasUrl);
+        if (apiKey) localStorage.setItem(API_KEY_KEY, apiKey);
+    }
+
+    function showStatus(msg, type = 'ok') {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
+    }
+
+    // GASから全データ読み込み
+    async function loadAllFromGas() {
+        const baseUrl = document.getElementById('apiUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        saveSettings();
+        showStatus('読み込み中...', 'loading');
+
+        try {
+            const [modelData, characterData, placeData, actionData] = await Promise.all([
+                fetchGasData(baseUrl, 'model'),
+                fetchGasData(baseUrl, 'character'),
+                fetchGasData(baseUrl, 'place'),
+                fetchGasData(baseUrl, 'action')
+            ]);
+
+            // モデル設定
+            models = {};
+            modelData.forEach(item => {
+                const modelId = item.model_id || item.id;
+                if (modelId) {
+                    models[modelId] = {
+                        name: item.name || modelId,
+                        steps: parseInt(item.steps) || 20,
+                        cfgScale: parseFloat(item.cfg) || 7,
+                        scheduler: item.scheduler || 'Default',
+                        qualityPositive: item['prompt positive'] || '',
+                        qualityNegative: item['prompt negative'] || ''
+                    };
+                }
+            });
+
+            // キャラクター設定
+            characters = characterData.map(item => ({
+                name: item.name || '',
+                series: item.series || '',
+                tag: item.tag || '',
+                profile: item.profile || ''
+            }));
+
+            // 場所設定
+            places = placeData.map(item => ({
+                name: item.name || '',
+                tag: item.tag || '',
+                additionalTag: item['additional tag'] || ''
+            }));
+
+            // アクション設定（構図情報も含める）
+            actions = actionData.map(item => {
+                const action = {
+                    name: item['action name'] || '',
+                    prompt: item.prompt || '',
+                    compositions: []
+                };
+                COMPOSITION_KEYS.forEach(key => {
+                    const qualityKey = key + ' quality';
+                    const tagKey = key + ' tag';
+                    const quality = item[qualityKey] || '';
+                    const tag = item[tagKey] || '';
+                    if (quality !== 'NG') {
+                        action.compositions.push({ name: key, tag: tag });
+                    }
+                });
+                return action;
+            });
+
+            // キャッシュに保存
+            saveCachedData();
+
+            renderCharacterGrid();
+            showStatus(`読み込み完了: モデル${Object.keys(models).length}件, キャラ${characters.length}件, 場所${places.length}件, アクション${actions.length}件`);
+
+        } catch (error) {
+            console.error(error);
+            showStatus('読み込みエラー: ' + error.message, 'error');
+        }
+    }
+
+    async function fetchGasData(baseUrl, sheet) {
+        const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=' + sheet;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`${sheet}: HTTP ${response.status}`);
+        return await response.json();
+    }
+
+    // GASにキャラクター画像URLを保存
+    async function saveImagesToGas() {
+        const baseUrl = document.getElementById('apiUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        if (characters.length === 0) {
+            alert('保存するキャラクターがありません');
+            return;
+        }
+
+        // キャラクターデータに画像URLを追加
+        const dataToSave = characters.map(char => ({
+            name: char.name,
+            series: char.series,
+            tag: char.tag,
+            profile: char.profile,
+            image: characterImages[char.name] || ''
+        }));
+
+        if (!confirm(`${dataToSave.length} 件のキャラクターをGASに保存しますか？`)) {
+            return;
+        }
+
+        saveSettings();
+        showStatus('保存中...', 'loading');
+
+        const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=character';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify(dataToSave)
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                showStatus('保存成功: ' + result.message);
+            } else {
+                showStatus('サーバーエラー: ' + result.message, 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showStatus('保存エラー: ' + error.message, 'error');
+        }
+    }
+
+    // キャラクターグリッドを描画
+    function renderCharacterGrid() {
+        const container = document.getElementById('character-grid');
+
+        if (characters.length === 0) {
+            container.innerHTML = '<div class="empty-message">キャラクターデータがありません</div>';
+            return;
+        }
+
+        container.innerHTML = characters.map((char, index) => `
+            <div class="character-card" id="card-${index}">
+                <div class="character-image" id="image-${index}">
+                    ${characterImages[char.name]
+                        ? `<img src="${characterImages[char.name]}" alt="${char.name}" onclick="window.open('${characterImages[char.name]}', '_blank')">`
+                        : '<div class="placeholder">画像未生成</div>'
+                    }
+                </div>
+                <div class="character-info">
+                    <div class="character-name">${char.name || '(名前未設定)'}</div>
+                    <div class="character-series">${char.series || ''}</div>
+                    <div class="character-profile">${char.profile || ''}</div>
+                </div>
+                <div class="character-actions">
+                    <button class="btn btn-generate btn-small" onclick="generateSingleImage(${index})">画像生成</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // モデルリストの最初のモデルを取得
+    function getFirstModel() {
+        return Object.keys(models)[0] || null;
+    }
+
+    // front view構図タグを取得
+    function getFrontViewTag(action) {
+        if (!action || !action.compositions) return 'front view';
+        const frontView = action.compositions.find(c => c.name === 'front view');
+        return frontView?.tag || frontView?.name || 'front view';
+    }
+
+    // キャラクター用プロンプトを構築
+    function buildCharacterPrompt(charIndex) {
+        const char = characters[charIndex];
+        if (!char) return '';
+
+        const modelId = getFirstModel();
+        const model = models[modelId] || {};
+
+        // リストの最初の場所とアクション
+        const place = places[0] || {};
+        const action = actions[0] || {};
+        const compositionTag = getFrontViewTag(action);
+
+        const parts = [
+            model.qualityPositive || '',
+            char.tag || '',
+            place.tag || '',
+            action.prompt || '',
+            compositionTag,
+            place.additionalTag || ''
+        ].filter(p => p);
+
+        return parts.join(', ');
+    }
+
+    // 単一キャラクターの画像生成
+    async function generateSingleImage(charIndex) {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        saveSettings();
+
+        const char = characters[charIndex];
+        const imageDiv = document.getElementById(`image-${charIndex}`);
+        imageDiv.innerHTML = '<div class="generating">生成中...</div>';
+
+        try {
+            const imageUrl = await generateImageForCharacter(charIndex, modelId, apiKey);
+            characterImages[char.name] = imageUrl;
+            saveCachedData(); // 画像URLを保存
+            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+        } catch (error) {
+            console.error(error);
+            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+        }
+    }
+
+    // 全キャラクターの画像を生成
+    async function generateAllImages() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        if (characters.length === 0) {
+            alert('キャラクターがありません');
+            return;
+        }
+
+        saveSettings();
+
+        const btn = document.getElementById('generateAllBtn');
+        btn.disabled = true;
+
+        showStatus(`画像生成中: 0/${characters.length}`, 'loading');
+
+        for (let i = 0; i < characters.length; i++) {
+            const char = characters[i];
+            const imageDiv = document.getElementById(`image-${i}`);
+            imageDiv.innerHTML = '<div class="generating">生成中...</div>';
+
+            try {
+                const imageUrl = await generateImageForCharacter(i, modelId, apiKey);
+                characterImages[char.name] = imageUrl;
+                saveCachedData(); // 画像URLを保存
+                imageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+                showStatus(`画像生成中: ${i + 1}/${characters.length}`, 'loading');
+            } catch (error) {
+                console.error(error);
+                imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー</div>`;
+            }
+
+            // レート制限対策で少し待つ
+            if (i < characters.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        btn.disabled = false;
+        showStatus(`画像生成完了: ${characters.length}件`);
+    }
+
+    // 画像生成API呼び出し
+    async function generateImageForCharacter(charIndex, modelId, apiKey) {
+        const model = models[modelId];
+        const prompt = buildCharacterPrompt(charIndex);
+        const negativePrompt = model?.qualityNegative || '';
+
+        const requestBody = {
+            taskType: 'imageInference',
+            taskUUID: crypto.randomUUID(),
+            model: modelId,
+            positivePrompt: prompt,
+            steps: model?.steps || 20,
+            CFGScale: model?.cfgScale || 7,
+            scheduler: model?.scheduler || 'Default',
+            width: 1024,
+            height: 1024,
+            seed: Math.floor(Math.random() * 2147483647),
+            numberResults: 1
+        };
+
+        if (negativePrompt && negativePrompt.length >= 2) {
+            requestBody.negativePrompt = negativePrompt;
+        }
+
+        const response = await fetch(API_BASE, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify([requestBody])
+        });
+
+        const result = await response.json();
+
+        if (result.data && result.data.length > 0 && result.data[0].imageURL) {
+            return result.data[0].imageURL;
+        } else if (result.errors) {
+            throw new Error(result.errors.map(e => e.message).join(', '));
+        } else {
+            throw new Error('画像の生成に失敗しました');
+        }
+    }
+</script>
+
+</body>
+</html>
