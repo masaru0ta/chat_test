@@ -190,6 +190,10 @@
             <label>Runware API Key:</label>
             <input type="password" id="apiKey" placeholder="Runware API Keyを入力">
         </div>
+        <div class="settings-row">
+            <label>画像アップロードGAS URL:</label>
+            <input type="text" id="imageUploadUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec (画像保存用)">
+        </div>
         <div id="status"></div>
     </div>
 
@@ -203,6 +207,7 @@
     const API_BASE = 'https://api.runware.ai/v1';
     const GAS_URL_KEY = 'gas_api_url';
     const API_KEY_KEY = 'runware_api_key';
+    const IMAGE_UPLOAD_URL_KEY = 'image_upload_gas_url';
     const GAS_DATA_KEY = 'gas_data_cache';
     const CHAR_IMAGES_KEY = 'character_images';
 
@@ -212,6 +217,7 @@
     let places = [];
     let actions = [];
     let characterImages = {}; // キャラ名 -> 画像URL
+    let originalGasImages = {}; // キャラ名 -> GASから読み込んだ元の画像URL
 
     // 構図のカラム名一覧
     const COMPOSITION_KEYS = ['pov', 'front view', 'side view', 'from above', 'low angle', 'from behind', 'crotch focus'];
@@ -225,6 +231,10 @@
         const savedApiKey = localStorage.getItem(API_KEY_KEY);
         if (savedApiKey) {
             document.getElementById('apiKey').value = savedApiKey;
+        }
+        const savedImageUploadUrl = localStorage.getItem(IMAGE_UPLOAD_URL_KEY);
+        if (savedImageUploadUrl) {
+            document.getElementById('imageUploadUrl').value = savedImageUploadUrl;
         }
 
         // 保存されたGASデータを復元
@@ -273,8 +283,10 @@
     function saveSettings() {
         const gasUrl = document.getElementById('apiUrl').value.trim();
         const apiKey = document.getElementById('apiKey').value.trim();
+        const imageUploadUrl = document.getElementById('imageUploadUrl').value.trim();
         if (gasUrl) localStorage.setItem(GAS_URL_KEY, gasUrl);
         if (apiKey) localStorage.setItem(API_KEY_KEY, apiKey);
+        if (imageUploadUrl) localStorage.setItem(IMAGE_UPLOAD_URL_KEY, imageUploadUrl);
     }
 
     function showStatus(msg, type = 'ok') {
@@ -319,12 +331,24 @@
             });
 
             // キャラクター設定
-            characters = characterData.map(item => ({
-                name: item.name || '',
-                series: item.series || '',
-                tag: item.tag || '',
-                profile: item.profile || ''
-            }));
+            originalGasImages = {}; // リセット
+            characters = characterData.map(item => {
+                const char = {
+                    name: item.name || '',
+                    series: item.series || '',
+                    tag: item.tag || '',
+                    profile: item.profile || ''
+                };
+                // 画像URLがあればcharacterImagesに設定
+                if (item.image) {
+                    characterImages[char.name] = item.image;
+                    // GoogleドライブのURLなら元のURLを保持
+                    if (isGoogleDriveUrl(item.image)) {
+                        originalGasImages[char.name] = item.image;
+                    }
+                }
+                return char;
+            });
 
             // 場所設定
             places = placeData.map(item => ({
@@ -371,9 +395,71 @@
         return await response.json();
     }
 
+    // RunwareのURLかどうかを判定
+    function isRunwareUrl(url) {
+        return url && (url.includes('runware.ai') || url.includes('im.runware'));
+    }
+
+    // GoogleドライブのURLかどうかを判定
+    function isGoogleDriveUrl(url) {
+        return url && (url.includes('drive.google.com') || url.includes('lh3.googleusercontent.com'));
+    }
+
+    // GoogleドライブURLからfileIdを抽出
+    function extractGoogleDriveFileId(url) {
+        if (!url) return null;
+        // drive.google.com/uc?id=XXXX 形式
+        let match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (match) return match[1];
+        // drive.google.com/file/d/XXXX/ 形式
+        match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match) return match[1];
+        return null;
+    }
+
+    // 画像URLをBase64に変換
+    async function imageUrlToBase64(url) {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    // GASに画像をアップロードして永続URLを取得
+    async function uploadImageToGas(baseUrl, base64Data, filename, oldFileId = null) {
+        const payload = {
+            filename: filename,
+            mimeType: 'image/png',
+            image: base64Data
+        };
+
+        // 古いファイルIDがあれば追加（削除用）
+        if (oldFileId) {
+            payload.oldFileId = oldFileId;
+        }
+
+        const response = await fetch(baseUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.status === 'success' && result.data && result.data.directUrl) {
+            return result.data.directUrl;
+        }
+        throw new Error(result.message || '画像アップロード失敗');
+    }
+
     // GASにキャラクター画像URLを保存
     async function saveImagesToGas() {
         const baseUrl = document.getElementById('apiUrl').value.trim();
+        const imageUploadUrl = document.getElementById('imageUploadUrl').value.trim();
+
         if (!baseUrl) {
             alert('GAS URLを入力してください');
             return;
@@ -384,25 +470,73 @@
             return;
         }
 
-        // キャラクターデータに画像URLを追加
-        const dataToSave = characters.map(char => ({
-            name: char.name,
-            series: char.series,
-            tag: char.tag,
-            profile: char.profile,
-            image: characterImages[char.name] || ''
-        }));
+        // Runware URLがあるキャラをカウント
+        const runwareCount = characters.filter(char => isRunwareUrl(characterImages[char.name])).length;
 
-        if (!confirm(`${dataToSave.length} 件のキャラクターをGASに保存しますか？`)) {
+        if (runwareCount > 0 && !imageUploadUrl) {
+            alert('Runware画像をアップロードするには「画像アップロードGAS URL」を入力してください');
+            return;
+        }
+
+        let confirmMsg = `${characters.length} 件のキャラクターをGASに保存しますか？`;
+        if (runwareCount > 0) {
+            confirmMsg += `\n\n※ ${runwareCount} 件のRunware画像をGASにアップロードします（時間がかかります）`;
+        }
+
+        if (!confirm(confirmMsg)) {
             return;
         }
 
         saveSettings();
         showStatus('保存中...', 'loading');
 
-        const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=character';
-
         try {
+            // Runware URLの画像をGASにアップロードして永続URLに変換
+            for (let i = 0; i < characters.length; i++) {
+                const char = characters[i];
+                const imageUrl = characterImages[char.name];
+
+                if (isRunwareUrl(imageUrl)) {
+                    showStatus(`画像アップロード中: ${i + 1}/${characters.length} (${char.name})`, 'loading');
+                    try {
+                        const base64Data = await imageUrlToBase64(imageUrl);
+                        // キャラタグからファイル名禁止文字と空白・カンマを除去
+                        const safeTag = (char.tag || char.name).replace(/[\/\\:*?"<>|,\s]+/g, '_').replace(/^_+|_+$/g, '');
+                        const filename = `${safeTag || 'character'}.png`;
+
+                        // 元のGoogleドライブ画像があれば、そのfileIdを取得して古い画像を削除
+                        const oldImageUrl = originalGasImages[char.name];
+                        const oldFileId = oldImageUrl ? extractGoogleDriveFileId(oldImageUrl) : null;
+
+                        const gasUrl = await uploadImageToGas(imageUploadUrl, base64Data, filename, oldFileId);
+                        characterImages[char.name] = gasUrl;
+                        originalGasImages[char.name] = gasUrl; // 新しいURLを元のURLとして保持
+                        saveCachedData();
+
+                        // カード画像も更新
+                        const imageDiv = document.getElementById(`image-${i}`);
+                        if (imageDiv) {
+                            imageDiv.innerHTML = `<img src="${gasUrl}" alt="${char.name}" onclick="window.open('${gasUrl}', '_blank')">`;
+                        }
+                    } catch (error) {
+                        console.error(`${char.name}の画像アップロード失敗:`, error);
+                    }
+                }
+            }
+
+            // キャラクターデータに画像URLを追加して保存
+            const dataToSave = characters.map(char => ({
+                name: char.name,
+                series: char.series,
+                tag: char.tag,
+                profile: char.profile,
+                image: characterImages[char.name] || ''
+            }));
+
+            showStatus('キャラクターデータ保存中...', 'loading');
+
+            const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=character';
+
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
