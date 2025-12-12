@@ -4,143 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>アクション設定</title>
+    <link rel="stylesheet" href="css/common.css">
     <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 20px;
-            background-color: #0a0a0a;
-            color: #e0e0e0;
-            margin: 0;
-        }
-        h1 { color: #4a9eff; margin-bottom: 20px; }
-
-        .container { max-width: 1400px; margin: 0 auto; }
-
-        .settings-bar {
-            background: #1a1a1a;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .settings-row {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        .settings-row:last-child { margin-bottom: 0; }
-
-        .settings-bar label {
-            font-weight: bold;
-            color: #888;
-            font-size: 0.9rem;
-        }
-
-        .settings-bar input[type="text"],
-        .settings-bar input[type="password"],
-        .settings-bar select {
-            flex: 1;
-            min-width: 200px;
-            padding: 10px;
-            border: 1px solid #333;
-            border-radius: 4px;
-            background: #2a2a2a;
-            color: #fff;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .btn-primary { background-color: #4a9eff; }
-        .btn-primary:hover:not(:disabled) { background-color: #3a8eef; }
-        .btn-save { background-color: #27ae60; }
-        .btn-save:hover:not(:disabled) { background-color: #219a52; }
-        .btn-generate { background-color: #9b59b6; }
-        .btn-generate:hover:not(:disabled) { background-color: #8e44ad; }
-
-        #status {
-            padding: 10px 15px;
-            border-radius: 4px;
-            display: none;
-            font-size: 0.9rem;
-        }
-        .status-ok { background-color: #155724; color: #d4edda; display: inline-block !important; }
-        .status-err { background-color: #721c24; color: #f8d7da; display: inline-block !important; }
-        .status-loading { background-color: #0c5460; color: #d1ecf1; display: inline-block !important; }
-
-        /* アクションカード */
-        .action-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 15px;
-        }
-
-        .action-card {
-            background: #1a1a1a;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #333;
-            transition: border-color 0.2s;
-        }
-
-        .action-card:hover {
-            border-color: #4a9eff;
-        }
-
-        .action-image {
-            width: 100%;
-            aspect-ratio: 1;
-            background: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        .action-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            cursor: pointer;
-        }
-
-        .action-image .placeholder {
-            color: #666;
-            font-size: 0.7rem;
-        }
-
-        .action-image .generating {
-            color: #4a9eff;
-            font-size: 0.7rem;
-        }
-
-        .action-info {
-            padding: 10px;
-        }
-
-        .action-name {
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #4a9eff;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
+        /* ページ固有スタイル */
         .action-prompt {
             font-size: 0.7rem;
             color: #aaa;
@@ -149,126 +15,7 @@
             overflow-y: auto;
         }
 
-        .action-actions {
-            padding: 8px 10px;
-            border-top: 1px solid #333;
-            display: flex;
-            gap: 5px;
-        }
-
-        .btn-small {
-            padding: 5px 10px;
-            font-size: 0.7rem;
-        }
-
-        .empty-message {
-            text-align: center;
-            color: #666;
-            padding: 40px;
-            font-size: 1.1rem;
-            grid-column: 1 / -1;
-        }
-
-        /* 詳細ページ */
-        .detail-page {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0a0a0a;
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .detail-page.active {
-            display: block;
-        }
-
-        .detail-header {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            background: #1a1a1a;
-            border-bottom: 1px solid #333;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .detail-back {
-            background: #333;
-            border: none;
-            color: #fff;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin-right: 20px;
-        }
-
-        .detail-back:hover {
-            background: #444;
-        }
-
-        .detail-title {
-            color: #4a9eff;
-            font-size: 1.5rem;
-            margin: 0;
-        }
-
-        .detail-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 30px 20px;
-        }
-
-        .detail-main {
-            display: flex;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        .detail-image-section {
-            flex: 0 0 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .detail-image-section .btn-generate {
-            width: 100%;
-        }
-
-        .detail-image-area img {
-            width: 100%;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        .detail-image-area .placeholder {
-            width: 400px;
-            height: 400px;
-            background: #111;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #666;
-            font-size: 1rem;
-        }
-
-        .detail-info {
-            flex: 1;
-        }
-
-        .detail-info .field-label {
-            color: #888;
-            font-size: 0.85rem;
-            margin-bottom: 6px;
-        }
-
+        /* 詳細ページ固有 */
         .detail-info .field-value {
             background: #1a1a1a;
             padding: 12px 15px;
@@ -293,53 +40,12 @@
             border-color: #4a9eff;
         }
 
-        .detail-nav {
-            display: flex;
-            gap: 10px;
-        }
-
-        .header-selects {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-left: auto;
-            margin-right: 15px;
-        }
-
-        .header-selects label {
-            color: #888;
-            font-size: 0.85rem;
-        }
-
-        .header-selects select {
-            padding: 6px 10px;
-            border-radius: 4px;
-            border: 1px solid #333;
-            background: #222;
-            color: #e0e0e0;
-            font-size: 0.85rem;
-        }
-
-        .header-selects select:focus {
-            outline: none;
-            border-color: #4a9eff;
-        }
-
         .detail-header .btn-save {
             margin-right: 10px;
         }
 
         .detail-header #detail-status {
             margin-right: 15px;
-        }
-
-        .btn-nav {
-            background: #333;
-            padding: 8px 16px;
-        }
-
-        .btn-nav:hover:not(:disabled) {
-            background: #444;
         }
 
         /* 構図セクション */
@@ -455,12 +161,6 @@
             opacity: 0.3;
         }
 
-        .composition-tag {
-            font-size: 0.7rem;
-            color: #aaa;
-            margin-bottom: 8px;
-        }
-
         .composition-tag-input {
             width: 100%;
             padding: 5px 8px;
@@ -490,7 +190,7 @@
     <h1>アクション設定</h1>
 
     <!-- アクショングリッド -->
-    <div id="action-grid" class="action-grid">
+    <div id="action-grid" class="card-grid">
         <div class="empty-message">「GASから読み込み」ボタンでアクションデータを読み込んでください</div>
     </div>
 
@@ -554,12 +254,17 @@
 <script src="js/runware-api.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/data-parser.js"></script>
+<script src="js/ui-utils.js"></script>
 <script>
-    const GAS_URL_KEY = STORAGE_KEYS.GAS_URL;
-    const API_KEY_KEY = STORAGE_KEYS.API_KEY;
     const GAS_DATA_KEY = 'gas_data_cache_action';
     const ACTION_IMAGES_KEY = 'action_images';
     const COMPOSITION_IMAGES_KEY = 'composition_images';
+    const QUALITY_OPTIONS = [
+        { value: '未評価', label: '未評価', activeClass: 'active-none' },
+        { value: 'NG', label: 'NG', activeClass: 'active-ng' },
+        { value: 'good', label: 'GOOD', activeClass: 'active-good' },
+        { value: 'best', label: 'BEST', activeClass: 'active-best' }
+    ];
 
     // データストア
     let models = {};
@@ -569,20 +274,11 @@
     let actionImages = {}; // アクション名 -> 画像URL
     let compositionImages = {}; // アクション名 -> { composition名: url }
 
-    // COMPOSITION_KEYS は constants.js で定義
-
     // 初期化
     document.addEventListener('DOMContentLoaded', () => {
-        const savedUrl = localStorage.getItem(GAS_URL_KEY);
-        if (savedUrl) {
-            document.getElementById('apiUrl').value = savedUrl;
-        }
-        const savedApiKey = localStorage.getItem(API_KEY_KEY);
-        if (savedApiKey) {
-            document.getElementById('apiKey').value = savedApiKey;
-        }
-
-        // 保存されたGASデータを復元
+        const settings = loadSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY);
+        if (settings.gasUrl) document.getElementById('apiUrl').value = settings.gasUrl;
+        if (settings.apiKey) document.getElementById('apiKey').value = settings.apiKey;
         loadCachedData();
     });
 
@@ -624,31 +320,26 @@
             // データがあればグリッドを描画
             if (actions.length > 0) {
                 renderActionGrid();
-                showStatus(`キャッシュから復元: モデル${Object.keys(models).length}件, アクション${actions.length}件`);
+                showStatusWithDetail(`キャッシュから復元: モデル${Object.keys(models).length}件, アクション${actions.length}件`);
             }
         } catch (error) {
             console.error('キャッシュ復元エラー:', error);
         }
     }
 
-    function saveSettings() {
+    function doSaveSettings() {
         const gasUrl = document.getElementById('apiUrl').value.trim();
         const apiKey = document.getElementById('apiKey').value.trim();
-        if (gasUrl) localStorage.setItem(GAS_URL_KEY, gasUrl);
-        if (apiKey) localStorage.setItem(API_KEY_KEY, apiKey);
+        saveSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY, gasUrl, apiKey);
     }
 
-    function showStatus(msg, type = 'ok') {
-        const el = document.getElementById('status');
-        el.textContent = msg;
-        el.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
-
+    function showStatusWithDetail(msg, type = 'ok') {
+        showStatus(msg, type);
         // 詳細画面が開いている場合はそちらにも表示
         const detailStatus = document.getElementById('detail-status');
         if (detailStatus && currentDetailIndex >= 0) {
             detailStatus.textContent = msg;
             detailStatus.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
-            // 成功時は3秒後に消す
             if (type === 'ok') {
                 setTimeout(() => {
                     detailStatus.textContent = '';
@@ -666,8 +357,8 @@
             return;
         }
 
-        saveSettings();
-        showStatus('読み込み中...', 'loading');
+        doSaveSettings();
+        showStatusWithDetail('読み込み中...', 'loading');
 
         try {
             const [modelData, characterData, placeData, actionData] = await Promise.all([
@@ -677,40 +368,12 @@
                 fetchGasData(baseUrl, 'action')
             ]);
 
-            // モデル設定
-            models = {};
-            modelData.forEach(item => {
-                const modelId = item.model_id || item.id;
-                if (modelId) {
-                    models[modelId] = {
-                        name: item.name || modelId,
-                        steps: parseInt(item.steps) || 20,
-                        cfgScale: parseFloat(item.cfg) || 7,
-                        scheduler: item.scheduler || 'Default',
-                        qualityPositive: item['prompt positive'] || '',
-                        qualityNegative: item['prompt negative'] || ''
-                    };
-                }
-            });
+            // 共通パーサーを使用
+            models = parseModels(modelData);
+            characters = parseCharacters(characterData);
+            places = parsePlaces(placeData);
 
-            // キャラクター設定
-            characters = characterData.map(item => ({
-                name: item.name || '',
-                series: item.series || '',
-                tag: item.tag || '',
-                profile: item.profile || '',
-                uniform1: item.uniform1 || '',
-                uniform2: item.uniform2 || ''
-            }));
-
-            // 場所設定
-            places = placeData.map(item => ({
-                name: item.name || '',
-                tag: item.tag || '',
-                additionalTag: item['additional tag'] || ''
-            }));
-
-            // アクション設定（構図情報も含める）
+            // アクション設定（品質正規化とenabled付き）
             actions = actionData.map(item => {
                 const action = {
                     name: item['action name'] || '',
@@ -747,15 +410,13 @@
             saveCachedData();
 
             renderActionGrid();
-            showStatus(`読み込み完了: モデル${Object.keys(models).length}件, キャラ${characters.length}件, 場所${places.length}件, アクション${actions.length}件`);
+            showStatusWithDetail(`読み込み完了: モデル${Object.keys(models).length}件, キャラ${characters.length}件, 場所${places.length}件, アクション${actions.length}件`);
 
         } catch (error) {
             console.error(error);
-            showStatus('読み込みエラー: ' + error.message, 'error');
+            showStatusWithDetail('読み込みエラー: ' + error.message, 'error');
         }
     }
-
-    // fetchGasData は gas-api.js で定義
 
     // アクショングリッドを描画
     function renderActionGrid() {
@@ -767,18 +428,18 @@
         }
 
         container.innerHTML = actions.map((action, index) => `
-            <div class="action-card" id="card-${index}">
-                <div class="action-image" id="image-${index}">
+            <div class="card" id="card-${index}">
+                <div class="card-image" id="image-${index}">
                     ${actionImages[action.name]
                         ? `<img src="${actionImages[action.name]}" alt="${action.name}" onclick="openDetailPage(${index})">`
                         : `<div class="placeholder" onclick="openDetailPage(${index})" style="cursor:pointer;">画像未生成</div>`
                     }
                 </div>
-                <div class="action-info">
-                    <div class="action-name">${action.name || '(名前未設定)'}</div>
+                <div class="card-info">
+                    <div class="card-name">${action.name || '(名前未設定)'}</div>
                     <div class="action-prompt">${action.prompt || ''}</div>
                 </div>
-                <div class="action-actions">
+                <div class="card-actions">
                     <button class="btn btn-generate btn-small" onclick="generateSingleImage(${index})">画像生成</button>
                 </div>
             </div>
@@ -790,36 +451,52 @@
         return Object.keys(models)[0] || null;
     }
 
-    // アクション用プロンプトを構築
-    function buildActionPrompt(actionIndex) {
+    // 画像生成前のバリデーション（APIキー/モデル確認）
+    function validateGenerateSettings() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return null;
+        }
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return null;
+        }
+        doSaveSettings();
+        return { apiKey, modelId };
+    }
+
+    // プロンプト構築（compIndexを指定しない場合はBEST構図を自動選択）
+    function buildActionPrompt(actionIndex, compIndex = null) {
         const action = actions[actionIndex];
         if (!action) return '';
 
-        const modelId = getFirstModel();
-        const model = models[modelId] || {};
-
-        // タイトルバーで選択されたキャラクターと場所を使用
-        const charSelect = document.getElementById('preview-character');
-        const placeSelect = document.getElementById('preview-place');
-        const charIndex = charSelect ? parseInt(charSelect.value) || 0 : 0;
-        const placeIndex = placeSelect ? parseInt(placeSelect.value) || 0 : 0;
+        const model = models[getFirstModel()] || {};
+        const charIndex = parseInt(document.getElementById('preview-character')?.value) || 0;
+        const placeIndex = parseInt(document.getElementById('preview-place')?.value) || 0;
         const char = characters[charIndex] || characters[0] || {};
         const place = places[placeIndex] || places[0] || {};
 
-        // 構図を選択: BEST → GOOD → 未評価 の優先順位
-        const selectedComp = selectBestComposition(action);
-        const compositionTag = selectedComp ? (selectedComp.tag || selectedComp.name) : 'front view';
+        // 構図タグ: 指定があればその構図、なければBEST選択
+        let compositionTag;
+        if (compIndex !== null && action.compositions[compIndex]) {
+            const comp = action.compositions[compIndex];
+            compositionTag = comp.tag || comp.name;
+        } else {
+            const selectedComp = selectBestComposition(action);
+            compositionTag = selectedComp ? (selectedComp.tag || selectedComp.name) : 'front view';
+        }
 
-        const parts = [
+        return [
             model.qualityPositive || '',
             char.tag || '',
             place.tag || '',
             action.prompt || '',
             compositionTag,
-            place.additionalTag || ''
-        ].filter(p => p);
-
-        return parts.join(', ');
+            place.additionalTag || '',
+            char.additionalTag || ''
+        ].filter(p => p).join(', ');
     }
 
     // BEST → GOOD → 未評価 の優先順位で構図を選択
@@ -844,19 +521,8 @@
 
     // 単一アクションの画像生成
     async function generateSingleImage(actionIndex) {
-        const apiKey = document.getElementById('apiKey').value.trim();
-        if (!apiKey) {
-            alert('Runware API Keyを入力してください');
-            return;
-        }
-
-        const modelId = getFirstModel();
-        if (!modelId) {
-            alert('モデルが見つかりません。GASから読み込んでください。');
-            return;
-        }
-
-        saveSettings();
+        const settings = validateGenerateSettings();
+        if (!settings) return;
 
         const action = actions[actionIndex];
         const imageDiv = document.getElementById(`image-${actionIndex}`);
@@ -864,7 +530,7 @@
 
         try {
             const prompt = buildActionPrompt(actionIndex);
-            const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+            const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
             actionImages[action.name] = imageUrl;
             saveCachedData();
             imageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="openDetailPage(${actionIndex})">`;
@@ -876,29 +542,18 @@
 
     // 全アクションの画像を生成
     async function generateAllImages() {
-        const apiKey = document.getElementById('apiKey').value.trim();
-        if (!apiKey) {
-            alert('Runware API Keyを入力してください');
-            return;
-        }
-
-        const modelId = getFirstModel();
-        if (!modelId) {
-            alert('モデルが見つかりません。GASから読み込んでください。');
-            return;
-        }
+        const settings = validateGenerateSettings();
+        if (!settings) return;
 
         if (actions.length === 0) {
             alert('アクションがありません');
             return;
         }
 
-        saveSettings();
-
         const btn = document.getElementById('generateAllBtn');
         btn.disabled = true;
 
-        showStatus(`画像生成中: 0/${actions.length}`, 'loading');
+        showStatusWithDetail(`画像生成中: 0/${actions.length}`, 'loading');
 
         for (let i = 0; i < actions.length; i++) {
             const action = actions[i];
@@ -907,11 +562,11 @@
 
             try {
                 const prompt = buildActionPrompt(i);
-                const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+                const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
                 actionImages[action.name] = imageUrl;
                 saveCachedData();
                 imageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="openDetailPage(${i})">`;
-                showStatus(`画像生成中: ${i + 1}/${actions.length}`, 'loading');
+                showStatusWithDetail(`画像生成中: ${i + 1}/${actions.length}`, 'loading');
             } catch (error) {
                 console.error(error);
                 imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー</div>`;
@@ -924,7 +579,7 @@
         }
 
         btn.disabled = false;
-        showStatus(`画像生成完了: ${actions.length}件`);
+        showStatusWithDetail(`画像生成完了: ${actions.length}件`);
     }
 
     // 詳細ページ関連
@@ -985,8 +640,8 @@
             `<option value="${index}">${place.name || '(名前なし)'}</option>`
         ).join('');
 
-        if (charValue && charValue < characters.length) charSelect.value = charValue;
-        if (placeValue && placeValue < places.length) placeSelect.value = placeValue;
+        if (charValue !== '' && parseInt(charValue) < characters.length) charSelect.value = charValue;
+        if (placeValue !== '' && parseInt(placeValue) < places.length) placeSelect.value = placeValue;
     }
 
     function updateCompositionGrid() {
@@ -999,18 +654,12 @@
         container.innerHTML = action.compositions.map((comp, index) => {
             const imageUrl = actionCompositions[comp.name];
             const disabledClass = comp.enabled ? '' : 'disabled';
-            const qualityOptions = [
-                { value: '未評価', label: '未評価', activeClass: 'active-none' },
-                { value: 'NG', label: 'NG', activeClass: 'active-ng' },
-                { value: 'good', label: 'GOOD', activeClass: 'active-good' },
-                { value: 'best', label: 'BEST', activeClass: 'active-best' }
-            ];
 
             return `
                 <div class="composition-item">
                     <div class="composition-label">${comp.name}</div>
                     <div class="composition-quality">
-                        ${qualityOptions.map(q => {
+                        ${QUALITY_OPTIONS.map(q => {
                             const isActive = comp.quality === q.value;
                             const activeClass = isActive ? `active ${q.activeClass}` : '';
                             return `<button class="quality-btn ${activeClass}" ${isActive ? 'disabled' : ''} onclick="updateCompositionQuality(${index}, '${q.value}')">${q.label}</button>`;
@@ -1117,19 +766,8 @@
     async function generateDetailImage() {
         if (currentDetailIndex < 0) return;
 
-        const apiKey = document.getElementById('apiKey').value.trim();
-        if (!apiKey) {
-            alert('Runware API Keyを入力してください');
-            return;
-        }
-
-        const modelId = getFirstModel();
-        if (!modelId) {
-            alert('モデルが見つかりません。GASから読み込んでください。');
-            return;
-        }
-
-        saveSettings();
+        const settings = validateGenerateSettings();
+        if (!settings) return;
 
         const action = actions[currentDetailIndex];
         const detailImageDiv = document.getElementById('detail-image');
@@ -1139,7 +777,7 @@
 
         try {
             const prompt = buildActionPrompt(currentDetailIndex);
-            const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+            const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
             actionImages[action.name] = imageUrl;
             saveCachedData();
 
@@ -1158,19 +796,8 @@
     async function generateCompositionImage(compIndex) {
         if (currentDetailIndex < 0) return;
 
-        const apiKey = document.getElementById('apiKey').value.trim();
-        if (!apiKey) {
-            alert('Runware API Keyを入力してください');
-            return;
-        }
-
-        const modelId = getFirstModel();
-        if (!modelId) {
-            alert('モデルが見つかりません。GASから読み込んでください。');
-            return;
-        }
-
-        saveSettings();
+        const settings = validateGenerateSettings();
+        if (!settings) return;
 
         const action = actions[currentDetailIndex];
         const comp = action.compositions[compIndex];
@@ -1180,8 +807,8 @@
         imageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
 
         try {
-            const prompt = buildCompositionPrompt(currentDetailIndex, compIndex);
-            const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+            const prompt = buildActionPrompt(currentDetailIndex, compIndex);
+            const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
 
             // 保存
             if (!compositionImages[action.name]) {
@@ -1198,75 +825,16 @@
         }
     }
 
-    // 構図用プロンプト生成
-    function buildCompositionPrompt(actionIndex, compIndex) {
-        const action = actions[actionIndex];
-        const comp = action.compositions[compIndex];
-        const modelId = getFirstModel();
-        const model = models[modelId] || {};
-
-        // 選択されたキャラクターと場所
-        const charIndex = parseInt(document.getElementById('preview-character').value) || 0;
-        const placeIndex = parseInt(document.getElementById('preview-place').value) || 0;
-        const char = characters[charIndex] || {};
-        const place = places[placeIndex] || {};
-
-        // 構図タグ
-        const compositionTag = comp.tag || comp.name;
-
-        const parts = [
-            model.qualityPositive || '',
-            char.tag || '',
-            place.tag || '',
-            action.prompt || '',
-            compositionTag,
-            place.additionalTag || ''
-        ].filter(p => p);
-
-        return parts.join(', ');
-    }
-
-    // プロンプト指定で画像生成
+    // プロンプト指定で画像生成（共通関数を使用）
     async function generateImageWithPrompt(modelId, apiKey, prompt) {
-        const model = models[modelId];
-        const negativePrompt = model?.qualityNegative || '';
-
-        const requestBody = {
-            taskType: 'imageInference',
-            taskUUID: crypto.randomUUID(),
-            model: modelId,
-            positivePrompt: prompt,
-            steps: model?.steps || 20,
-            CFGScale: model?.cfgScale || 7,
-            scheduler: model?.scheduler || 'Default',
-            width: 1024,
-            height: 1024,
-            seed: Math.floor(Math.random() * 2147483647),
-            numberResults: 1
-        };
-
-        if (negativePrompt && negativePrompt.length >= 2) {
-            requestBody.negativePrompt = negativePrompt;
-        }
-
-        const response = await fetch(API_CONFIG.RUNWARE_BASE, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify([requestBody])
+        const model = models[modelId] || {};
+        const result = await generateImage(apiKey, modelId, prompt, {
+            negativePrompt: model.qualityNegative || '',
+            steps: model.steps || 20,
+            cfgScale: model.cfgScale || 7,
+            scheduler: model.scheduler || 'Default'
         });
-
-        const result = await response.json();
-
-        if (result.data && result.data.length > 0 && result.data[0].imageURL) {
-            return result.data[0].imageURL;
-        } else if (result.errors) {
-            throw new Error(result.errors.map(e => e.message).join(', '));
-        } else {
-            throw new Error('画像の生成に失敗しました');
-        }
+        return result.imageURL;
     }
 
     // GASに保存
@@ -1282,8 +850,8 @@
             return;
         }
 
-        saveSettings();
-        showStatus('GASに保存中...', 'loading');
+        doSaveSettings();
+        showStatusWithDetail('GASに保存中...', 'loading');
 
         try {
             // アクションデータをGAS形式に変換
@@ -1302,26 +870,17 @@
                 return row;
             });
 
-            // GASに送信
-            const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=action';
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8'
-                },
-                body: JSON.stringify(gasData)
-            });
-
-            const result = await response.json();
+            // GASに送信（共通関数を使用）
+            const result = await saveGasData(baseUrl, 'action', gasData);
 
             if (result.status === 'success') {
-                showStatus('GASに保存しました: ' + result.message);
+                showStatusWithDetail('GASに保存しました: ' + result.message);
             } else {
                 throw new Error(result.message || '保存に失敗しました');
             }
         } catch (error) {
             console.error(error);
-            showStatus('保存エラー: ' + error.message, 'error');
+            showStatusWithDetail('保存エラー: ' + error.message, 'error');
         }
     }
 </script>
