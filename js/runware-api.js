@@ -19,11 +19,12 @@
  */
 async function generateImage(apiKey, modelId, prompt, options = {}) {
     const seed = options.seed || Math.floor(Math.random() * 2147483647);
+    const cleanedPrompt = cleanPrompt(prompt);
 
     // 最終プロンプトをコンソールに出力
     console.log('[Runware] 画像生成リクエスト');
     console.log('[Runware] モデル:', modelId);
-    console.log('[Runware] プロンプト:', prompt);
+    console.log('[Runware] プロンプト:', cleanedPrompt);
     if (options.negativePrompt) {
         console.log('[Runware] ネガティブ:', options.negativePrompt);
     }
@@ -32,7 +33,7 @@ async function generateImage(apiKey, modelId, prompt, options = {}) {
         taskType: 'imageInference',
         taskUUID: crypto.randomUUID(),
         model: modelId,
-        positivePrompt: prompt,
+        positivePrompt: cleanedPrompt,
         steps: options.steps || 20,
         CFGScale: options.cfgScale || 7,
         scheduler: options.scheduler || 'Default',
@@ -79,13 +80,14 @@ function getFirstModelId(models) {
 }
 
 /**
- * プロンプトの連続カンマを修正
+ * プロンプトを整形（連続スペース・カンマを修正）
  * @param {string} prompt - プロンプト
  * @returns {string} 整形されたプロンプト
  */
 function cleanPrompt(prompt) {
     return prompt
-        .replace(/,\s*,+/g, ',')  // 連続カンマを1つに
+        .replace(/  +/g, ' ')      // 連続スペースを1つに
+        .replace(/,\s*,+/g, ',')   // 連続カンマを1つに
         .replace(/^,\s*/, '')      // 先頭のカンマを削除
         .replace(/,\s*$/, '')      // 末尾のカンマを削除
         .trim();

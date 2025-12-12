@@ -206,6 +206,7 @@ h1 {
 .detail-nav {
     display: flex;
     gap: 10px;
+    margin-left: auto;
 }
 
 /* ヘッダー内のセレクト */
