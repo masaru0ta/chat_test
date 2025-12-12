@@ -1,0 +1,387 @@
+/**
+ * 共通スタイル
+ */
+
+/* リセット・基本スタイル */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 20px;
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    margin: 0;
+}
+
+h1 {
+    color: #4a9eff;
+    margin-bottom: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* ボタンスタイル */
+.btn {
+    padding: 10px 20px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background-color: #4a9eff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #3a8eef;
+}
+
+.btn-save {
+    background-color: #27ae60;
+}
+
+.btn-save:hover:not(:disabled) {
+    background-color: #219a52;
+}
+
+.btn-generate {
+    background-color: #9b59b6;
+}
+
+.btn-generate:hover:not(:disabled) {
+    background-color: #8e44ad;
+}
+
+.btn-small {
+    padding: 5px 10px;
+    font-size: 0.7rem;
+}
+
+.btn-nav {
+    background: #333;
+    padding: 8px 16px;
+}
+
+.btn-nav:hover:not(:disabled) {
+    background: #444;
+}
+
+/* 設定バー */
+.settings-bar {
+    background: #1a1a1a;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.settings-row:last-child {
+    margin-bottom: 0;
+}
+
+.settings-bar label {
+    font-weight: bold;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.settings-bar input[type="text"],
+.settings-bar input[type="password"],
+.settings-bar select {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #fff;
+}
+
+/* ステータス表示 */
+#status {
+    padding: 10px 15px;
+    border-radius: 4px;
+    display: none;
+    font-size: 0.9rem;
+}
+
+.status-ok {
+    background-color: #155724;
+    color: #d4edda;
+    display: inline-block !important;
+}
+
+.status-err {
+    background-color: #721c24;
+    color: #f8d7da;
+    display: inline-block !important;
+}
+
+.status-loading {
+    background-color: #0c5460;
+    color: #d1ecf1;
+    display: inline-block !important;
+}
+
+/* 詳細ページ */
+.detail-page {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0a0a0a;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.detail-page.active {
+    display: block;
+}
+
+.detail-header {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.detail-back {
+    background: #333;
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-right: 20px;
+}
+
+.detail-back:hover {
+    background: #444;
+}
+
+.detail-title {
+    color: #4a9eff;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.detail-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+.detail-main {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.detail-nav {
+    display: flex;
+    gap: 10px;
+}
+
+/* ヘッダー内のセレクト */
+.header-selects {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    margin-right: 15px;
+}
+
+.header-selects label {
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.header-selects select {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid #333;
+    background: #222;
+    color: #e0e0e0;
+    font-size: 0.85rem;
+}
+
+.header-selects select:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+/* 画像エリア */
+.detail-image-section {
+    flex: 0 0 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.detail-image-section .btn-generate {
+    width: 100%;
+}
+
+.detail-image-area img {
+    width: 100%;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.detail-image-area .placeholder {
+    width: 400px;
+    height: 400px;
+    background: #111;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #666;
+    font-size: 1rem;
+}
+
+/* フォームフィールド */
+.detail-info {
+    flex: 1;
+}
+
+.detail-info .field-label {
+    color: #888;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+}
+
+.detail-info .field-input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 0.95rem;
+    border: 1px solid #333;
+    background: #222;
+    color: #e0e0e0;
+    box-sizing: border-box;
+}
+
+.detail-info .field-input:focus,
+.detail-info .field-textarea:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.detail-info .field-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 0.95rem;
+    border: 1px solid #333;
+    background: #222;
+    color: #e0e0e0;
+    box-sizing: border-box;
+    min-height: 100px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* カードグリッド */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 15px;
+}
+
+.card {
+    background: #1a1a1a;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #333;
+    transition: border-color 0.2s;
+}
+
+.card:hover {
+    border-color: #4a9eff;
+}
+
+.card-image {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.card-image .placeholder {
+    color: #666;
+    font-size: 0.7rem;
+}
+
+.card-image .generating {
+    color: #4a9eff;
+    font-size: 0.7rem;
+}
+
+.card-info {
+    padding: 10px;
+}
+
+.card-name {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #4a9eff;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-actions {
+    padding: 8px 10px;
+    border-top: 1px solid #333;
+    display: flex;
+    gap: 5px;
+}
+
+/* 空メッセージ */
+.empty-message {
+    text-align: center;
+    color: #666;
+    padding: 40px;
+    font-size: 1.1rem;
+    grid-column: 1 / -1;
+}

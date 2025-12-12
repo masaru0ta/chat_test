@@ -549,10 +549,14 @@
     </div>
 </div>
 
+<script src="js/constants.js"></script>
+<script src="js/gas-api.js"></script>
+<script src="js/runware-api.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/data-parser.js"></script>
 <script>
-    const API_BASE = 'https://api.runware.ai/v1';
-    const GAS_URL_KEY = 'gas_api_url';
-    const API_KEY_KEY = 'runware_api_key';
+    const GAS_URL_KEY = STORAGE_KEYS.GAS_URL;
+    const API_KEY_KEY = STORAGE_KEYS.API_KEY;
     const GAS_DATA_KEY = 'gas_data_cache_action';
     const ACTION_IMAGES_KEY = 'action_images';
     const COMPOSITION_IMAGES_KEY = 'composition_images';
@@ -565,8 +569,7 @@
     let actionImages = {}; // アクション名 -> 画像URL
     let compositionImages = {}; // アクション名 -> { composition名: url }
 
-    // 構図のカラム名一覧
-    const COMPOSITION_KEYS = ['pov', 'front view', 'side view', 'from above', 'low angle', 'from behind', 'crotch focus'];
+    // COMPOSITION_KEYS は constants.js で定義
 
     // 初期化
     document.addEventListener('DOMContentLoaded', () => {
@@ -752,12 +755,7 @@
         }
     }
 
-    async function fetchGasData(baseUrl, sheet) {
-        const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=' + sheet;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`${sheet}: HTTP ${response.status}`);
-        return await response.json();
-    }
+    // fetchGasData は gas-api.js で定義
 
     // アクショングリッドを描画
     function renderActionGrid() {
@@ -1251,7 +1249,7 @@
             requestBody.negativePrompt = negativePrompt;
         }
 
-        const response = await fetch(API_BASE, {
+        const response = await fetch(API_CONFIG.RUNWARE_BASE, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

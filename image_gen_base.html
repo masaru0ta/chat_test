@@ -4,82 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Generator (GAS連携)</title>
+    <link rel="stylesheet" href="css/common.css">
     <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 20px;
-            background-color: #0a0a0a;
-            color: #e0e0e0;
-            margin: 0;
-        }
-        h1 { color: #4a9eff; margin-bottom: 20px; }
+        /* ページ固有スタイル */
+        .container { max-width: 1200px; }
 
-        .container { max-width: 1200px; margin: 0 auto; }
+        #status { margin-top: 10px; }
 
-        .settings-bar {
-            background: #1a1a1a;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .settings-row {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        .settings-row:last-child { margin-bottom: 0; }
-
-        .settings-bar label {
-            font-weight: bold;
-            color: #888;
-            font-size: 0.9rem;
-        }
-
-        .settings-bar input[type="text"],
-        .settings-bar input[type="password"] {
-            flex: 1;
-            min-width: 200px;
-            padding: 10px;
-            border: 1px solid #333;
-            border-radius: 4px;
-            background: #2a2a2a;
-            color: #fff;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .btn-primary { background-color: #4a9eff; }
-        .btn-primary:hover:not(:disabled) { background-color: #3a8eef; }
-        .btn-success { background-color: #27ae60; }
-        .btn-success:hover:not(:disabled) { background-color: #219a52; }
-        .btn-generate { background-color: #9b59b6; font-size: 16px; padding: 12px 30px; }
-        .btn-generate:hover:not(:disabled) { background-color: #8e44ad; }
-
-        #status {
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-top: 10px;
-            display: none;
-            font-size: 0.9rem;
-        }
-        .status-ok { background-color: #155724; color: #d4edda; display: block !important; }
-        .status-err { background-color: #721c24; color: #f8d7da; display: block !important; }
-        .status-loading { background-color: #0c5460; color: #d1ecf1; display: block !important; }
+        .btn-generate { font-size: 16px; padding: 12px 30px; }
 
         .main-content {
             display: grid;
@@ -134,28 +66,9 @@
             font-family: monospace;
         }
 
-        .display-field {
-            padding: 10px;
-            background: #111;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            color: #aaa;
-            word-break: break-word;
-            min-height: 40px;
-        }
-
-        .display-field.positive { color: #27ae60; }
-        .display-field.negative { color: #e74c3c; }
-
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .form-row-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
             gap: 15px;
         }
 
@@ -223,19 +136,12 @@
                 </select>
             </div>
 
-            <!-- 非表示の品質プロンプト（内部用） -->
-            <div id="qualityPrompt" style="display:none;">--</div>
-            <div id="qualityNegativePrompt" style="display:none;">--</div>
-
             <div class="form-group">
                 <label>キャラクター</label>
-                <select id="character" onchange="updateCharacterTag()">
+                <select id="character" onchange="updatePromptPreview()">
                     <option value="">（なし）</option>
                 </select>
             </div>
-
-            <!-- 非表示のキャラタグ（内部用） -->
-            <div id="characterTag" style="display:none;">--</div>
 
             <div class="form-group">
                 <label>場所</label>
@@ -244,19 +150,12 @@
                 </select>
             </div>
 
-            <!-- 非表示の場所タグ（内部用） -->
-            <div id="placeTag" style="display:none;">--</div>
-            <div id="placeAdditionalTag" style="display:none;">--</div>
-
             <div class="form-group">
                 <label>アクション</label>
                 <select id="action" onchange="updateActionPrompt()">
                     <option value="">（なし）</option>
                 </select>
             </div>
-
-            <!-- 非表示のアクションプロンプト（内部用） -->
-            <div id="actionPrompt" style="display:none;">--</div>
 
             <div class="form-group">
                 <label>構図</label>
@@ -265,23 +164,9 @@
                 </select>
             </div>
 
-            <!-- 非表示の構図タグ（内部用） -->
-            <div id="compositionTag" style="display:none;">--</div>
-
             <div class="form-group">
                 <label>追加プロンプト</label>
                 <textarea id="customPrompt" placeholder="追加のプロンプトを入力"></textarea>
-            </div>
-
-            <!-- 非表示のSteps/CFG（内部用） -->
-            <input type="hidden" id="steps" value="20">
-            <input type="hidden" id="cfgScale" value="7">
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Seed (-1=ランダム)</label>
-                    <input type="number" id="seed" value="-1">
-                </div>
             </div>
 
             <div class="form-row">
@@ -293,6 +178,11 @@
                     <label>高さ</label>
                     <input type="number" id="height" value="1024" min="512" max="2048" step="64">
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label>Seed (-1=ランダム)</label>
+                <input type="number" id="seed" value="-1">
             </div>
 
             <div class="prompt-preview">
@@ -308,7 +198,7 @@
         <div class="panel result-panel">
             <h2>生成結果</h2>
             <div style="margin-bottom: 15px; text-align: center;">
-                <button class="btn btn-generate" onclick="generateImage()" id="generateBtn">画像生成</button>
+                <button class="btn btn-generate" onclick="handleGenerateImage()" id="generateBtn">画像生成</button>
             </div>
             <div id="result-container">
                 <div class="result-placeholder">画像を生成してください</div>
@@ -331,8 +221,14 @@
     </div>
 </div>
 
+<script src="js/constants.js"></script>
+<script src="js/gas-api.js"></script>
+<script src="js/runware-api.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/data-parser.js"></script>
+<script src="js/ui-utils.js"></script>
 <script>
-    const API_BASE = 'https://api.runware.ai/v1';
+    // ページ固有のストレージキー
     const GAS_URL_KEY = 'image_gen_gas_url';
     const API_KEY_KEY = 'image_gen_api_key';
 
@@ -342,35 +238,25 @@
     let places = [];
     let actions = [];
 
-    // 構図のカラム名一覧
-    const COMPOSITION_KEYS = ['pov', 'front view', 'side view', 'from above', 'low angle', 'from behind', 'crotch focus'];
-
     // 初期化
     document.addEventListener('DOMContentLoaded', () => {
-        const savedGasUrl = localStorage.getItem(GAS_URL_KEY);
-        if (savedGasUrl) {
-            document.getElementById('gasUrl').value = savedGasUrl;
+        // 共通関数で設定を読み込み
+        const settings = loadSettings(GAS_URL_KEY, API_KEY_KEY);
+        if (settings.gasUrl) {
+            document.getElementById('gasUrl').value = settings.gasUrl;
         }
-        const savedApiKey = localStorage.getItem(API_KEY_KEY);
-        if (savedApiKey) {
-            document.getElementById('apiKey').value = savedApiKey;
+        if (settings.apiKey) {
+            document.getElementById('apiKey').value = settings.apiKey;
         }
 
         // プロンプトプレビュー更新（customPromptのみ編集可能）
         document.getElementById('customPrompt').addEventListener('input', updatePromptPreview);
     });
 
-    function showStatus(msg, type = 'ok') {
-        const el = document.getElementById('status');
-        el.textContent = msg;
-        el.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
-    }
-
-    function saveSettings() {
+    function doSaveSettings() {
         const gasUrl = document.getElementById('gasUrl').value.trim();
         const apiKey = document.getElementById('apiKey').value.trim();
-        if (gasUrl) localStorage.setItem(GAS_URL_KEY, gasUrl);
-        if (apiKey) localStorage.setItem(API_KEY_KEY, apiKey);
+        saveSettings(GAS_URL_KEY, API_KEY_KEY, gasUrl, apiKey);
     }
 
     // GASから全データ読み込み
@@ -381,7 +267,7 @@
             return;
         }
 
-        saveSettings();
+        doSaveSettings();
         showStatus('読み込み中...', 'loading');
 
         try {
@@ -393,64 +279,16 @@
                 fetchGasData(baseUrl, 'action')
             ]);
 
-            // モデル設定
-            models = {};
-            modelData.forEach(item => {
-                const modelId = item.model_id || item.id;
-                if (modelId) {
-                    models[modelId] = {
-                        name: item.name || modelId,
-                        steps: parseInt(item.steps) || 20,
-                        cfgScale: parseFloat(item.cfg) || 7,
-                        scheduler: item.scheduler || 'Default',
-                        qualityPositive: item['prompt positive'] || '',
-                        qualityNegative: item['prompt negative'] || ''
-                    };
-                }
-            });
+            models = parseModels(modelData);
             updateModelSelect();
 
-            // キャラクター設定
-            characters = characterData.map(item => ({
-                name: item.name || '',
-                series: item.series || '',
-                tag: item.tag || '',
-                profile: item.profile || '',
-                additionalTag: item['additional tag'] || ''
-            }));
+            characters = parseCharacters(characterData);
             updateCharacterSelect();
 
-            // 場所設定
-            places = placeData.map(item => ({
-                name: item.name || '',
-                tag: item.tag || '',
-                additionalTag: item['additional tag'] || ''
-            }));
+            places = parsePlaces(placeData);
             updatePlaceSelect();
 
-            // アクション設定（構図情報も含める）
-            actions = actionData.map(item => {
-                const action = {
-                    name: item['action name'] || '',
-                    prompt: item.prompt || '',
-                    compositions: []
-                };
-                // 構図情報を読み込み（NGでないもののみ、quality情報も保存）
-                COMPOSITION_KEYS.forEach(key => {
-                    const qualityKey = key + ' quality';
-                    const tagKey = key + ' tag';
-                    const quality = item[qualityKey] || '';
-                    const tag = item[tagKey] || '';
-                    if (quality !== 'NG' && quality !== '') {
-                        action.compositions.push({
-                            name: key,
-                            tag: tag,
-                            quality: quality  // BEST, Good などを保存
-                        });
-                    }
-                });
-                return action;
-            });
+            actions = parseActionsWithCompositions(actionData);
             updateActionSelect();
 
             showStatus(`読み込み完了: モデル${Object.keys(models).length}件, キャラ${characters.length}件, 場所${places.length}件, アクション${actions.length}件`);
@@ -459,13 +297,6 @@
             console.error(error);
             showStatus('読み込みエラー: ' + error.message, 'error');
         }
-    }
-
-    async function fetchGasData(baseUrl, sheet) {
-        const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=' + sheet;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`${sheet}: HTTP ${response.status}`);
-        return await response.json();
     }
 
     function updateModelSelect() {
@@ -507,28 +338,15 @@
         });
     }
 
-    function getSelectedPlaceTag() {
-        const index = document.getElementById('place').value;
-        if (index !== '' && places[index]) {
-            return places[index].tag || '';
-        }
-        return '';
+    // 選択データ取得ヘルパー
+    function getSelectedModelData(prop) {
+        const id = document.getElementById('model').value;
+        return (id && models[id]) ? (models[id][prop] || '') : '';
     }
 
-    function getSelectedPlaceAdditionalTag() {
-        const index = document.getElementById('place').value;
-        if (index !== '' && places[index]) {
-            return places[index].additionalTag || '';
-        }
-        return '';
-    }
-
-    function getSelectedCharacterAdditionalTag() {
-        const index = document.getElementById('character').value;
-        if (index !== '' && characters[index]) {
-            return characters[index].additionalTag || '';
-        }
-        return '';
+    function getSelectedData(selectId, dataArray, prop) {
+        const idx = document.getElementById(selectId).value;
+        return (idx !== '' && dataArray[idx]) ? (dataArray[idx][prop] || '') : '';
     }
 
     function updateActionSelect() {
@@ -543,39 +361,13 @@
     }
 
     function applyModelDefaults() {
-        const modelId = document.getElementById('model').value;
-        if (modelId && models[modelId]) {
-            const m = models[modelId];
-            document.getElementById('steps').value = m.steps;
-            document.getElementById('cfgScale').value = m.cfgScale;
-            document.getElementById('qualityPrompt').textContent = m.qualityPositive || '--';
-            document.getElementById('qualityNegativePrompt').textContent = m.qualityNegative || '--';
-        } else {
-            document.getElementById('qualityPrompt').textContent = '--';
-            document.getElementById('qualityNegativePrompt').textContent = '--';
-        }
-        updatePromptPreview();
-    }
-
-    function updateCharacterTag() {
-        const index = document.getElementById('character').value;
-        if (index !== '' && characters[index]) {
-            document.getElementById('characterTag').textContent = characters[index].tag || '--';
-        } else {
-            document.getElementById('characterTag').textContent = '--';
-        }
         updatePromptPreview();
     }
 
     function updateActionPrompt() {
         const index = document.getElementById('action').value;
-        if (index !== '' && actions[index]) {
-            document.getElementById('actionPrompt').textContent = actions[index].prompt || '--';
-            updateCompositionSelect(actions[index].compositions);
-        } else {
-            document.getElementById('actionPrompt').textContent = '--';
-            updateCompositionSelect([]);
-        }
+        const compositions = (index !== '' && actions[index]) ? actions[index].compositions : [];
+        updateCompositionSelect(compositions);
         updatePromptPreview();
     }
 
@@ -612,9 +404,6 @@
                 }
             }
         }
-
-        // 構図タグをリセット
-        document.getElementById('compositionTag').textContent = '--';
     }
 
     // BEST選択時に適切な構図をランダムに選ぶ
@@ -662,58 +451,30 @@
         return '';
     }
 
-    function getDisplayFieldText(id) {
-        const text = document.getElementById(id).textContent.trim();
-        return text === '--' ? '' : text;
-    }
-
-    // プロンプトの連続カンマを修正
-    function cleanPrompt(prompt) {
-        return prompt
-            .replace(/,\s*,+/g, ',')  // 連続カンマを1つに
-            .replace(/^,\s*/, '')      // 先頭のカンマを削除
-            .replace(/,\s*$/, '')      // 末尾のカンマを削除
-            .trim();
-    }
-
-    function updatePromptPreview() {
-        const qualityPrompt = getDisplayFieldText('qualityPrompt');
-        const characterTag = getDisplayFieldText('characterTag');
-        const placeTag = getSelectedPlaceTag();
-        const actionPrompt = getDisplayFieldText('actionPrompt');
-        const compositionTag = getSelectedCompositionTag();
-        const customPrompt = document.getElementById('customPrompt').value.trim();
-        const placeAdditionalTag = getSelectedPlaceAdditionalTag();
-        const characterAdditionalTag = getSelectedCharacterAdditionalTag();
-
-        const parts = [qualityPrompt, characterTag, placeTag, actionPrompt, compositionTag, customPrompt, placeAdditionalTag, characterAdditionalTag].filter(p => p);
-        const fullPrompt = cleanPrompt(parts.join(', '));
-
-        document.getElementById('promptPreview').textContent = fullPrompt || '--';
-
-        const negativePrompt = getDisplayFieldText('qualityNegativePrompt');
-        document.getElementById('negativePreview').textContent = negativePrompt || '--';
-    }
-
     function buildPrompt() {
-        const qualityPrompt = getDisplayFieldText('qualityPrompt');
-        const characterTag = getDisplayFieldText('characterTag');
-        const placeTag = getSelectedPlaceTag();
-        const actionPrompt = getDisplayFieldText('actionPrompt');
-        const compositionTag = getSelectedCompositionTag();
-        const customPrompt = document.getElementById('customPrompt').value.trim();
-        const placeAdditionalTag = getSelectedPlaceAdditionalTag();
-        const characterAdditionalTag = getSelectedCharacterAdditionalTag();
-
-        return cleanPrompt([qualityPrompt, characterTag, placeTag, actionPrompt, compositionTag, customPrompt, placeAdditionalTag, characterAdditionalTag].filter(p => p).join(', '));
+        const parts = [
+            getSelectedModelData('qualityPositive'),
+            getSelectedData('character', characters, 'tag'),
+            getSelectedData('place', places, 'tag'),
+            getSelectedData('action', actions, 'prompt'),
+            getSelectedCompositionTag(),
+            document.getElementById('customPrompt').value.trim(),
+            getSelectedData('place', places, 'additionalTag'),
+            getSelectedData('character', characters, 'additionalTag')
+        ].filter(p => p);
+        return cleanPrompt(parts.join(', '));
     }
 
     function buildNegativePrompt() {
-        return getDisplayFieldText('qualityNegativePrompt');
+        return getSelectedModelData('qualityNegative');
     }
 
-    // 画像生成
-    async function generateImage() {
+    function updatePromptPreview() {
+        document.getElementById('promptPreview').textContent = buildPrompt() || '--';
+        document.getElementById('negativePreview').textContent = buildNegativePrompt() || '--';
+    }
+
+    async function handleGenerateImage() {
         const apiKey = document.getElementById('apiKey').value.trim();
         if (!apiKey) {
             alert('Runware API Keyを入力してください');
@@ -726,18 +487,18 @@
             return;
         }
 
-        saveSettings();
+        doSaveSettings();
 
+        const model = models[modelId];
         const prompt = buildPrompt();
         const negativePrompt = buildNegativePrompt();
-        const steps = parseInt(document.getElementById('steps').value);
-        const cfgScale = parseFloat(document.getElementById('cfgScale').value);
+        const steps = model?.steps || 20;
+        const cfgScale = model?.cfgScale || 7;
+        const scheduler = model?.scheduler || 'Default';
         const width = parseInt(document.getElementById('width').value);
         const height = parseInt(document.getElementById('height').value);
         let seed = parseInt(document.getElementById('seed').value);
-        if (seed === -1) seed = Math.floor(Math.random() * 2147483647);
-
-        const scheduler = models[modelId]?.scheduler || 'Default';
+        if (seed === -1) seed = undefined;
 
         const btn = document.getElementById('generateBtn');
         btn.disabled = true;
@@ -749,57 +510,27 @@
         const startTime = Date.now();
 
         try {
-            const requestBody = {
-                taskType: 'imageInference',
-                taskUUID: crypto.randomUUID(),
-                model: modelId,
-                positivePrompt: prompt,
+            const result = await generateImage(apiKey, modelId, prompt, {
+                negativePrompt: negativePrompt,
                 steps: steps,
-                CFGScale: cfgScale,
+                cfgScale: cfgScale,
                 scheduler: scheduler,
                 width: width,
                 height: height,
-                seed: seed,
-                numberResults: 1
-            };
-
-            // ネガティブプロンプトが2文字以上の場合のみ追加
-            if (negativePrompt && negativePrompt.length >= 2) {
-                requestBody.negativePrompt = negativePrompt;
-            }
-
-            const response = await fetch(API_BASE, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify([requestBody])
+                seed: seed
             });
 
-            const result = await response.json();
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
-            if (result.data && result.data.length > 0 && result.data[0].imageURL) {
-                const imageUrl = result.data[0].imageURL;
-                const resultSeed = result.data[0].seed || seed;
+            resultContainer.innerHTML = `<img src="${result.imageURL}" alt="Generated Image" onclick="window.open('${result.imageURL}', '_blank')">`;
 
-                resultContainer.innerHTML = `<img src="${imageUrl}" alt="Generated Image" onclick="window.open('${imageUrl}', '_blank')">`;
-
-                const infoDiv = document.getElementById('generation-info');
-                infoDiv.style.display = 'block';
-                infoDiv.innerHTML = `
-                    <div><strong>モデル:</strong> ${models[modelId]?.name || modelId}</div>
-                    <div><strong>Seed:</strong> ${resultSeed} | <strong>Steps:</strong> ${steps} | <strong>CFG:</strong> ${cfgScale}</div>
-                    <div><strong>生成時間:</strong> ${elapsed}秒</div>
-                `;
-
-
-            } else if (result.errors) {
-                throw new Error(result.errors.map(e => e.message).join(', '));
-            } else {
-                throw new Error('画像の生成に失敗しました');
-            }
+            const infoDiv = document.getElementById('generation-info');
+            infoDiv.style.display = 'block';
+            infoDiv.innerHTML = `
+                <div><strong>モデル:</strong> ${model?.name || modelId}</div>
+                <div><strong>Seed:</strong> ${result.seed} | <strong>Steps:</strong> ${steps} | <strong>CFG:</strong> ${cfgScale}</div>
+                <div><strong>生成時間:</strong> ${elapsed}秒</div>
+            `;
 
         } catch (error) {
             console.error(error);

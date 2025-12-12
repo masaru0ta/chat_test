@@ -413,10 +413,14 @@
     </div>
 </div>
 
+<script src="js/constants.js"></script>
+<script src="js/gas-api.js"></script>
+<script src="js/runware-api.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/data-parser.js"></script>
 <script>
-    const API_BASE = 'https://api.runware.ai/v1';
-    const GAS_URL_KEY = 'gas_api_url';
-    const API_KEY_KEY = 'runware_api_key';
+    const GAS_URL_KEY = STORAGE_KEYS.GAS_URL;
+    const API_KEY_KEY = STORAGE_KEYS.API_KEY;
     const GAS_DATA_KEY = 'gas_data_cache_place';
     const PLACE_IMAGES_KEY = 'place_images';
 
@@ -596,12 +600,7 @@
         }
     }
 
-    async function fetchGasData(baseUrl, sheet) {
-        const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=' + sheet;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`${sheet}: HTTP ${response.status}`);
-        return await response.json();
-    }
+    // fetchGasData は gas-api.js で定義
 
     // GASに保存
     async function saveToGas() {
@@ -934,7 +933,7 @@
             requestBody.negativePrompt = negativePrompt;
         }
 
-        const response = await fetch(API_BASE, {
+        const response = await fetch(API_CONFIG.RUNWARE_BASE, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
