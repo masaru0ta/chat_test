@@ -198,7 +198,7 @@
             models = parseModels(modelData);
             characters = parseCharacters(characterData);
             places = parsePlaces(placeData);
-            actions = parseActions(actionData);
+            actions = parseActionsWithCompositions(actionData);
 
             saveCachedData();
             renderPlaceGrid();
@@ -274,6 +274,22 @@
         return Object.keys(models)[0] || null;
     }
 
+    // BEST → GOOD → 未評価 の優先順位で構図を選択
+    function selectBestComposition(action) {
+        if (!action || !action.compositions) return null;
+
+        const best = action.compositions.find(c => c.quality === 'best');
+        if (best) return best;
+
+        const good = action.compositions.find(c => c.quality === 'good');
+        if (good) return good;
+
+        const none = action.compositions.find(c => c.quality === '未評価');
+        if (none) return none;
+
+        return action.compositions[0] || null;
+    }
+
     function validateGenerateSettings() {
         const apiKey = document.getElementById('apiKey').value.trim();
         if (!apiKey) {
@@ -299,12 +315,16 @@
         const char = characters[charIndex] || characters[0] || {};
         const action = actions[actionIndex] || actions[0] || {};
 
+        // アクションに応じたBEST構図を選択
+        const selectedComp = selectBestComposition(action);
+        const compositionTag = selectedComp ? (selectedComp.tag || selectedComp.name) : 'front view';
+
         return [
             model.qualityPositive || '',
             char.tag || '',
             place.tag || '',
             action.prompt || '',
-            'front view',
+            compositionTag,
             place.additionalTag || '',
             char.additionalTag || ''
         ].filter(p => p).join(', ');

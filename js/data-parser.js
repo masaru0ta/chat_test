@@ -57,18 +57,6 @@ function parsePlaces(rawData) {
 }
 
 /**
- * アクションデータをパース（シンプル版）
- * @param {Array} rawData - GASから取得した生データ
- * @returns {Array} パース済みアクション配列
- */
-function parseActions(rawData) {
-    return rawData.map(item => ({
-        name: item['action name'] || '',
-        prompt: item.prompt || ''
-    }));
-}
-
-/**
  * アクションデータをパース（構図情報付き）
  * @param {Array} rawData - GASから取得した生データ
  * @returns {Array} パース済みアクション配列（構図情報付き）
