@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>場所設定</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 20px;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            margin: 0;
+        }
+        h1 { color: #4a9eff; margin-bottom: 20px; }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        .settings-bar {
+            background: #1a1a1a;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .settings-row:last-child { margin-bottom: 0; }
+
+        .settings-bar label {
+            font-weight: bold;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .settings-bar input[type="text"],
+        .settings-bar input[type="password"],
+        .settings-bar select {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary { background-color: #4a9eff; }
+        .btn-primary:hover:not(:disabled) { background-color: #3a8eef; }
+        .btn-save { background-color: #27ae60; }
+        .btn-save:hover:not(:disabled) { background-color: #219a52; }
+        .btn-generate { background-color: #9b59b6; }
+        .btn-generate:hover:not(:disabled) { background-color: #8e44ad; }
+
+        #status {
+            padding: 10px 15px;
+            border-radius: 4px;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .status-ok { background-color: #155724; color: #d4edda; display: inline-block !important; }
+        .status-err { background-color: #721c24; color: #f8d7da; display: inline-block !important; }
+        .status-loading { background-color: #0c5460; color: #d1ecf1; display: inline-block !important; }
+
+        /* 場所カード */
+        .place-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+        }
+
+        .place-card {
+            background: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #333;
+            transition: border-color 0.2s;
+        }
+
+        .place-card:hover {
+            border-color: #4a9eff;
+        }
+
+        .place-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .place-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .place-image .placeholder {
+            color: #666;
+            font-size: 0.7rem;
+        }
+
+        .place-image .generating {
+            color: #4a9eff;
+            font-size: 0.7rem;
+        }
+
+        .place-info {
+            padding: 10px;
+        }
+
+        .place-name {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #4a9eff;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .place-tag {
+            font-size: 0.7rem;
+            color: #aaa;
+            line-height: 1.3;
+            max-height: 50px;
+            overflow-y: auto;
+        }
+
+        .place-actions {
+            padding: 8px 10px;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 0.7rem;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+            font-size: 1.1rem;
+            grid-column: 1 / -1;
+        }
+
+        /* 詳細ページ */
+        .detail-page {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .detail-page.active {
+            display: block;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .detail-back {
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-right: 20px;
+        }
+
+        .detail-back:hover {
+            background: #444;
+        }
+
+        .detail-title {
+            color: #4a9eff;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .header-selects {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            margin-right: 15px;
+        }
+
+        .header-selects label {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .header-selects select {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #222;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+
+        .header-selects select:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .detail-header .btn-save {
+            margin-right: 10px;
+        }
+
+        .detail-header #detail-status {
+            margin-right: 15px;
+        }
+
+        .detail-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-nav {
+            background: #333;
+            padding: 8px 16px;
+        }
+
+        .btn-nav:hover:not(:disabled) {
+            background: #444;
+        }
+
+        .detail-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .detail-main {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .detail-image-section {
+            flex: 0 0 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .detail-image-section .btn-generate {
+            width: 100%;
+        }
+
+        .detail-image-area img {
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .detail-image-area .placeholder {
+            width: 400px;
+            height: 400px;
+            background: #111;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .detail-info {
+            flex: 1;
+        }
+
+        .detail-info .field-label {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .detail-info .field-input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            border: 1px solid #333;
+            background: #222;
+            color: #e0e0e0;
+            box-sizing: border-box;
+        }
+
+        .detail-info .field-input:focus,
+        .detail-info .field-textarea:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .detail-info .field-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            border: 1px solid #333;
+            background: #222;
+            color: #e0e0e0;
+            box-sizing: border-box;
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>場所設定</h1>
+
+    <!-- 場所グリッド -->
+    <div id="place-grid" class="place-grid">
+        <div class="empty-message">「GASから読み込み」ボタンで場所データを読み込んでください</div>
+    </div>
+
+    <!-- 設定バー -->
+    <div class="settings-bar" style="margin-top: 20px;">
+        <div class="settings-row">
+            <label>GAS URL:</label>
+            <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec">
+            <button class="btn btn-primary" onclick="loadAllFromGas()">GASから読み込み</button>
+            <button class="btn btn-save" onclick="saveToGas()">GASに保存</button>
+            <button class="btn btn-generate" onclick="generateAllImages()" id="generateAllBtn">全場所画像生成</button>
+        </div>
+        <div class="settings-row">
+            <label>Runware API Key:</label>
+            <input type="password" id="apiKey" placeholder="Runware API Keyを入力">
+        </div>
+        <div id="status"></div>
+    </div>
+</div>
+
+<!-- 場所詳細ページ -->
+<div id="detail-page" class="detail-page">
+    <div class="detail-header">
+        <button class="detail-back" onclick="closeDetailPage()">← 戻る</button>
+        <h1 class="detail-title" id="detail-title"></h1>
+        <div class="header-selects">
+            <label>キャラ:</label>
+            <select id="preview-character"></select>
+            <label>アクション:</label>
+            <select id="preview-action"></select>
+        </div>
+        <button class="btn btn-save" onclick="saveToGas()">GASに保存</button>
+        <div id="detail-status"></div>
+        <div class="detail-nav">
+            <button class="btn btn-nav" onclick="navigatePlace(-1)" id="btn-prev">← 前</button>
+            <button class="btn btn-nav" onclick="navigatePlace(1)" id="btn-next">次 →</button>
+        </div>
+    </div>
+    <div class="detail-content">
+        <div class="detail-main">
+            <div class="detail-image-section">
+                <div class="detail-image-area" id="detail-image"></div>
+                <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
+            </div>
+            <div class="detail-info">
+                <div class="field-label">場所タグ</div>
+                <textarea class="field-textarea" id="detail-tag" onchange="updatePlaceField('tag', this.value)"></textarea>
+                <div class="field-label">追加タグ</div>
+                <textarea class="field-textarea" id="detail-additional" onchange="updatePlaceField('additionalTag', this.value)"></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'https://api.runware.ai/v1';
+    const GAS_URL_KEY = 'gas_api_url';
+    const API_KEY_KEY = 'runware_api_key';
+    const GAS_DATA_KEY = 'gas_data_cache_place';
+    const PLACE_IMAGES_KEY = 'place_images';
+
+    // データストア
+    let models = {};
+    let characters = [];
+    let places = [];
+    let actions = [];
+    let placeImages = {}; // 場所名 -> 画像URL
+
+    // 現在の詳細ページインデックス
+    let currentDetailIndex = -1;
+
+    // 初期化
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedUrl = localStorage.getItem(GAS_URL_KEY);
+        if (savedUrl) {
+            document.getElementById('apiUrl').value = savedUrl;
+        }
+        const savedApiKey = localStorage.getItem(API_KEY_KEY);
+        if (savedApiKey) {
+            document.getElementById('apiKey').value = savedApiKey;
+        }
+
+        // 保存されたデータを復元
+        loadCachedData();
+    });
+
+    // キーボードナビゲーション
+    document.addEventListener('keydown', (e) => {
+        if (currentDetailIndex < 0) return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            navigatePlace(-1);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            navigatePlace(1);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeDetailPage();
+        }
+    });
+
+    // キャッシュデータを保存
+    function saveCachedData() {
+        const data = {
+            models: models,
+            characters: characters,
+            places: places,
+            actions: actions
+        };
+        localStorage.setItem(GAS_DATA_KEY, JSON.stringify(data));
+        localStorage.setItem(PLACE_IMAGES_KEY, JSON.stringify(placeImages));
+    }
+
+    // キャッシュデータを復元
+    function loadCachedData() {
+        try {
+            const cachedData = localStorage.getItem(GAS_DATA_KEY);
+            if (cachedData) {
+                const data = JSON.parse(cachedData);
+                models = data.models || {};
+                characters = data.characters || [];
+                places = data.places || [];
+                actions = data.actions || [];
+            }
+
+            const cachedImages = localStorage.getItem(PLACE_IMAGES_KEY);
+            if (cachedImages) {
+                placeImages = JSON.parse(cachedImages);
+            }
+
+            if (places.length > 0) {
+                renderPlaceGrid();
+                showStatus(`キャッシュから復元: 場所${places.length}件`);
+            }
+        } catch (error) {
+            console.error('キャッシュ復元エラー:', error);
+        }
+    }
+
+    function saveSettings() {
+        const gasUrl = document.getElementById('apiUrl').value.trim();
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (gasUrl) localStorage.setItem(GAS_URL_KEY, gasUrl);
+        if (apiKey) localStorage.setItem(API_KEY_KEY, apiKey);
+    }
+
+    function showStatus(msg, type = 'ok') {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
+
+        // 詳細画面が開いている場合はそちらにも表示
+        const detailStatus = document.getElementById('detail-status');
+        if (detailStatus && currentDetailIndex >= 0) {
+            detailStatus.textContent = msg;
+            detailStatus.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
+            if (type === 'ok') {
+                setTimeout(() => {
+                    detailStatus.textContent = '';
+                    detailStatus.className = '';
+                }, 3000);
+            }
+        }
+    }
+
+    // GASから全データ読み込み
+    async function loadAllFromGas() {
+        const baseUrl = document.getElementById('apiUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        saveSettings();
+        showStatus('読み込み中...', 'loading');
+
+        try {
+            const [modelData, characterData, placeData, actionData] = await Promise.all([
+                fetchGasData(baseUrl, 'model'),
+                fetchGasData(baseUrl, 'character'),
+                fetchGasData(baseUrl, 'place'),
+                fetchGasData(baseUrl, 'action')
+            ]);
+
+            // モデル設定
+            models = {};
+            modelData.forEach(item => {
+                const modelId = item.model_id || item.id;
+                if (modelId) {
+                    models[modelId] = {
+                        name: item.name || modelId,
+                        steps: parseInt(item.steps) || 20,
+                        cfgScale: parseFloat(item.cfg) || 7,
+                        scheduler: item.scheduler || 'Default',
+                        qualityPositive: item['prompt positive'] || '',
+                        qualityNegative: item['prompt negative'] || ''
+                    };
+                }
+            });
+
+            // キャラクター設定
+            characters = characterData.map(item => ({
+                name: item.name || '',
+                series: item.series || '',
+                tag: item.tag || '',
+                profile: item.profile || '',
+                uniform1: item.uniform1 || '',
+                uniform2: item.uniform2 || ''
+            }));
+
+            // 場所設定
+            places = placeData.map(item => ({
+                name: item.name || '',
+                tag: item.tag || '',
+                additionalTag: item['additional tag'] || ''
+            }));
+
+            // アクション設定
+            actions = actionData.map(item => ({
+                name: item['action name'] || '',
+                prompt: item.prompt || ''
+            }));
+
+            // キャッシュに保存
+            saveCachedData();
+
+            renderPlaceGrid();
+            showStatus(`読み込み完了: モデル${Object.keys(models).length}件, キャラ${characters.length}件, 場所${places.length}件, アクション${actions.length}件`);
+
+        } catch (error) {
+            console.error(error);
+            showStatus('読み込みエラー: ' + error.message, 'error');
+        }
+    }
+
+    async function fetchGasData(baseUrl, sheet) {
+        const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=' + sheet;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`${sheet}: HTTP ${response.status}`);
+        return await response.json();
+    }
+
+    // GASに保存
+    async function saveToGas() {
+        const baseUrl = document.getElementById('apiUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        if (places.length === 0) {
+            alert('保存する場所データがありません');
+            return;
+        }
+
+        saveSettings();
+        showStatus('GASに保存中...', 'loading');
+
+        try {
+            const gasData = places.map(place => ({
+                'name': place.name,
+                'tag': place.tag,
+                'additional tag': place.additionalTag
+            }));
+
+            const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=place';
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify(gasData)
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                showStatus('GASに保存しました: ' + result.message);
+            } else {
+                throw new Error(result.message || '保存に失敗しました');
+            }
+        } catch (error) {
+            console.error(error);
+            showStatus('保存エラー: ' + error.message, 'error');
+        }
+    }
+
+    // 場所グリッドを描画
+    function renderPlaceGrid() {
+        const container = document.getElementById('place-grid');
+
+        if (places.length === 0) {
+            container.innerHTML = '<div class="empty-message">場所データがありません</div>';
+            return;
+        }
+
+        container.innerHTML = places.map((place, index) => `
+            <div class="place-card" id="card-${index}">
+                <div class="place-image" id="image-${index}">
+                    ${placeImages[place.name]
+                        ? `<img src="${placeImages[place.name]}" alt="${place.name}" onclick="openDetailPage(${index})">`
+                        : `<div class="placeholder" onclick="openDetailPage(${index})" style="cursor:pointer;">画像未生成</div>`
+                    }
+                </div>
+                <div class="place-info">
+                    <div class="place-name">${place.name || '(名前未設定)'}</div>
+                    <div class="place-tag">${place.tag || ''}</div>
+                </div>
+                <div class="place-actions">
+                    <button class="btn btn-generate btn-small" onclick="generateSingleImage(${index})">画像生成</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // モデルリストの最初のモデルを取得
+    function getFirstModel() {
+        return Object.keys(models)[0] || null;
+    }
+
+    // 場所用プロンプトを構築
+    function buildPlacePrompt(placeIndex) {
+        const place = places[placeIndex];
+        if (!place) return '';
+
+        const modelId = getFirstModel();
+        const model = models[modelId] || {};
+
+        // 選択されたキャラクターとアクションを使用
+        const charSelect = document.getElementById('preview-character');
+        const actionSelect = document.getElementById('preview-action');
+        const charIndex = charSelect ? parseInt(charSelect.value) || 0 : 0;
+        const actionIndex = actionSelect ? parseInt(actionSelect.value) || 0 : 0;
+        const char = characters[charIndex] || characters[0] || {};
+        const action = actions[actionIndex] || actions[0] || {};
+
+        const parts = [
+            model.qualityPositive || '',
+            char.tag || '',
+            place.tag || '',
+            action.prompt || '',
+            'front view',
+            place.additionalTag || ''
+        ].filter(p => p);
+
+        return parts.join(', ');
+    }
+
+    // 単一場所の画像生成
+    async function generateSingleImage(placeIndex) {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        saveSettings();
+
+        const place = places[placeIndex];
+        const imageDiv = document.getElementById(`image-${placeIndex}`);
+        imageDiv.innerHTML = '<div class="generating">生成中...</div>';
+
+        try {
+            const prompt = buildPlacePrompt(placeIndex);
+            const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+            placeImages[place.name] = imageUrl;
+            saveCachedData();
+            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${place.name}" onclick="openDetailPage(${placeIndex})">`;
+        } catch (error) {
+            console.error(error);
+            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+        }
+    }
+
+    // 全場所の画像を生成
+    async function generateAllImages() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        if (places.length === 0) {
+            alert('場所がありません');
+            return;
+        }
+
+        saveSettings();
+
+        const btn = document.getElementById('generateAllBtn');
+        btn.disabled = true;
+
+        showStatus(`画像生成中: 0/${places.length}`, 'loading');
+
+        for (let i = 0; i < places.length; i++) {
+            const place = places[i];
+            const imageDiv = document.getElementById(`image-${i}`);
+            imageDiv.innerHTML = '<div class="generating">生成中...</div>';
+
+            try {
+                const prompt = buildPlacePrompt(i);
+                const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+                placeImages[place.name] = imageUrl;
+                saveCachedData();
+                imageDiv.innerHTML = `<img src="${imageUrl}" alt="${place.name}" onclick="openDetailPage(${i})">`;
+                showStatus(`画像生成中: ${i + 1}/${places.length}`, 'loading');
+            } catch (error) {
+                console.error(error);
+                imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー</div>`;
+            }
+
+            if (i < places.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        btn.disabled = false;
+        showStatus(`画像生成完了: ${places.length}件`);
+    }
+
+    // 詳細ページ関連
+    function openDetailPage(index) {
+        const place = places[index];
+        if (!place) return;
+
+        currentDetailIndex = index;
+        updateDetailPage();
+
+        document.getElementById('detail-page').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function updateDetailPage() {
+        const place = places[currentDetailIndex];
+        if (!place) return;
+
+        document.getElementById('detail-title').textContent = place.name || '(名前未設定)';
+        document.getElementById('detail-tag').value = place.tag || '';
+        document.getElementById('detail-additional').value = place.additionalTag || '';
+
+        const imageDiv = document.getElementById('detail-image');
+        const imageUrl = placeImages[place.name];
+        if (imageUrl) {
+            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${place.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+        } else {
+            imageDiv.innerHTML = '<div class="placeholder">画像未生成</div>';
+        }
+
+        // プルダウンを更新
+        updatePreviewSelects();
+
+        // ナビゲーションボタンの状態を更新
+        document.getElementById('btn-prev').disabled = currentDetailIndex <= 0;
+        document.getElementById('btn-next').disabled = currentDetailIndex >= places.length - 1;
+    }
+
+    function updatePreviewSelects() {
+        const charSelect = document.getElementById('preview-character');
+        const actionSelect = document.getElementById('preview-action');
+
+        const charValue = charSelect.value;
+        const actionValue = actionSelect.value;
+
+        charSelect.innerHTML = characters.map((char, index) =>
+            `<option value="${index}">${char.name || '(名前なし)'}</option>`
+        ).join('');
+
+        actionSelect.innerHTML = actions.map((action, index) =>
+            `<option value="${index}">${action.name || '(名前なし)'}</option>`
+        ).join('');
+
+        if (charValue && charValue < characters.length) charSelect.value = charValue;
+        if (actionValue && actionValue < actions.length) actionSelect.value = actionValue;
+    }
+
+    function closeDetailPage() {
+        document.getElementById('detail-page').classList.remove('active');
+        document.body.style.overflow = '';
+        currentDetailIndex = -1;
+    }
+
+    function updatePlaceField(field, value) {
+        if (currentDetailIndex < 0) return;
+
+        const place = places[currentDetailIndex];
+        if (!place) return;
+
+        place[field] = value;
+        saveCachedData();
+
+        renderPlaceGrid();
+    }
+
+    function navigatePlace(direction) {
+        const newIndex = currentDetailIndex + direction;
+        if (newIndex >= 0 && newIndex < places.length) {
+            currentDetailIndex = newIndex;
+            updateDetailPage();
+        }
+    }
+
+    async function generateDetailImage() {
+        if (currentDetailIndex < 0) return;
+
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        saveSettings();
+
+        const place = places[currentDetailIndex];
+        const detailImageDiv = document.getElementById('detail-image');
+        const cardImageDiv = document.getElementById(`image-${currentDetailIndex}`);
+
+        detailImageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
+
+        try {
+            const prompt = buildPlacePrompt(currentDetailIndex);
+            const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+            placeImages[place.name] = imageUrl;
+            saveCachedData();
+
+            detailImageDiv.innerHTML = `<img src="${imageUrl}" alt="${place.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+            cardImageDiv.innerHTML = `<img src="${imageUrl}" alt="${place.name}" onclick="openDetailPage(${currentDetailIndex})">`;
+        } catch (error) {
+            console.error(error);
+            detailImageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+        }
+    }
+
+    // プロンプト指定で画像生成
+    async function generateImageWithPrompt(modelId, apiKey, prompt) {
+        const model = models[modelId];
+        const negativePrompt = model?.qualityNegative || '';
+
+        const requestBody = {
+            taskType: 'imageInference',
+            taskUUID: crypto.randomUUID(),
+            model: modelId,
+            positivePrompt: prompt,
+            steps: model?.steps || 20,
+            CFGScale: model?.cfgScale || 7,
+            scheduler: model?.scheduler || 'Default',
+            width: 1024,
+            height: 1024,
+            seed: Math.floor(Math.random() * 2147483647),
+            numberResults: 1
+        };
+
+        if (negativePrompt && negativePrompt.length >= 2) {
+            requestBody.negativePrompt = negativePrompt;
+        }
+
+        const response = await fetch(API_BASE, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify([requestBody])
+        });
+
+        const result = await response.json();
+
+        if (result.data && result.data.length > 0 && result.data[0].imageURL) {
+            return result.data[0].imageURL;
+        } else if (result.errors) {
+            throw new Error(result.errors.map(e => e.message).join(', '));
+        } else {
+            throw new Error('画像の生成に失敗しました');
+        }
+    }
+</script>
+
+</body>
+</html>

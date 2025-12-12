@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アクション設定</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 20px;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            margin: 0;
+        }
+        h1 { color: #4a9eff; margin-bottom: 20px; }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        .settings-bar {
+            background: #1a1a1a;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .settings-row:last-child { margin-bottom: 0; }
+
+        .settings-bar label {
+            font-weight: bold;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .settings-bar input[type="text"],
+        .settings-bar input[type="password"],
+        .settings-bar select {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary { background-color: #4a9eff; }
+        .btn-primary:hover:not(:disabled) { background-color: #3a8eef; }
+        .btn-save { background-color: #27ae60; }
+        .btn-save:hover:not(:disabled) { background-color: #219a52; }
+        .btn-generate { background-color: #9b59b6; }
+        .btn-generate:hover:not(:disabled) { background-color: #8e44ad; }
+
+        #status {
+            padding: 10px 15px;
+            border-radius: 4px;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .status-ok { background-color: #155724; color: #d4edda; display: inline-block !important; }
+        .status-err { background-color: #721c24; color: #f8d7da; display: inline-block !important; }
+        .status-loading { background-color: #0c5460; color: #d1ecf1; display: inline-block !important; }
+
+        /* アクションカード */
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+        }
+
+        .action-card {
+            background: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #333;
+            transition: border-color 0.2s;
+        }
+
+        .action-card:hover {
+            border-color: #4a9eff;
+        }
+
+        .action-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .action-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .action-image .placeholder {
+            color: #666;
+            font-size: 0.7rem;
+        }
+
+        .action-image .generating {
+            color: #4a9eff;
+            font-size: 0.7rem;
+        }
+
+        .action-info {
+            padding: 10px;
+        }
+
+        .action-name {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #4a9eff;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .action-prompt {
+            font-size: 0.7rem;
+            color: #aaa;
+            line-height: 1.3;
+            max-height: 50px;
+            overflow-y: auto;
+        }
+
+        .action-actions {
+            padding: 8px 10px;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 0.7rem;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+            font-size: 1.1rem;
+            grid-column: 1 / -1;
+        }
+
+        /* 詳細ページ */
+        .detail-page {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .detail-page.active {
+            display: block;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .detail-back {
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-right: 20px;
+        }
+
+        .detail-back:hover {
+            background: #444;
+        }
+
+        .detail-title {
+            color: #4a9eff;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .detail-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .detail-main {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .detail-image-section {
+            flex: 0 0 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .detail-image-section .btn-generate {
+            width: 100%;
+        }
+
+        .detail-image-area img {
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .detail-image-area .placeholder {
+            width: 400px;
+            height: 400px;
+            background: #111;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .detail-info {
+            flex: 1;
+        }
+
+        .detail-info .field-label {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .detail-info .field-value {
+            background: #1a1a1a;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 1rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 1px solid #333;
+        }
+
+        .detail-info .field-value.editable {
+            width: 100%;
+            min-height: 120px;
+            resize: vertical;
+            color: #e0e0e0;
+            font-family: inherit;
+        }
+
+        .detail-info .field-value.editable:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .detail-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-selects {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            margin-right: 15px;
+        }
+
+        .header-selects label {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .header-selects select {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #222;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+
+        .header-selects select:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .detail-header .btn-save {
+            margin-right: 10px;
+        }
+
+        .detail-header #detail-status {
+            margin-right: 15px;
+        }
+
+        .btn-nav {
+            background: #333;
+            padding: 8px 16px;
+        }
+
+        .btn-nav:hover:not(:disabled) {
+            background: #444;
+        }
+
+        /* 構図セクション */
+        .composition-section {
+            border-top: 1px solid #333;
+            padding-top: 30px;
+        }
+
+        .composition-title {
+            color: #4a9eff;
+            margin: 0 0 20px 0;
+            font-size: 1.2rem;
+        }
+
+        .composition-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .composition-item {
+            text-align: center;
+        }
+
+        .composition-label {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .composition-quality {
+            margin-bottom: 8px;
+            display: flex;
+            gap: 2px;
+        }
+
+        .quality-btn {
+            flex: 1;
+            padding: 4px 2px;
+            border: 1px solid #444;
+            background: #222;
+            color: #888;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quality-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+
+        .quality-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+
+        .quality-btn:hover:not(.active) {
+            background: #333;
+        }
+
+        .quality-btn.active {
+            cursor: default;
+        }
+
+        .quality-btn.active-none {
+            background: #555;
+            color: #fff;
+            border-color: #666;
+        }
+
+        .quality-btn.active-ng {
+            background: #c0392b;
+            color: #fff;
+            border-color: #e74c3c;
+        }
+
+        .quality-btn.active-good {
+            background: #d68910;
+            color: #fff;
+            border-color: #f39c12;
+        }
+
+        .quality-btn.active-best {
+            background: #1e8449;
+            color: #fff;
+            border-color: #27ae60;
+        }
+
+        .composition-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #111;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .composition-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .composition-image .placeholder {
+            color: #666;
+            font-size: 0.75rem;
+        }
+
+        .composition-image.disabled {
+            opacity: 0.3;
+        }
+
+        .composition-tag {
+            font-size: 0.7rem;
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+
+        .composition-tag-input {
+            width: 100%;
+            padding: 5px 8px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #222;
+            color: #e0e0e0;
+            font-size: 0.7rem;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+        }
+
+        .composition-tag-input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .composition-tag-input::placeholder {
+            color: #666;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>アクション設定</h1>
+
+    <!-- アクショングリッド -->
+    <div id="action-grid" class="action-grid">
+        <div class="empty-message">「GASから読み込み」ボタンでアクションデータを読み込んでください</div>
+    </div>
+
+    <!-- 設定バー -->
+    <div class="settings-bar" style="margin-top: 20px;">
+        <div class="settings-row">
+            <label>GAS URL:</label>
+            <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec">
+            <button class="btn btn-primary" onclick="loadAllFromGas()">GASから読み込み</button>
+            <button class="btn btn-save" onclick="saveToGas()">GASに保存</button>
+            <button class="btn btn-generate" onclick="generateAllImages()" id="generateAllBtn">全アクション画像生成</button>
+        </div>
+        <div class="settings-row">
+            <label>Runware API Key:</label>
+            <input type="password" id="apiKey" placeholder="Runware API Keyを入力">
+        </div>
+        <div id="status"></div>
+    </div>
+</div>
+
+<!-- アクション詳細ページ -->
+<div id="detail-page" class="detail-page">
+    <div class="detail-header">
+        <button class="detail-back" onclick="closeDetailPage()">← 戻る</button>
+        <h1 class="detail-title" id="detail-title"></h1>
+        <div class="header-selects">
+            <label>キャラ:</label>
+            <select id="preview-character"></select>
+            <label>場所:</label>
+            <select id="preview-place"></select>
+        </div>
+        <button class="btn btn-save" onclick="saveToGas()">GASに保存</button>
+        <div id="detail-status"></div>
+        <div class="detail-nav">
+            <button class="btn btn-nav" onclick="navigateAction(-1)" id="btn-prev">← 前</button>
+            <button class="btn btn-nav" onclick="navigateAction(1)" id="btn-next">次 →</button>
+        </div>
+    </div>
+    <div class="detail-content">
+        <div class="detail-main">
+            <div class="detail-image-section">
+                <div class="detail-image-area" id="detail-image"></div>
+                <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
+            </div>
+            <div class="detail-info">
+                <div class="field-label">プロンプト</div>
+                <textarea class="field-value editable" id="detail-prompt" onchange="updateActionPrompt(this.value)"></textarea>
+            </div>
+        </div>
+
+        <!-- 構図セクション -->
+        <div class="composition-section">
+            <h3 class="composition-title">構図別プレビュー</h3>
+            <div id="composition-grid" class="composition-grid"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'https://api.runware.ai/v1';
+    const GAS_URL_KEY = 'gas_api_url';
+    const API_KEY_KEY = 'runware_api_key';
+    const GAS_DATA_KEY = 'gas_data_cache_action';
+    const ACTION_IMAGES_KEY = 'action_images';
+    const COMPOSITION_IMAGES_KEY = 'composition_images';
+
+    // データストア
+    let models = {};
+    let characters = [];
+    let places = [];
+    let actions = [];
+    let actionImages = {}; // アクション名 -> 画像URL
+    let compositionImages = {}; // アクション名 -> { composition名: url }
+
+    // 構図のカラム名一覧
+    const COMPOSITION_KEYS = ['pov', 'front view', 'side view', 'from above', 'low angle', 'from behind', 'crotch focus'];
+
+    // 初期化
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedUrl = localStorage.getItem(GAS_URL_KEY);
+        if (savedUrl) {
+            document.getElementById('apiUrl').value = savedUrl;
+        }
+        const savedApiKey = localStorage.getItem(API_KEY_KEY);
+        if (savedApiKey) {
+            document.getElementById('apiKey').value = savedApiKey;
+        }
+
+        // 保存されたGASデータを復元
+        loadCachedData();
+    });
+
+    // キャッシュデータを保存
+    function saveCachedData() {
+        const data = {
+            models: models,
+            characters: characters,
+            places: places,
+            actions: actions
+        };
+        localStorage.setItem(GAS_DATA_KEY, JSON.stringify(data));
+        localStorage.setItem(ACTION_IMAGES_KEY, JSON.stringify(actionImages));
+        localStorage.setItem(COMPOSITION_IMAGES_KEY, JSON.stringify(compositionImages));
+    }
+
+    // キャッシュデータを復元
+    function loadCachedData() {
+        try {
+            const cachedData = localStorage.getItem(GAS_DATA_KEY);
+            if (cachedData) {
+                const data = JSON.parse(cachedData);
+                models = data.models || {};
+                characters = data.characters || [];
+                places = data.places || [];
+                actions = data.actions || [];
+            }
+
+            const cachedImages = localStorage.getItem(ACTION_IMAGES_KEY);
+            if (cachedImages) {
+                actionImages = JSON.parse(cachedImages);
+            }
+
+            const cachedComposition = localStorage.getItem(COMPOSITION_IMAGES_KEY);
+            if (cachedComposition) {
+                compositionImages = JSON.parse(cachedComposition);
+            }
+
+            // データがあればグリッドを描画
+            if (actions.length > 0) {
+                renderActionGrid();
+                showStatus(`キャッシュから復元: モデル${Object.keys(models).length}件, アクション${actions.length}件`);
+            }
+        } catch (error) {
+            console.error('キャッシュ復元エラー:', error);
+        }
+    }
+
+    function saveSettings() {
+        const gasUrl = document.getElementById('apiUrl').value.trim();
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (gasUrl) localStorage.setItem(GAS_URL_KEY, gasUrl);
+        if (apiKey) localStorage.setItem(API_KEY_KEY, apiKey);
+    }
+
+    function showStatus(msg, type = 'ok') {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
+
+        // 詳細画面が開いている場合はそちらにも表示
+        const detailStatus = document.getElementById('detail-status');
+        if (detailStatus && currentDetailIndex >= 0) {
+            detailStatus.textContent = msg;
+            detailStatus.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
+            // 成功時は3秒後に消す
+            if (type === 'ok') {
+                setTimeout(() => {
+                    detailStatus.textContent = '';
+                    detailStatus.className = '';
+                }, 3000);
+            }
+        }
+    }
+
+    // GASから全データ読み込み
+    async function loadAllFromGas() {
+        const baseUrl = document.getElementById('apiUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        saveSettings();
+        showStatus('読み込み中...', 'loading');
+
+        try {
+            const [modelData, characterData, placeData, actionData] = await Promise.all([
+                fetchGasData(baseUrl, 'model'),
+                fetchGasData(baseUrl, 'character'),
+                fetchGasData(baseUrl, 'place'),
+                fetchGasData(baseUrl, 'action')
+            ]);
+
+            // モデル設定
+            models = {};
+            modelData.forEach(item => {
+                const modelId = item.model_id || item.id;
+                if (modelId) {
+                    models[modelId] = {
+                        name: item.name || modelId,
+                        steps: parseInt(item.steps) || 20,
+                        cfgScale: parseFloat(item.cfg) || 7,
+                        scheduler: item.scheduler || 'Default',
+                        qualityPositive: item['prompt positive'] || '',
+                        qualityNegative: item['prompt negative'] || ''
+                    };
+                }
+            });
+
+            // キャラクター設定
+            characters = characterData.map(item => ({
+                name: item.name || '',
+                series: item.series || '',
+                tag: item.tag || '',
+                profile: item.profile || '',
+                uniform1: item.uniform1 || '',
+                uniform2: item.uniform2 || ''
+            }));
+
+            // 場所設定
+            places = placeData.map(item => ({
+                name: item.name || '',
+                tag: item.tag || '',
+                additionalTag: item['additional tag'] || ''
+            }));
+
+            // アクション設定（構図情報も含める）
+            actions = actionData.map(item => {
+                const action = {
+                    name: item['action name'] || '',
+                    prompt: item.prompt || '',
+                    compositions: []
+                };
+                COMPOSITION_KEYS.forEach(key => {
+                    const qualityKey = key + ' quality';
+                    const tagKey = key + ' tag';
+                    const rawQuality = item[qualityKey] || '';
+                    const tag = item[tagKey] || '';
+
+                    // quality値を正規化
+                    let quality = '未評価';
+                    if (rawQuality === 'NG' || rawQuality === 'ng') {
+                        quality = 'NG';
+                    } else if (rawQuality === 'best' || rawQuality === 'Best') {
+                        quality = 'best';
+                    } else if (rawQuality === 'good' || rawQuality === 'Good') {
+                        quality = 'good';
+                    }
+
+                    action.compositions.push({
+                        name: key,
+                        tag: tag,
+                        quality: quality,
+                        enabled: quality !== 'NG'
+                    });
+                });
+                return action;
+            });
+
+            // キャッシュに保存
+            saveCachedData();
+
+            renderActionGrid();
+            showStatus(`読み込み完了: モデル${Object.keys(models).length}件, キャラ${characters.length}件, 場所${places.length}件, アクション${actions.length}件`);
+
+        } catch (error) {
+            console.error(error);
+            showStatus('読み込みエラー: ' + error.message, 'error');
+        }
+    }
+
+    async function fetchGasData(baseUrl, sheet) {
+        const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=' + sheet;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`${sheet}: HTTP ${response.status}`);
+        return await response.json();
+    }
+
+    // アクショングリッドを描画
+    function renderActionGrid() {
+        const container = document.getElementById('action-grid');
+
+        if (actions.length === 0) {
+            container.innerHTML = '<div class="empty-message">アクションデータがありません</div>';
+            return;
+        }
+
+        container.innerHTML = actions.map((action, index) => `
+            <div class="action-card" id="card-${index}">
+                <div class="action-image" id="image-${index}">
+                    ${actionImages[action.name]
+                        ? `<img src="${actionImages[action.name]}" alt="${action.name}" onclick="openDetailPage(${index})">`
+                        : `<div class="placeholder" onclick="openDetailPage(${index})" style="cursor:pointer;">画像未生成</div>`
+                    }
+                </div>
+                <div class="action-info">
+                    <div class="action-name">${action.name || '(名前未設定)'}</div>
+                    <div class="action-prompt">${action.prompt || ''}</div>
+                </div>
+                <div class="action-actions">
+                    <button class="btn btn-generate btn-small" onclick="generateSingleImage(${index})">画像生成</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // モデルリストの最初のモデルを取得
+    function getFirstModel() {
+        return Object.keys(models)[0] || null;
+    }
+
+    // アクション用プロンプトを構築
+    function buildActionPrompt(actionIndex) {
+        const action = actions[actionIndex];
+        if (!action) return '';
+
+        const modelId = getFirstModel();
+        const model = models[modelId] || {};
+
+        // タイトルバーで選択されたキャラクターと場所を使用
+        const charSelect = document.getElementById('preview-character');
+        const placeSelect = document.getElementById('preview-place');
+        const charIndex = charSelect ? parseInt(charSelect.value) || 0 : 0;
+        const placeIndex = placeSelect ? parseInt(placeSelect.value) || 0 : 0;
+        const char = characters[charIndex] || characters[0] || {};
+        const place = places[placeIndex] || places[0] || {};
+
+        // 構図を選択: BEST → GOOD → 未評価 の優先順位
+        const selectedComp = selectBestComposition(action);
+        const compositionTag = selectedComp ? (selectedComp.tag || selectedComp.name) : 'front view';
+
+        const parts = [
+            model.qualityPositive || '',
+            char.tag || '',
+            place.tag || '',
+            action.prompt || '',
+            compositionTag,
+            place.additionalTag || ''
+        ].filter(p => p);
+
+        return parts.join(', ');
+    }
+
+    // BEST → GOOD → 未評価 の優先順位で構図を選択
+    function selectBestComposition(action) {
+        if (!action || !action.compositions) return null;
+
+        // BESTを探す
+        const best = action.compositions.find(c => c.quality === 'best');
+        if (best) return best;
+
+        // GOODを探す（最初に見つかったもの）
+        const good = action.compositions.find(c => c.quality === 'good');
+        if (good) return good;
+
+        // 未評価を探す（最初に見つかったもの）
+        const none = action.compositions.find(c => c.quality === '未評価');
+        if (none) return none;
+
+        // どれもなければ最初の構図
+        return action.compositions[0] || null;
+    }
+
+    // 単一アクションの画像生成
+    async function generateSingleImage(actionIndex) {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        saveSettings();
+
+        const action = actions[actionIndex];
+        const imageDiv = document.getElementById(`image-${actionIndex}`);
+        imageDiv.innerHTML = '<div class="generating">生成中...</div>';
+
+        try {
+            const prompt = buildActionPrompt(actionIndex);
+            const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+            actionImages[action.name] = imageUrl;
+            saveCachedData();
+            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="openDetailPage(${actionIndex})">`;
+        } catch (error) {
+            console.error(error);
+            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+        }
+    }
+
+    // 全アクションの画像を生成
+    async function generateAllImages() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        if (actions.length === 0) {
+            alert('アクションがありません');
+            return;
+        }
+
+        saveSettings();
+
+        const btn = document.getElementById('generateAllBtn');
+        btn.disabled = true;
+
+        showStatus(`画像生成中: 0/${actions.length}`, 'loading');
+
+        for (let i = 0; i < actions.length; i++) {
+            const action = actions[i];
+            const imageDiv = document.getElementById(`image-${i}`);
+            imageDiv.innerHTML = '<div class="generating">生成中...</div>';
+
+            try {
+                const prompt = buildActionPrompt(i);
+                const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+                actionImages[action.name] = imageUrl;
+                saveCachedData();
+                imageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="openDetailPage(${i})">`;
+                showStatus(`画像生成中: ${i + 1}/${actions.length}`, 'loading');
+            } catch (error) {
+                console.error(error);
+                imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー</div>`;
+            }
+
+            // レート制限対策で少し待つ
+            if (i < actions.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        btn.disabled = false;
+        showStatus(`画像生成完了: ${actions.length}件`);
+    }
+
+    // 詳細ページ関連
+    let currentDetailIndex = -1;
+
+    function openDetailPage(index) {
+        const action = actions[index];
+        if (!action) return;
+
+        currentDetailIndex = index;
+        updateDetailPage();
+
+        // 詳細ページを表示
+        document.getElementById('detail-page').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function updateDetailPage() {
+        const action = actions[currentDetailIndex];
+        if (!action) return;
+
+        // データを設定
+        document.getElementById('detail-title').textContent = action.name || '(名前未設定)';
+        document.getElementById('detail-prompt').value = action.prompt || '';
+
+        // 画像を設定
+        const imageDiv = document.getElementById('detail-image');
+        const imageUrl = actionImages[action.name];
+        if (imageUrl) {
+            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+        } else {
+            imageDiv.innerHTML = '<div class="placeholder">画像未生成</div>';
+        }
+
+        // プルダウンを更新
+        updatePreviewSelects();
+
+        // 構図グリッドを更新
+        updateCompositionGrid();
+
+        // ナビゲーションボタンの状態を更新
+        document.getElementById('btn-prev').disabled = currentDetailIndex <= 0;
+        document.getElementById('btn-next').disabled = currentDetailIndex >= actions.length - 1;
+    }
+
+    function updatePreviewSelects() {
+        const charSelect = document.getElementById('preview-character');
+        const placeSelect = document.getElementById('preview-place');
+
+        const charValue = charSelect.value;
+        const placeValue = placeSelect.value;
+
+        charSelect.innerHTML = characters.map((char, index) =>
+            `<option value="${index}">${char.name || '(名前なし)'}</option>`
+        ).join('');
+
+        placeSelect.innerHTML = places.map((place, index) =>
+            `<option value="${index}">${place.name || '(名前なし)'}</option>`
+        ).join('');
+
+        if (charValue && charValue < characters.length) charSelect.value = charValue;
+        if (placeValue && placeValue < places.length) placeSelect.value = placeValue;
+    }
+
+    function updateCompositionGrid() {
+        const action = actions[currentDetailIndex];
+        if (!action) return;
+
+        const container = document.getElementById('composition-grid');
+        const actionCompositions = compositionImages[action.name] || {};
+
+        container.innerHTML = action.compositions.map((comp, index) => {
+            const imageUrl = actionCompositions[comp.name];
+            const disabledClass = comp.enabled ? '' : 'disabled';
+            const qualityOptions = [
+                { value: '未評価', label: '未評価', activeClass: 'active-none' },
+                { value: 'NG', label: 'NG', activeClass: 'active-ng' },
+                { value: 'good', label: 'GOOD', activeClass: 'active-good' },
+                { value: 'best', label: 'BEST', activeClass: 'active-best' }
+            ];
+
+            return `
+                <div class="composition-item">
+                    <div class="composition-label">${comp.name}</div>
+                    <div class="composition-quality">
+                        ${qualityOptions.map(q => {
+                            const isActive = comp.quality === q.value;
+                            const activeClass = isActive ? `active ${q.activeClass}` : '';
+                            return `<button class="quality-btn ${activeClass}" ${isActive ? 'disabled' : ''} onclick="updateCompositionQuality(${index}, '${q.value}')">${q.label}</button>`;
+                        }).join('')}
+                    </div>
+                    <div class="composition-image ${disabledClass}" id="comp-image-${index}">
+                        ${imageUrl
+                            ? `<img src="${imageUrl}" alt="${comp.name}" onclick="window.open('${imageUrl}', '_blank')">`
+                            : `<div class="placeholder">${comp.enabled ? '未生成' : 'NG'}</div>`
+                        }
+                    </div>
+                    <input type="text" class="composition-tag-input" value="${comp.tag || ''}" placeholder="構図補正タグ" onchange="updateCompositionTag(${index}, this.value)">
+                    <button class="btn btn-generate btn-small" onclick="generateCompositionImage(${index})">生成</button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 構図のquality更新
+    function updateCompositionQuality(compIndex, quality) {
+        if (currentDetailIndex < 0) return;
+
+        const action = actions[currentDetailIndex];
+        if (!action || !action.compositions[compIndex]) return;
+
+        // BESTを選択した場合、他のBESTをGOODに変更
+        if (quality === 'best') {
+            action.compositions.forEach((comp, index) => {
+                if (index !== compIndex && comp.quality === 'best') {
+                    comp.quality = 'good';
+                }
+            });
+        }
+
+        action.compositions[compIndex].quality = quality;
+        action.compositions[compIndex].enabled = quality !== 'NG';
+
+        saveCachedData();
+
+        // グリッドを再描画
+        updateCompositionGrid();
+    }
+
+    // 構図補正タグ更新
+    function updateCompositionTag(compIndex, tag) {
+        if (currentDetailIndex < 0) return;
+
+        const action = actions[currentDetailIndex];
+        if (!action || !action.compositions[compIndex]) return;
+
+        action.compositions[compIndex].tag = tag;
+
+        saveCachedData();
+    }
+
+    // アクションプロンプト更新
+    function updateActionPrompt(prompt) {
+        if (currentDetailIndex < 0) return;
+
+        const action = actions[currentDetailIndex];
+        if (!action) return;
+
+        action.prompt = prompt;
+        saveCachedData();
+
+        // 一覧のカードも更新
+        renderActionGrid();
+    }
+
+    function closeDetailPage() {
+        document.getElementById('detail-page').classList.remove('active');
+        document.body.style.overflow = '';
+        currentDetailIndex = -1;
+    }
+
+    function navigateAction(direction) {
+        const newIndex = currentDetailIndex + direction;
+        if (newIndex >= 0 && newIndex < actions.length) {
+            currentDetailIndex = newIndex;
+            updateDetailPage();
+        }
+    }
+
+    // キーボードナビゲーション
+    document.addEventListener('keydown', (e) => {
+        // 詳細ページが開いていない場合は無視
+        if (currentDetailIndex < 0) return;
+
+        // 入力フォーカス中は無視
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            navigateAction(-1);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            navigateAction(1);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeDetailPage();
+        }
+    });
+
+    async function generateDetailImage() {
+        if (currentDetailIndex < 0) return;
+
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        saveSettings();
+
+        const action = actions[currentDetailIndex];
+        const detailImageDiv = document.getElementById('detail-image');
+        const cardImageDiv = document.getElementById(`image-${currentDetailIndex}`);
+
+        detailImageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
+
+        try {
+            const prompt = buildActionPrompt(currentDetailIndex);
+            const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+            actionImages[action.name] = imageUrl;
+            saveCachedData();
+
+            // 詳細ページ画像を更新
+            detailImageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+
+            // カード画像も更新
+            cardImageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="openDetailPage(${currentDetailIndex})">`;
+        } catch (error) {
+            console.error(error);
+            detailImageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+        }
+    }
+
+    // 構図画像生成
+    async function generateCompositionImage(compIndex) {
+        if (currentDetailIndex < 0) return;
+
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('モデルが見つかりません。GASから読み込んでください。');
+            return;
+        }
+
+        saveSettings();
+
+        const action = actions[currentDetailIndex];
+        const comp = action.compositions[compIndex];
+        if (!comp) return;
+
+        const imageDiv = document.getElementById(`comp-image-${compIndex}`);
+        imageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
+
+        try {
+            const prompt = buildCompositionPrompt(currentDetailIndex, compIndex);
+            const imageUrl = await generateImageWithPrompt(modelId, apiKey, prompt);
+
+            // 保存
+            if (!compositionImages[action.name]) {
+                compositionImages[action.name] = {};
+            }
+            compositionImages[action.name][comp.name] = imageUrl;
+            saveCachedData();
+
+            // 表示更新
+            imageDiv.innerHTML = `<img src="${imageUrl}" alt="${comp.name}" onclick="window.open('${imageUrl}', '_blank')">`;
+        } catch (error) {
+            console.error(error);
+            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー</div>`;
+        }
+    }
+
+    // 構図用プロンプト生成
+    function buildCompositionPrompt(actionIndex, compIndex) {
+        const action = actions[actionIndex];
+        const comp = action.compositions[compIndex];
+        const modelId = getFirstModel();
+        const model = models[modelId] || {};
+
+        // 選択されたキャラクターと場所
+        const charIndex = parseInt(document.getElementById('preview-character').value) || 0;
+        const placeIndex = parseInt(document.getElementById('preview-place').value) || 0;
+        const char = characters[charIndex] || {};
+        const place = places[placeIndex] || {};
+
+        // 構図タグ
+        const compositionTag = comp.tag || comp.name;
+
+        const parts = [
+            model.qualityPositive || '',
+            char.tag || '',
+            place.tag || '',
+            action.prompt || '',
+            compositionTag,
+            place.additionalTag || ''
+        ].filter(p => p);
+
+        return parts.join(', ');
+    }
+
+    // プロンプト指定で画像生成
+    async function generateImageWithPrompt(modelId, apiKey, prompt) {
+        const model = models[modelId];
+        const negativePrompt = model?.qualityNegative || '';
+
+        const requestBody = {
+            taskType: 'imageInference',
+            taskUUID: crypto.randomUUID(),
+            model: modelId,
+            positivePrompt: prompt,
+            steps: model?.steps || 20,
+            CFGScale: model?.cfgScale || 7,
+            scheduler: model?.scheduler || 'Default',
+            width: 1024,
+            height: 1024,
+            seed: Math.floor(Math.random() * 2147483647),
+            numberResults: 1
+        };
+
+        if (negativePrompt && negativePrompt.length >= 2) {
+            requestBody.negativePrompt = negativePrompt;
+        }
+
+        const response = await fetch(API_BASE, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify([requestBody])
+        });
+
+        const result = await response.json();
+
+        if (result.data && result.data.length > 0 && result.data[0].imageURL) {
+            return result.data[0].imageURL;
+        } else if (result.errors) {
+            throw new Error(result.errors.map(e => e.message).join(', '));
+        } else {
+            throw new Error('画像の生成に失敗しました');
+        }
+    }
+
+    // GASに保存
+    async function saveToGas() {
+        const baseUrl = document.getElementById('apiUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        if (actions.length === 0) {
+            alert('保存するアクションデータがありません');
+            return;
+        }
+
+        saveSettings();
+        showStatus('GASに保存中...', 'loading');
+
+        try {
+            // アクションデータをGAS形式に変換
+            const gasData = actions.map(action => {
+                const row = {
+                    'action name': action.name,
+                    'prompt': action.prompt
+                };
+
+                // 各構図のquality/tagを追加
+                action.compositions.forEach(comp => {
+                    row[comp.name + ' quality'] = comp.quality === '未評価' ? '' : comp.quality;
+                    row[comp.name + ' tag'] = comp.tag || '';
+                });
+
+                return row;
+            });
+
+            // GASに送信
+            const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=action';
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify(gasData)
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                showStatus('GASに保存しました: ' + result.message);
+            } else {
+                throw new Error(result.message || '保存に失敗しました');
+            }
+        } catch (error) {
+            console.error(error);
+            showStatus('保存エラー: ' + error.message, 'error');
+        }
+    }
+</script>
+
+</body>
+</html>
