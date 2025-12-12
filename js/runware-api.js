@@ -57,15 +57,19 @@ async function generateImage(apiKey, modelId, prompt, options = {}) {
     });
 
     const result = await response.json();
+    console.log('[Runware] レスポンス:', result);
 
     if (result.data && result.data.length > 0 && result.data[0].imageURL) {
+        console.log('[Runware] 画像URL:', result.data[0].imageURL);
         return {
             imageURL: result.data[0].imageURL,
             seed: result.data[0].seed || seed
         };
     } else if (result.errors) {
+        console.error('[Runware] エラー:', result.errors);
         throw new Error(result.errors.map(e => e.message).join(', '));
     } else {
+        console.error('[Runware] 不明なエラー:', result);
         throw new Error('画像の生成に失敗しました');
     }
 }
