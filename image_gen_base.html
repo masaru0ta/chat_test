@@ -415,7 +415,8 @@
                 name: item.name || '',
                 series: item.series || '',
                 tag: item.tag || '',
-                profile: item.profile || ''
+                profile: item.profile || '',
+                additionalTag: item['additional tag'] || ''
             }));
             updateCharacterSelect();
 
@@ -434,16 +435,17 @@
                     prompt: item.prompt || '',
                     compositions: []
                 };
-                // 構図情報を読み込み（NGでないもののみ）
+                // 構図情報を読み込み（NGでないもののみ、quality情報も保存）
                 COMPOSITION_KEYS.forEach(key => {
                     const qualityKey = key + ' quality';
                     const tagKey = key + ' tag';
                     const quality = item[qualityKey] || '';
                     const tag = item[tagKey] || '';
-                    if (quality !== 'NG') {
+                    if (quality !== 'NG' && quality !== '') {
                         action.compositions.push({
                             name: key,
-                            tag: tag
+                            tag: tag,
+                            quality: quality  // BEST, Good などを保存
                         });
                     }
                 });
@@ -521,6 +523,14 @@
         return '';
     }
 
+    function getSelectedCharacterAdditionalTag() {
+        const index = document.getElementById('character').value;
+        if (index !== '' && characters[index]) {
+            return characters[index].additionalTag || '';
+        }
+        return '';
+    }
+
     function updateActionSelect() {
         const select = document.getElementById('action');
         select.innerHTML = '<option value="">（なし）</option>';
@@ -571,29 +581,81 @@
 
     function updateCompositionSelect(compositions) {
         const select = document.getElementById('composition');
+        const previousValue = select.value;
         select.innerHTML = '<option value="">（なし）</option>';
 
         if (compositions && compositions.length > 0) {
+            // BESTオプションを追加
+            const bestOption = document.createElement('option');
+            bestOption.value = 'BEST';
+            bestOption.textContent = 'BEST（自動選択）';
+            select.appendChild(bestOption);
+
+            // 個別の構図を追加
             compositions.forEach((comp, index) => {
                 const option = document.createElement('option');
                 option.value = index;
-                option.textContent = comp.name;
+                option.textContent = comp.name + (comp.quality ? ` [${comp.quality}]` : '');
                 select.appendChild(option);
             });
+
+            // 以前BESTだった場合は維持、そうでなければデフォルトでBEST
+            if (previousValue === 'BEST' || previousValue === '') {
+                select.value = 'BEST';
+            } else {
+                // 以前の選択を維持しようとする（同じインデックスがあれば）
+                const prevIndex = parseInt(previousValue);
+                if (!isNaN(prevIndex) && prevIndex < compositions.length) {
+                    select.value = prevIndex;
+                } else {
+                    select.value = 'BEST';
+                }
+            }
         }
 
         // 構図タグをリセット
         document.getElementById('compositionTag').textContent = '--';
     }
 
+    // BEST選択時に適切な構図をランダムに選ぶ
+    function selectBestComposition(compositions) {
+        if (!compositions || compositions.length === 0) return null;
+
+        // BESTのものを探す
+        const bestComps = compositions.filter(c => c.quality === 'BEST');
+        if (bestComps.length > 0) {
+            return bestComps[Math.floor(Math.random() * bestComps.length)];
+        }
+
+        // BESTがなければGoodからランダム
+        const goodComps = compositions.filter(c => c.quality === 'Good');
+        if (goodComps.length > 0) {
+            return goodComps[Math.floor(Math.random() * goodComps.length)];
+        }
+
+        // どちらもなければ全体からランダム
+        return compositions[Math.floor(Math.random() * compositions.length)];
+    }
+
     function getSelectedCompositionTag() {
         const actionIndex = document.getElementById('action').value;
-        const compIndex = document.getElementById('composition').value;
+        const compValue = document.getElementById('composition').value;
 
-        if (actionIndex !== '' && compIndex !== '' && actions[actionIndex]) {
+        if (actionIndex !== '' && compValue !== '' && actions[actionIndex]) {
             const compositions = actions[actionIndex].compositions;
+
+            // BEST選択時
+            if (compValue === 'BEST') {
+                const selected = selectBestComposition(compositions);
+                if (selected) {
+                    return selected.tag || selected.name || '';
+                }
+                return '';
+            }
+
+            // 通常の構図選択
+            const compIndex = parseInt(compValue);
             if (compositions && compositions[compIndex]) {
-                // タグがあればタグを、なければ構図名自体を返す
                 return compositions[compIndex].tag || compositions[compIndex].name || '';
             }
         }
@@ -605,6 +667,15 @@
         return text === '--' ? '' : text;
     }
 
+    // プロンプトの連続カンマを修正
+    function cleanPrompt(prompt) {
+        return prompt
+            .replace(/,\s*,+/g, ',')  // 連続カンマを1つに
+            .replace(/^,\s*/, '')      // 先頭のカンマを削除
+            .replace(/,\s*$/, '')      // 末尾のカンマを削除
+            .trim();
+    }
+
     function updatePromptPreview() {
         const qualityPrompt = getDisplayFieldText('qualityPrompt');
         const characterTag = getDisplayFieldText('characterTag');
@@ -613,9 +684,10 @@
         const compositionTag = getSelectedCompositionTag();
         const customPrompt = document.getElementById('customPrompt').value.trim();
         const placeAdditionalTag = getSelectedPlaceAdditionalTag();
+        const characterAdditionalTag = getSelectedCharacterAdditionalTag();
 
-        const parts = [qualityPrompt, characterTag, placeTag, actionPrompt, compositionTag, customPrompt, placeAdditionalTag].filter(p => p);
-        const fullPrompt = parts.join(', ');
+        const parts = [qualityPrompt, characterTag, placeTag, actionPrompt, compositionTag, customPrompt, placeAdditionalTag, characterAdditionalTag].filter(p => p);
+        const fullPrompt = cleanPrompt(parts.join(', '));
 
         document.getElementById('promptPreview').textContent = fullPrompt || '--';
 
@@ -631,8 +703,9 @@
         const compositionTag = getSelectedCompositionTag();
         const customPrompt = document.getElementById('customPrompt').value.trim();
         const placeAdditionalTag = getSelectedPlaceAdditionalTag();
+        const characterAdditionalTag = getSelectedCharacterAdditionalTag();
 
-        return [qualityPrompt, characterTag, placeTag, actionPrompt, compositionTag, customPrompt, placeAdditionalTag].filter(p => p).join(', ');
+        return cleanPrompt([qualityPrompt, characterTag, placeTag, actionPrompt, compositionTag, customPrompt, placeAdditionalTag, characterAdditionalTag].filter(p => p).join(', '));
     }
 
     function buildNegativePrompt() {

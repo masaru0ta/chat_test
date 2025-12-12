@@ -480,6 +480,8 @@
                 <input type="text" class="field-input" id="detail-uniform1" onchange="updateCharacterField('uniform1', this.value)">
                 <div class="field-label">ユニフォーム2</div>
                 <input type="text" class="field-input" id="detail-uniform2" onchange="updateCharacterField('uniform2', this.value)">
+                <div class="field-label">Additional Tag</div>
+                <input type="text" class="field-input" id="detail-additionalTag" onchange="updateCharacterField('additionalTag', this.value)">
             </div>
         </div>
         <!-- 全身画像エリア -->
@@ -654,7 +656,8 @@
                     tag: item.tag || '',
                     profile: item.profile || '',
                     uniform1: item.uniform1 || '',
-                    uniform2: item.uniform2 || ''
+                    uniform2: item.uniform2 || '',
+                    additionalTag: item['additional tag'] || ''
                 };
                 // 画像URLがあればcharacterImagesに設定
                 if (item.image) {
@@ -849,6 +852,7 @@
                 profile: char.profile,
                 uniform1: char.uniform1 || '',
                 uniform2: char.uniform2 || '',
+                'additional tag': char.additionalTag || '',
                 image: characterImages[char.name] || ''
             }));
 
@@ -945,7 +949,8 @@
             action.prompt || '',
             compositionTag,
             char.uniform1 || '',  // ユニフォーム1のタグ
-            place.additionalTag || ''
+            place.additionalTag || '',
+            char.additionalTag || ''  // キャラクターのadditional tag
         ].filter(p => p);
 
         console.log('生成されるプロンプト:', parts.join(', '));
@@ -1062,6 +1067,7 @@
         document.getElementById('detail-profile').value = char.profile || '';
         document.getElementById('detail-uniform1').value = char.uniform1 || '';
         document.getElementById('detail-uniform2').value = char.uniform2 || '';
+        document.getElementById('detail-additionalTag').value = char.additionalTag || '';
 
         // 画像を設定
         const imageDiv = document.getElementById('detail-image');
@@ -1254,7 +1260,8 @@
             place.tag || '',
             action.prompt || '',
             'full body',
-            place.additionalTag || ''
+            place.additionalTag || '',
+            char.additionalTag || ''  // キャラクターのadditional tag
         ].filter(p => p);
 
         return parts.join(', ');
