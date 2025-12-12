@@ -3,3270 +3,1335 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grok Chat</title>
+    <title>Adventure Game</title>
+    <link rel="stylesheet" href="css/common.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            height: 100%;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #000;
-            color: #eee;
-            height: 100%;
-            height: 100dvh;
-            display: flex;
-            overflow: hidden;
-        }
-
-        /* サイドバー */
-        #sidebar {
-            width: 240px;
-            background: #1a1a1a;
-            border-right: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            transition: width 0.2s;
-        }
-
-        #sidebar.collapsed {
-            width: 0;
-            border-right: none;
-            overflow: hidden;
-        }
-
-        /* サイドバーが開いている時はヘッダーのメニューボタンを非表示 */
-        body:has(#sidebar:not(.collapsed)) #header-menu-toggle {
-            display: none;
-        }
-
-        #sidebar-header {
-            padding: 0.75rem;
-            border-bottom: 1px solid #333;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            position: relative;
-        }
-
-        #sidebar-toggle {
-            background: transparent;
-            border: none;
-            color: #aaa;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.25rem;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-
-        #sidebar-toggle:hover {
-            color: #2d5a7b;
-        }
-
-        #sidebar-header h2 {
-            font-size: 1.2rem;
-            color: #2d5a7b;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        #sidebar.collapsed #sidebar-header h2 {
-            display: none;
-        }
-
-        #sidebar-header #mobile-project {
-            display: none;
-            font-size: 0.9rem;
-            color: #2d5a7b;
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 60%;
-        }
-
-        /* デスクトップではサイドバーの画像トグルを非表示 */
-        #sidebar-image-toggle {
-            display: none;
-        }
-
-        #sidebar-menu {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .menu-item {
-            padding: 0.875rem 1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            transition: background 0.2s;
-            border: none;
-            background: transparent;
-            color: #aaa;
-            font-size: 0.95rem;
-            text-align: left;
-            width: 100%;
-            flex-shrink: 0;
-        }
-
-        .menu-item:hover {
-            background: #111;
-            color: #eee;
-        }
-
-        .menu-item.active {
-            background: #111;
-            color: #2d5a7b;
-            border-left: 3px solid #2d5a7b;
-        }
-
-        .menu-item-icon {
-            font-size: 1.1rem;
-            width: 1.5rem;
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        .menu-item-text {
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        #sidebar.collapsed .menu-item-text {
-            display: none;
-        }
-
-        #sidebar.collapsed .panel-list {
-            display: none !important;
-        }
-
-        .menu-spacer {
-            flex: 1;
-        }
-
-        .menu-item.settings {
-            border-top: 1px solid #333;
-        }
-
-        /* サイドバー統計 */
-        #sidebar-stats {
-            padding: 0.75rem 1rem;
-            border-top: 1px solid #333;
-            font-size: 0.8rem;
-        }
-
-        #sidebar.collapsed #sidebar-stats {
-            display: none;
-        }
-
-        .stat-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            color: #888;
-            text-decoration: none;
-        }
-
-        a.stat-label:hover {
-            color: #2d5a7b;
-        }
-
-        .stat-value {
-            color: #2d5a7b;
-            font-weight: bold;
-        }
-
-        .stat-reset-btn {
-            width: 100%;
-            padding: 0.4rem;
-            background: transparent;
-            border: 1px solid #333;
-            color: #888;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            font-size: 0.75rem;
-            transition: all 0.2s;
-        }
-
-        .stat-reset-btn:hover {
-            border-color: #2d5a7b;
-            color: #2d5a7b;
-        }
-
-        /* パネル共通スタイル */
-        .panel-list {
-            flex: 1;
-            overflow-y: auto;
-            display: none;
-            flex-direction: column;
-            border-top: 1px solid #333;
-        }
-
-        .panel-list.show {
-            display: flex;
-        }
-
-        .panel-header {
-            padding: 0.5rem 1rem;
-            font-size: 0.75rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border-bottom: 1px solid #333;
-            flex-shrink: 0;
-        }
-
-        /* リストアイテム共通 */
-        .list-item {
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.5rem;
-            transition: background 0.2s;
-            border: none;
-            background: transparent;
-            color: #888;
-            font-size: 0.85rem;
-            text-align: left;
-            width: 100%;
-            border-bottom: 1px solid #333;
-        }
-
-        .list-item:hover {
-            background: #111;
-            color: #eee;
-        }
-
-        .list-item.active {
-            background: #111;
-            color: #2d5a7b;
-        }
-
-        .list-item-title {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .list-item-btn {
-            color: #888;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-size: 0.85rem;
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-        }
-
-        .list-item-btn:hover {
-            color: #2d5a7b;
-        }
-
-        .list-item-btn.delete {
-            color: #2d5a7b;
-        }
-
-        .list-item-btn.delete:hover {
-            background: #2d5a7b;
-            color: white;
-        }
-
-        .list-item-images {
-            font-size: 0.75rem;
-            color: #2d5a7b;
-            background: #1a2a3a;
-            padding: 0.15rem 0.4rem;
-            border-radius: 0.25rem;
-            flex-shrink: 0;
-        }
-
-        .list-item.new-item {
-            color: #2d5a7b;
-            font-weight: 500;
-        }
-
-        .list-item.new-item:hover {
-            color: #3d6a8b;
-        }
-
-        .list-item.delete-all-btn {
-            color: #c0392b;
-            font-size: 0.8rem;
-            justify-content: center;
-        }
-
-        .list-item.delete-all-btn:hover {
-            background: #c0392b;
-            color: white;
-        }
-
-        /* モーダル */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 0.75rem;
-            width: 80%;
-            height: 90vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .modal-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h3 {
-            color: #2d5a7b;
-            font-size: 1.1rem;
-        }
-
-        .modal-close {
-            background: transparent;
-            border: none;
-            color: #888;
-            cursor: pointer;
-            font-size: 1.25rem;
-        }
-
-        .modal-close:hover {
-            color: #2d5a7b;
-        }
-
-        .modal-body {
-            padding: 1.25rem;
-            overflow-y: auto;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group.flex-grow {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group.flex-grow textarea {
-            flex: 1;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #aaa;
-            font-size: 0.9rem;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 0.5rem;
-            color: #eee;
-            font-size: 0.95rem;
-            outline: none;
-            font-family: inherit;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            border-color: #2d5a7b;
-        }
-
-        .form-group select {
-            width: 100%;
-            padding: 0.75rem;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 0.5rem;
-            color: #eee;
-            font-size: 0.95rem;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .form-group textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        .modal-footer {
-            padding: 1rem 1.25rem;
-            border-top: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            gap: 0.75rem;
-        }
-
-        .modal-footer-left {
-            display: flex;
-        }
-
-        .modal-footer-right {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .btn {
-            padding: 0.6rem 1.25rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: #2d5a7b;
-            color: white;
-            border: none;
-        }
-
-        .btn-primary:hover {
-            background: #3d6a8b;
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: #aaa;
-            border: 1px solid #333;
-        }
-
-        .btn-secondary:hover {
-            color: #eee;
-            border-color: #888;
-        }
-
-        .btn-danger {
-            background: transparent;
-            color: #2d5a7b;
-            border: 1px solid #2d5a7b;
-        }
-
-        .btn-danger:hover {
-            background: #2d5a7b;
-            color: white;
-        }
-
-        /* メインコンテンツ */
-        #main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-
-        header {
-            background: #1a1a1a;
-            padding: 1rem;
-            text-align: center;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        #current-project {
-            font-size: 0.8rem;
-            color: #2d5a7b;
-        }
-
-        #header-menu-toggle,
-        #header-image-toggle {
-            position: absolute;
-            background: transparent;
-            border: none;
-            color: #888;
-            font-size: 1.2rem;
-            cursor: pointer;
-            padding: 0.25rem 0.5rem;
-            transition: color 0.2s;
-        }
-
-        #header-menu-toggle {
-            left: 1rem;
-        }
-
-        #header-image-toggle {
-            right: 1rem;
-        }
-
-        #header-menu-toggle:hover,
-        #header-image-toggle:hover {
-            color: #2d5a7b;
-        }
-
-        #chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .message {
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-
-        .user {
-            max-width: 80%;
-            padding: 0.75rem 1rem;
-            border-radius: 1rem;
-            border-bottom-right-radius: 0.25rem;
-            align-self: flex-end;
-            background: #2d5a7b;
-            color: white;
-        }
-
-        .assistant {
-            width: 100%;
-            padding: 0.5rem 0;
-            color: #eee;
-        }
-
-        .system-msg {
-            align-self: center;
-            background: #333;
-            color: #888;
-            font-size: 0.85rem;
-            padding: 0.5rem 1rem;
-        }
-
-        .reasoning {
-            font-size: 0.85rem;
-            color: #888;
-            background: #0d0d0d;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            margin-bottom: 0.5rem;
-            border-left: 3px solid #2d5a7b;
-        }
-
-        .reasoning-toggle {
-            cursor: pointer;
-            color: #2d5a7b;
-            font-size: 0.8rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .reasoning-content {
-            display: none;
-        }
-
-        .reasoning-content.show {
-            display: block;
-        }
-
-        #input-container {
-            padding: 1rem;
-            background: #1a1a1a;
-            border-top: 1px solid #333;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        #message-input {
-            flex: 1;
-            padding: 0.75rem 1rem;
-            border: 1px solid #333;
-            border-radius: 1.5rem;
-            background: #111;
-            color: #eee;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        #message-input:focus {
-            border-color: #2d5a7b;
-        }
-
-        #send-btn {
-            padding: 0.75rem 1.5rem;
-            background: #2d5a7b;
-            color: white;
-            border: none;
-            border-radius: 1.5rem;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background 0.2s;
-        }
-
-        #send-btn:hover {
-            background: #3d6a8b;
-        }
-
-        #generate-image-btn {
-            padding: 0.5rem;
-            background: transparent;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1.25rem;
-            transition: all 0.2s;
-            color: #888;
-            line-height: 1;
-        }
-
-        #generate-image-btn:hover {
-            background: #333;
-            color: #2d5a7b;
-        }
-
-        #generate-image-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        #send-btn:disabled {
-            background: #555;
-            cursor: not-allowed;
-        }
-
-        .loading {
-            display: flex;
-            gap: 0.3rem;
-            padding: 1rem;
-        }
-
-        .loading span {
-            width: 8px;
-            height: 8px;
-            background: #2d5a7b;
-            border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-
-        .loading span:nth-child(1) { animation-delay: -0.32s; }
-        .loading span:nth-child(2) { animation-delay: -0.16s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-
-        .empty-message {
-            color: #666;
-            text-align: center;
-            padding: 2rem 1rem;
-            font-size: 0.9rem;
-        }
-
-        .clickable-word {
-            text-decoration: underline;
-            cursor: pointer;
-        }
-
-        .clickable-word:hover {
-            opacity: 0.7;
-        }
-
-        .clickable-choice {
-            cursor: pointer;
-            color: #6b9dc4;
-            font-weight: bold;
-            padding: 0.1rem 0.3rem;
-            border-radius: 0.25rem;
-            transition: background 0.2s;
-        }
-
-        .clickable-choice:hover {
-            background: #333;
-            color: #8bb8d8;
-        }
-
-        .character-settings {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .character-group {
-            flex: 1;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-        }
-
-        .character-group-title {
-            font-weight: bold;
-            color: #aaa;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #333;
-        }
-
-        .character-row {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.25rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .character-row label {
-            font-size: 0.8rem;
-            color: #888;
-        }
-
-        .character-row label code {
-            font-size: 0.7rem;
-            color: #6b9dc4;
-            background: #222;
-            padding: 0.1rem 0.3rem;
-            border-radius: 0.2rem;
-        }
-
-        .character-row input[type="text"] {
-            width: 100%;
-            padding: 0.4rem;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 0.25rem;
-            color: #eee;
-            font-size: 0.85rem;
-        }
+        body { padding: 0; }
 
-        .character-row input[type="color"] {
-            width: 40px;
-            height: 30px;
-            padding: 0;
-            border: 1px solid #333;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            background: transparent;
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 5px 400px;
+            grid-template-rows: 1fr auto;
+            height: 100vh;
+            gap: 0;
         }
 
-        /* リサイズハンドル */
-        #resize-handle {
+        .resize-handle {
             width: 5px;
             background: #333;
             cursor: col-resize;
-            flex-shrink: 0;
             transition: background 0.2s;
         }
 
-        #resize-handle:hover {
-            background: #2d5a7b;
+        .resize-handle:hover {
+            background: #4a9eff;
         }
 
-        #resize-handle.dragging {
-            background: #2d5a7b;
-        }
-
-        body.resizing {
-            cursor: col-resize;
-            user-select: none;
-        }
-
-        body.resizing * {
-            cursor: col-resize !important;
-        }
-
-        body.resizing #right-sidebar {
-            transition: none;
-        }
-
-        /* 画像パネルが閉じているときはハンドルを非表示 */
-        body:has(#right-sidebar.collapsed) #resize-handle {
-            display: none;
-        }
-
-        /* 右側サイドバー（画像表示用） */
-        #right-sidebar {
-            width: 300px;
-            background: #1a1a1a;
-            border-left: none;
+        /* シーンエリア */
+        .scene-area {
+            background: #111;
             display: flex;
             flex-direction: column;
-            flex-shrink: 0;
-            transition: width 0.2s;
-        }
-
-        #right-sidebar.collapsed {
-            width: 0;
+            position: relative;
             overflow: hidden;
+            min-height: 0;
         }
 
-        /* サイドバーが開いている時はヘッダーのボタンを非表示 */
-        body:has(#right-sidebar:not(.collapsed)) #header-image-toggle {
-            display: none;
-        }
-
-        #right-sidebar-header {
-            padding: 0.75rem;
-            border-bottom: 1px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-        }
-
-        #right-sidebar-toggle,
-        #right-sidebar-menu-toggle {
-            background: transparent;
-            border: none;
-            color: #aaa;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.25rem;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-
-        #right-sidebar-toggle:hover,
-        #right-sidebar-menu-toggle:hover {
-            color: #2d5a7b;
-        }
-
-        /* デスクトップではメニューボタンとプロジェクト名を非表示 */
-        #right-sidebar-menu-toggle,
-        #right-sidebar-project {
-            display: none;
-        }
-
-        #right-sidebar-header h2 {
-            font-size: 1.2rem;
-            color: #2d5a7b;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        #right-sidebar.collapsed #right-sidebar-header h2 {
-            display: none;
-        }
-
-        #image-container {
+        .scene-image {
             flex: 1;
-            overflow-y: auto;
-            padding: 0.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        #right-sidebar.collapsed #image-container {
-            display: none;
-        }
-
-        .image-wrapper {
-            margin-bottom: 1rem;
-        }
-
-        .generated-image {
-            width: 100%;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .generated-image:hover {
-            opacity: 0.8;
-        }
-
-        /* 画像拡大モーダル */
-        .image-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 2000;
-            cursor: pointer;
-            overflow-y: auto;
-            padding: 1rem;
-        }
-
-        .image-modal.show {
             display: flex;
             justify-content: center;
-            align-items: flex-start;
-        }
-
-        .image-modal-content {
-            display: flex;
-            flex-direction: column;
             align-items: center;
-            max-width: 95%;
-            cursor: default;
-            margin: auto;
+            overflow: hidden;
+            padding: 20px;
+            position: relative;
         }
 
-        .image-modal-content img {
+        .scene-image img {
             max-width: 100%;
-            max-height: 70vh;
+            max-height: 100%;
             object-fit: contain;
-            border-radius: 0.5rem;
+            border-radius: 8px;
             cursor: pointer;
         }
 
-        .image-modal-controls {
-            margin-top: 1rem;
-            background: #1a1a1a;
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            max-width: 600px;
-            width: 100%;
+        .scene-placeholder {
+            color: #666;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        .scene-loading {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #4a9eff;
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            z-index: 10;
+        }
+
+        .scene-dialogue {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            padding: 15px 20px;
+            font-size: 1.35rem;
+            line-height: 1.8;
+            z-index: 5;
+            display: none;
+        }
+
+        .scene-dialogue.font-large {
+            font-size: 1.6rem;
+            line-height: 1.9;
+        }
+
+        .scene-dialogue.font-small {
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+
+        .scene-dialogue .char-name {
+            color: #4a9eff;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .scene-thumbnails {
+            display: flex;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            overflow-x: auto;
             flex-shrink: 0;
         }
 
-        .image-modal-prompt {
-            font-size: 0.85rem;
-            color: #aaa;
-            margin-bottom: 0.75rem;
-            max-height: 80px;
-            overflow-y: auto;
-            word-break: break-word;
-            line-height: 1.4;
-        }
-
-        .image-modal-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .image-modal-btn {
-            flex: 1;
-            padding: 0.6rem 1rem;
-            background: #333;
-            border: none;
-            color: #eee;
-            border-radius: 0.5rem;
+        .scene-thumb {
+            width: 60px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 0.85rem;
+            border: 2px solid transparent;
+            opacity: 0.6;
             transition: all 0.2s;
         }
 
-        .image-modal-btn:hover {
-            background: #2d5a7b;
+        .scene-thumb:hover {
+            opacity: 0.9;
         }
 
-        .image-modal-btn.active {
-            background: #2d5a7b;
+        .scene-thumb.active {
+            border-color: #4a9eff;
+            opacity: 1;
         }
 
-        .image-modal-btn.delete {
-            background: #4a2020;
+        .scene-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
         }
 
-        .image-modal-btn.delete:hover {
-            background: #c0392b;
+        .scene-info .char-name {
+            color: #4a9eff;
+            font-weight: bold;
         }
 
-        /* モバイル対応 */
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
+        .scene-info .place-name {
+            color: #27ae60;
+        }
 
-            #sidebar {
-                width: 100%;
-                height: 100%;
-                max-height: none;
-                border-right: none;
-                border-bottom: none;
-                overflow-y: auto;
-                position: absolute;
-                top: 0;
-                left: 0;
-                z-index: 100;
-            }
+        /* チャットエリア */
+        .chat-area {
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #333;
+            overflow: hidden;
+            min-height: 0;
+        }
 
-            #sidebar.collapsed {
-                width: 100%;
-                height: auto;
-                max-height: 50px;
-                overflow: hidden;
-                position: relative;
-            }
+        .chat-header {
+            padding: 15px;
+            background: #222;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-            #sidebar.collapsed #sidebar-menu {
-                display: none;
-            }
+        .chat-header h2 {
+            margin: 0;
+            color: #4a9eff;
+            font-size: 1rem;
+            flex: 1;
+        }
 
-            #sidebar.collapsed #sidebar-stats {
-                display: none;
-            }
+        .font-size-btns {
+            display: flex;
+            gap: 4px;
+        }
 
-            #sidebar-menu {
-                overflow: visible;
-            }
+        .font-size-btns button {
+            background: #444;
+            border: none;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
 
-            #sidebar-header #mobile-project {
-                display: block;
-            }
+        .font-size-btns button:hover {
+            background: #555;
+        }
 
-            #sidebar-header h2 {
-                display: none;
-            }
+        .font-size-btns button.active {
+            background: #4a9eff;
+        }
 
-            /* モバイルでサイドバーの画像トグルを表示 */
-            #sidebar.collapsed #sidebar-image-toggle {
-                display: block;
-                position: absolute;
-                right: 0.75rem;
-                background: transparent;
-                border: none;
-                color: #aaa;
-                font-size: 1.2rem;
-                cursor: pointer;
-                padding: 0.25rem;
-            }
+        /* 中（デフォルト）: 1.35rem */
+        .chat-messages .message {
+            font-size: 1.35rem;
+            line-height: 1.8;
+        }
 
-            #sidebar.collapsed #sidebar-image-toggle:hover {
-                color: #2d5a7b;
-            }
+        .chat-messages .message.narration {
+            font-size: 1.25rem;
+        }
 
-            header {
-                display: none;
-            }
+        /* 大: 1.6rem */
+        .chat-messages.font-large .message {
+            font-size: 1.6rem;
+            line-height: 1.9;
+        }
 
-            #main {
-                flex: 1;
-                min-height: 0;
-            }
+        .chat-messages.font-large .message.narration {
+            font-size: 1.5rem;
+        }
 
-            .modal {
-                width: 95%;
-                height: 95vh;
-            }
+        /* 小: 1.1rem */
+        .chat-messages.font-small .message {
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
 
-            .character-settings {
-                flex-direction: column;
-            }
+        .chat-messages.font-small .message.narration {
+            font-size: 1.05rem;
+        }
 
-            #message-input {
-                flex: 1;
-                min-width: 0;
-            }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 0;
+        }
 
-            #send-btn {
-                padding: 0.75rem 1rem;
-            }
+        .message {
+            padding: 10px 14px;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
 
-            .panel-list {
-                max-height: none;
-                flex: 1;
-                overflow-y: auto;
-            }
+        .message.user {
+            background: #4a9eff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
 
-            #resize-handle {
-                width: 100%;
-                height: 12px;
-                cursor: row-resize;
-                order: -1;
-                display: none;
-            }
+        .message.assistant {
+            background: #333;
+            color: #e0e0e0;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
 
-            body.image-panel-open #resize-handle {
-                display: block;
-            }
+        .message.system {
+            background: #2a2a2a;
+            color: #888;
+            align-self: center;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
 
-            body.resizing,
-            body.resizing * {
-                cursor: row-resize !important;
-            }
+        .message.narration {
+            background: transparent;
+            color: #c9a0dc;
+            align-self: stretch;
+            max-width: 100%;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            padding: 15px;
+            border-left: 3px solid #9b59b6;
+        }
 
-            #right-sidebar {
-                width: 100%;
-                height: 40%;
+        .chat-input-area {
+            padding: 15px;
+            background: #222;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 20px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+
+        .chat-input-area input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .chat-input-area button {
+            padding: 12px 20px;
+            border-radius: 20px;
+        }
+
+        /* コントロールバー */
+        .control-bar {
+            grid-column: 1 / 4;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+            padding: 15px 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            color: #888;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .control-group select {
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 0.9rem;
+            min-width: 150px;
+        }
+
+        .control-actions {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        /* 設定パネル */
+        .settings-toggle {
+            position: fixed;
+            top: 10px;
+            right: 420px;
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        .settings-toggle:hover {
+            background: #444;
+        }
+
+        .settings-panel {
+            position: fixed;
+            top: 50px;
+            right: 420px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            width: 350px;
+            display: none;
+            z-index: 100;
+        }
+
+        .settings-panel.active {
+            display: block;
+        }
+
+        .settings-panel h3 {
+            margin: 0 0 15px 0;
+            color: #4a9eff;
+            font-size: 1rem;
+        }
+
+        .settings-panel .form-group {
+            margin-bottom: 12px;
+        }
+
+        .settings-panel .form-group label {
+            display: block;
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+
+        .settings-panel .form-group input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 0.85rem;
+        }
+
+        .settings-panel .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        #settings-status {
+            margin-top: 10px;
+            font-size: 0.8rem;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 900px) {
+            .game-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 50vh 1fr auto;
+            }
+            .chat-area {
                 border-left: none;
-                border-bottom: none;
-                order: -2;
+                border-top: 1px solid #333;
             }
-
-            #right-sidebar.collapsed {
-                display: none !important;
+            .settings-toggle {
+                right: 10px;
             }
-
-            #right-sidebar-header {
-                justify-content: space-between;
+            .settings-panel {
+                right: 10px;
+                width: calc(100% - 40px);
             }
-
-            /* 画像パネルが開いているときはサイドバーを非表示 */
-            body.image-panel-open #sidebar.collapsed {
-                display: none !important;
-            }
-
-            /* 画像パネルが開いているときはメニューボタンとプロジェクト名を表示 */
-            body.image-panel-open #right-sidebar-menu-toggle {
-                display: block;
-            }
-
-            body.image-panel-open #right-sidebar-project {
-                display: block;
-                flex: 1;
-                text-align: center;
-                font-size: 0.9rem;
-                color: #2d5a7b;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-
-            /* 画像パネルが開いているときはmainのpadding-topを0に */
-            body.image-panel-open #main {
-                padding-top: 0 !important;
-            }
-
-            #right-sidebar {
-                display: flex;
-                flex-direction: column;
-            }
-
-            #right-sidebar #image-container {
-                overflow-x: auto;
-                overflow-y: hidden;
-                padding: 0.5rem;
-                flex: 1;
-                display: flex;
-                align-items: center;
-                justify-content: flex-start;
-                min-height: 0;
-                flex-direction: row;
-                gap: 0.5rem;
-            }
-
-            #right-sidebar .image-wrapper {
-                height: 100%;
-                width: auto;
-                margin: 0 !important;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-            }
-
-            #right-sidebar .generated-image {
-                max-height: 100%;
-                max-width: none;
-                width: auto;
-                height: 100%;
-                object-fit: contain;
-                border-radius: 0.5rem;
-            }
-
         }
     </style>
 </head>
 <body>
-    <!-- サイドバー -->
-    <div id="sidebar">
-        <div id="sidebar-header">
-            <button id="sidebar-toggle">≡</button>
-            <h2>Grok Chat</h2>
-            <span id="mobile-project"></span>
-            <button id="sidebar-image-toggle">🖼️</button>
+
+<div class="game-container">
+    <!-- シーンエリア -->
+    <div class="scene-area">
+        <div class="scene-info">
+            <span class="char-name" id="current-char">キャラクター未選択</span>
+            <span style="color: #666;"> @ </span>
+            <span class="place-name" id="current-place">場所未選択</span>
         </div>
-        <div id="sidebar-menu">
-            <button class="menu-item" id="menu-new-chat">
-                <span class="menu-item-icon">+</span>
-                <span class="menu-item-text">新規チャット</span>
-            </button>
-            <button class="menu-item" id="menu-projects">
-                <span class="menu-item-icon">📁</span>
-                <span class="menu-item-text">プロジェクト</span>
-            </button>
-            <button class="menu-item" id="menu-history">
-                <span class="menu-item-icon">📜</span>
-                <span class="menu-item-text">履歴</span>
-            </button>
-
-            <!-- プロジェクトリスト -->
-            <div id="project-list" class="panel-list">
-                <div class="panel-header">
-                    <span>プロジェクト</span>
-                </div>
-                <div id="project-items"></div>
+        <div class="scene-image" id="scene-image">
+            <div class="scene-placeholder">
+                キャラクターと場所を選択してください<br>
+                <small style="color: #555;">設定ボタンからGASデータを読み込んでください</small>
             </div>
-
-            <!-- 履歴リスト -->
-            <div id="history-list" class="panel-list">
-                <div class="panel-header">
-                    <span>セッション履歴</span>
-                </div>
-                <div id="history-items"></div>
-            </div>
-
-            <div class="menu-spacer"></div>
-
-            <!-- 統計情報 -->
-            <div id="sidebar-stats">
-                <div class="stat-item">
-                    <a class="stat-label" href="https://openrouter.ai/settings/credits" target="_blank">OpenRouter 残高</a>
-                    <span class="stat-value" id="credit-balance">--</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">累計 OpenRouter コスト</span>
-                    <span class="stat-value" id="total-cost">$0.00</span>
-                </div>
-                <div class="stat-item" id="runware-balance-item" style="display: none;">
-                    <a class="stat-label" href="https://my.runware.ai/wallet" target="_blank">Runware 残高</a>
-                    <span class="stat-value" id="runware-balance">--</span>
-                </div>
-                <div class="stat-item" id="runware-cost-item" style="display: none;">
-                    <span class="stat-label">累計 Runware コスト</span>
-                    <span class="stat-value" id="total-runware-cost">$0.00</span>
-                </div>
-                <button class="stat-reset-btn" id="clear-cost-btn">リセット</button>
-            </div>
-
-            <button class="menu-item settings" id="menu-settings">
-                <span class="menu-item-icon">⚙️</span>
-                <span class="menu-item-text">設定</span>
-            </button>
+            <div class="scene-dialogue" id="scene-dialogue"></div>
         </div>
-    </div>
-
-    <!-- プロジェクト作成/編集モーダル -->
-    <div class="modal-overlay" id="project-modal">
-        <div class="modal">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="project-name">プロジェクト名</label>
-                    <input type="text" id="project-name" placeholder="例: 英語翻訳アシスタント">
-                </div>
-                <div class="form-group flex-grow">
-                    <label for="project-prompt">システムプロンプト</label>
-                    <textarea id="project-prompt" placeholder="例: あなたは優秀な英語翻訳者です。ユーザーが入力した日本語を自然な英語に翻訳してください。"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <div class="modal-footer-left">
-                    <button class="btn btn-danger" id="project-delete" style="display: none;">削除</button>
-                </div>
-                <div class="modal-footer-right">
-                    <button class="btn btn-secondary" id="project-cancel">キャンセル</button>
-                    <button class="btn btn-primary" id="project-save">保存</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 設定モーダル -->
-    <div class="modal-overlay" id="settings-modal">
-        <div class="modal" style="height: auto; max-height: 90vh;">
-            <div class="modal-header">
-                <h3>設定</h3>
-                <button class="modal-close" id="settings-modal-close">×</button>
-            </div>
-            <div class="modal-body" style="display: block;">
-                <div class="form-group">
-                    <label for="api-key-input">OpenRouter APIキー</label>
-                    <input type="password" id="api-key-input" placeholder="sk-or-v1-...">
-                    <div style="font-size: 0.75rem; color: #888; margin-top: 0.25rem;">
-                        <a href="https://openrouter.ai/keys" target="_blank" style="color: #2d5a7b;">APIキーを取得</a>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="chat-model-select">会話用モデル</label>
-                    <select id="chat-model-select">
-                        <option value="x-ai/grok-3-mini">Grok 3 Mini ($0.30/$0.50)</option>
-                        <option value="x-ai/grok-4-fast">Grok 4 Fast ($0.20/$0.50)</option>
-                        <option value="x-ai/grok-4.1-fast" selected>Grok 4.1 Fast ($0.20/$0.50)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="image-model-select">画像生成用モデル</label>
-                    <select id="image-model-select">
-                        <option value="google/gemini-2.5-flash-image" selected>Gemini 2.5 Flash Image ($0.30/$2.50)</option>
-                        <option value="runware:z-image@turbo">Runware / Z-Image Turbo</option>
-                        <option value="civitai:481162@558910">Runware / Aoi-Realistic-Pony</option>
-                        <option value="civitai:457669@691683">Runware / PinkiePie Pony Mix</option>
-                        <option value="x:42@1761560">Runware / WAI-NSFW-illustrious-SDXL v14</option>
-                    </select>
-                </div>
-                <div class="form-group" id="runware-api-key-group" style="display: none;">
-                    <label for="runware-api-key-input">Runware APIキー</label>
-                    <input type="password" id="runware-api-key-input" placeholder="Runware API Key">
-                    <div style="font-size: 0.75rem; color: #888; margin-top: 0.25rem;">
-                        <a href="https://my.runware.ai/" target="_blank" style="color: #2d5a7b;">APIキーを取得</a>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>画像生成プロンプト依頼文</label>
-                    <button class="btn btn-secondary" id="open-image-prompt-editor" style="width: 100%; text-align: left;">
-                        <span id="image-prompt-preview" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
-                    </button>
-                </div>
-                <div class="form-group">
-                    <label for="click-prompt">クリック時のプロンプト（{word}が単語に置換されます）</label>
-                    <input type="text" id="click-prompt" placeholder="例: {word}について詳しく">
-                </div>
-                <div class="form-group">
-                    <label>強調設定</label>
-                    <div class="character-settings">
-                        <div class="character-group">
-                            <div class="character-group-title">強調１</div>
-                            <div class="character-row">
-                                <label>名称１ <code>{name1}</code></label>
-                                <input type="text" id="name1">
-                            </div>
-                            <div class="character-row">
-                                <label>通称１ <code>{nickname1}</code></label>
-                                <input type="text" id="nickname1">
-                            </div>
-                            <div class="character-row">
-                                <label>文字色</label>
-                                <input type="color" id="color1" value="#00cc66">
-                            </div>
-                        </div>
-                        <div class="character-group">
-                            <div class="character-group-title">強調２</div>
-                            <div class="character-row">
-                                <label>名称２ <code>{name2}</code></label>
-                                <input type="text" id="name2">
-                            </div>
-                            <div class="character-row">
-                                <label>通称２ <code>{nickname2}</code></label>
-                                <input type="text" id="nickname2">
-                            </div>
-                            <div class="character-row">
-                                <label>文字色</label>
-                                <input type="color" id="color2" value="#00cc66">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <div class="modal-footer-left">
-                    <a href="runware-test.html" target="_blank" style="color: #2d5a7b; font-size: 0.85rem;">🎨 Runware テストツール</a>
-                </div>
-                <div class="modal-footer-right">
-                    <button class="btn btn-primary" id="settings-close">閉じる</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 画像プロンプト編集モーダル（個別の画像用） -->
-    <div class="modal-overlay" id="edit-prompt-modal">
-        <div class="modal" style="width: 90%; height: 80vh;">
-            <div class="modal-header">
-                <h3>プロンプトを編集</h3>
-                <button class="modal-close" id="edit-prompt-modal-close">×</button>
-            </div>
-            <div class="modal-body" style="display: flex; flex-direction: column;">
-                <div class="form-group flex-grow" style="flex: 1; display: flex; flex-direction: column;">
-                    <textarea id="edit-prompt-textarea" style="flex: 1; resize: none; font-family: monospace; font-size: 0.95rem; line-height: 1.5;"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <div class="modal-footer-left">
-                    <button class="btn btn-secondary" id="edit-prompt-cancel">キャンセル</button>
-                </div>
-                <div class="modal-footer-right">
-                    <button class="btn btn-secondary" id="edit-prompt-save">保存</button>
-                    <button class="btn btn-primary" id="edit-prompt-generate">保存して生成</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 画像生成プロンプト編集モーダル -->
-    <div class="modal-overlay" id="image-prompt-modal">
-        <div class="modal" style="width: 90%; height: 90vh;">
-            <div class="modal-header">
-                <h3>画像生成プロンプト依頼文</h3>
-                <button class="modal-close" id="image-prompt-modal-close">×</button>
-            </div>
-            <div class="modal-body" style="display: flex; flex-direction: column;">
-                <div class="form-group flex-grow" style="flex: 1; display: flex; flex-direction: column;">
-                    <label for="image-gen-prompt">会話の状況から画像生成用プロンプトを作成させる指示文</label>
-                    <textarea id="image-gen-prompt" style="flex: 1; resize: none; font-family: monospace; font-size: 0.9rem; line-height: 1.5;"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <div class="modal-footer-left">
-                    <button class="btn btn-secondary" id="image-prompt-reset">デフォルトに戻す</button>
-                </div>
-                <div class="modal-footer-right">
-                    <button class="btn btn-primary" id="image-prompt-save">保存</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- メインコンテンツ -->
-    <div id="main">
-        <header>
-            <button id="header-menu-toggle" title="メニューを開く">☰</button>
-            <div id="current-project"></div>
-            <button id="header-image-toggle" title="画像ウィンドウを開く">🖼️</button>
-        </header>
-
-        <div id="chat-container"></div>
-
-        <div id="input-container">
-            <button id="generate-image-btn" title="現在の状況から画像を生成">🎨</button>
-            <input type="text" id="message-input" placeholder="メッセージを入力..." autocomplete="off">
-            <button id="send-btn">送信</button>
-        </div>
+        <div class="scene-thumbnails" id="scene-thumbnails" style="display: none;"></div>
     </div>
 
     <!-- リサイズハンドル -->
-    <div id="resize-handle"></div>
+    <div class="resize-handle" id="resize-handle"></div>
 
-    <!-- 右側サイドバー（画像表示用） -->
-    <div id="right-sidebar" class="collapsed">
-        <div id="right-sidebar-header">
-            <button id="right-sidebar-menu-toggle">☰</button>
-            <span id="right-sidebar-project"></span>
-            <button id="right-sidebar-toggle">🖼️</button>
-        </div>
-        <div id="image-container">
-            <div class="empty-message">画像がありません</div>
-        </div>
-    </div>
-
-    <!-- 画像拡大モーダル -->
-    <div id="image-modal" class="image-modal" onclick="closeImageModal(event)">
-        <div class="image-modal-content">
-            <img id="image-modal-img" src="" alt="">
-            <div id="image-modal-controls" class="image-modal-controls">
-                <div id="image-modal-prompt" class="image-modal-prompt"></div>
-                <div class="image-modal-buttons">
-                    <button id="image-modal-copy" class="image-modal-btn">📋 コピー</button>
-                    <button id="image-modal-edit" class="image-modal-btn">✎ 編集</button>
-                    <button id="image-modal-generate" class="image-modal-btn">🎨 再生成</button>
-                    <button id="image-modal-delete" class="image-modal-btn delete">🗑️ 削除</button>
-                </div>
+    <!-- チャットエリア -->
+    <div class="chat-area" id="chat-area">
+        <div class="chat-header">
+            <h2 id="chat-title">チャット</h2>
+            <div class="font-size-btns">
+                <button onclick="setFontSize('small')" id="font-small">小</button>
+                <button onclick="setFontSize('normal')" id="font-normal" class="active">中</button>
+                <button onclick="setFontSize('large')" id="font-large">大</button>
             </div>
+            <button class="btn btn-small" onclick="clearChat()" style="background:#555;">クリア</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message system">キャラクターを選択するとチャットできます</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="メッセージを入力..." onkeydown="if(event.key==='Enter')sendMessage()">
+            <button class="btn btn-primary" onclick="sendMessage()">送信</button>
         </div>
     </div>
 
-    <script>
-        let apiKey = '';
-        let runwareApiKey = '';
-        const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-        const CREDITS_URL = 'https://openrouter.ai/api/v1/credits';
-        const RUNWARE_API_URL = 'https://api.runware.ai/v1';
+    <!-- コントロールバー -->
+    <div class="control-bar">
+        <div class="control-group">
+            <label>キャラクター:</label>
+            <select id="character" onchange="onCharacterChange()">
+                <option value="">-- 選択 --</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>場所:</label>
+            <select id="place" onchange="onPlaceChange()">
+                <option value="">-- 選択 --</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>アクション:</label>
+            <select id="action">
+                <option value="">-- 選択 --</option>
+            </select>
+        </div>
+        <div class="control-actions">
+            <button class="btn btn-generate" onclick="executeAction()" id="action-btn">アクション実行</button>
+            <button class="btn btn-primary" onclick="generateSceneImage()" id="scene-btn">シーン生成</button>
+        </div>
+    </div>
+</div>
 
-        const STORAGE_KEY = 'grok-chat-data';
-        const SESSIONS_KEY = 'grok-chat-sessions';
-        const PROJECTS_KEY = 'grok-chat-projects';
+<!-- 設定パネル -->
+<button class="settings-toggle" onclick="toggleSettings()">設定</button>
+<div class="settings-panel" id="settings-panel">
+    <h3>設定</h3>
+    <div class="form-group">
+        <label>GAS URL:</label>
+        <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/xxx/exec">
+    </div>
+    <div class="form-group">
+        <label>Runware API Key:</label>
+        <input type="password" id="apiKey" placeholder="画像生成用">
+    </div>
+    <div class="form-group">
+        <label>OpenRouter API Key:</label>
+        <input type="password" id="chatApiKey" placeholder="チャット用">
+    </div>
+    <div class="form-group">
+        <label>チャットモデル:</label>
+        <select id="chatModel">
+            <option value="x-ai/grok-4.1-fast">Grok 4.1 Fast</option>
+            <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
+            <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</option>
+            <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+        </select>
+    </div>
+    <div class="btn-row">
+        <button class="btn btn-primary" onclick="loadAllFromGas()">GAS読み込み</button>
+        <button class="btn btn-save" onclick="doSaveSettings()">設定保存</button>
+    </div>
+    <div id="settings-status"></div>
+</div>
 
-        const sidebar = document.getElementById('sidebar');
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        const headerMenuToggle = document.getElementById('header-menu-toggle');
-        const chatContainer = document.getElementById('chat-container');
-        const messageInput = document.getElementById('message-input');
-        const sendBtn = document.getElementById('send-btn');
-        const clearCostBtn = document.getElementById('clear-cost-btn');
-        const totalCostEl = document.getElementById('total-cost');
-        const totalRunwareCostEl = document.getElementById('total-runware-cost');
-        const creditBalanceEl = document.getElementById('credit-balance');
-        const runwareBalanceEl = document.getElementById('runware-balance');
-        const runwareBalanceItem = document.getElementById('runware-balance-item');
-        const runwareCostItem = document.getElementById('runware-cost-item');
-        const chatModelSelect = document.getElementById('chat-model-select');
-        const imageModelSelect = document.getElementById('image-model-select');
-        const clickPromptInput = document.getElementById('click-prompt');
-        const apiKeyInput = document.getElementById('api-key-input');
-        const runwareApiKeyInput = document.getElementById('runware-api-key-input');
-        const runwareApiKeyGroup = document.getElementById('runware-api-key-group');
-        const imageGenPromptInput = document.getElementById('image-gen-prompt');
-        const imagePromptPreview = document.getElementById('image-prompt-preview');
-        const imagePromptModal = document.getElementById('image-prompt-modal');
-        const generateImageBtn = document.getElementById('generate-image-btn');
-        const rightSidebar = document.getElementById('right-sidebar');
-        const rightSidebarToggle = document.getElementById('right-sidebar-toggle');
-        const rightSidebarMenuToggle = document.getElementById('right-sidebar-menu-toggle');
-        const rightSidebarProject = document.getElementById('right-sidebar-project');
-        const headerImageToggle = document.getElementById('header-image-toggle');
-        const sidebarImageToggle = document.getElementById('sidebar-image-toggle');
-        const imageContainer = document.getElementById('image-container');
-        const historyList = document.getElementById('history-list');
-        const historyItems = document.getElementById('history-items');
-        const projectList = document.getElementById('project-list');
-        const projectItems = document.getElementById('project-items');
-        const projectModal = document.getElementById('project-modal');
-        const currentProjectEl = document.getElementById('current-project');
+<script src="js/constants.js"></script>
+<script src="js/gas-api.js"></script>
+<script src="js/runware-api.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/data-parser.js"></script>
+<script src="js/ui-utils.js"></script>
+<script>
+    // ストレージキー
+    const GAME_DATA_KEY = 'adventure_game_data';
+    const CHAT_API_KEY = 'openrouter_api_key';
+    const CHAT_MODEL_KEY = 'openrouter_model';
 
-        // 現在のセッション
-        let currentSessionId = null;
-        let currentProjectId = null;
-        let messages = [];
-        let chatHistory = [];
-        let currentSessionImages = [];
-        const MAX_SESSION_IMAGES = 50; // セッションごとの最大画像保持枚数
+    // データストア
+    let models = {};
+    let characters = [];
+    let places = [];
+    let actions = [];
+    let chatHistory = [];
+    let currentSceneUrl = '';
+    let generatedImages = [];
+    let currentImageIndex = 0;
 
-        // グローバル統計
-        let totalCost = 0;
-        let totalRunwareCost = 0;
+    // 初期化
+    document.addEventListener('DOMContentLoaded', () => {
+        const settings = loadSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY);
+        if (settings.gasUrl) document.getElementById('gasUrl').value = settings.gasUrl;
+        if (settings.apiKey) document.getElementById('apiKey').value = settings.apiKey;
 
-        // クリック時のプロンプト
-        let clickPrompt = '{word}について詳しく';
+        const chatApiKey = localStorage.getItem(CHAT_API_KEY);
+        if (chatApiKey) document.getElementById('chatApiKey').value = chatApiKey;
 
-        // 画像生成プロンプト依頼文
-        const DEFAULT_IMAGE_GEN_PROMPT = '現在の会話の状況を表す画像を生成するための、英語の画像生成プロンプトを1つだけ生成してください。プロンプトのみを出力し、説明は不要です。';
-        let imageGenPrompt = DEFAULT_IMAGE_GEN_PROMPT;
+        const chatModel = localStorage.getItem(CHAT_MODEL_KEY);
+        if (chatModel) document.getElementById('chatModel').value = chatModel;
 
-        // プレビュー更新関数
-        function updateImagePromptPreview() {
-            const preview = imageGenPrompt || DEFAULT_IMAGE_GEN_PROMPT;
-            imagePromptPreview.textContent = preview.substring(0, 50) + (preview.length > 50 ? '...' : '');
+        // 保存された文字サイズを復元
+        const savedFontSize = localStorage.getItem('chat_font_size') || 'normal';
+        setFontSize(savedFontSize);
+
+        // 保存されたチャット幅を復元
+        const savedChatWidth = localStorage.getItem('chat_width');
+        if (savedChatWidth) {
+            document.querySelector('.game-container').style.gridTemplateColumns = `1fr 5px ${savedChatWidth}px`;
         }
 
-        // 強調設定
-        let highlightSettings = {
-            h1: { name: '', nickname: '', color: '#00cc66' },
-            h2: { name: '', nickname: '', color: '#00cc66' }
-        };
-
-        // データ
-        let sessions = [];
-        let projects = [];
-
-        // 編集中のプロジェクトID
-        let editingProjectId = null;
-
-        // 日時フォーマット
-        function formatDateTime(timestamp) {
-            const date = new Date(timestamp);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${year}/${month}/${day} ${hours}:${minutes}`;
-        }
-
-        // ========== セッション管理 ==========
-        function saveSessions() {
-            localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
-        }
-
-        function loadSessions() {
-            const saved = localStorage.getItem(SESSIONS_KEY);
-            if (saved) {
-                sessions = JSON.parse(saved);
-            }
-        }
-
-        function saveCurrentSession() {
-            if (!currentSessionId || messages.length === 0) return;
-
-            const sessionIndex = sessions.findIndex(s => s.id === currentSessionId);
-            const sessionData = {
-                id: currentSessionId,
-                title: formatDateTime(currentSessionId),
-                messages: messages,
-                chatHistory: chatHistory,
-                projectId: currentProjectId,
-                createdAt: currentSessionId,
-                images: currentSessionImages.length > 0 ? [...currentSessionImages] : [],
-                imageFormatV2: true  // 画像配列が古い順（先頭が最古）であることを示すフラグ
-            };
-
-            if (sessionIndex >= 0) {
-                sessions[sessionIndex] = sessionData;
-            } else {
-                sessions.unshift(sessionData);
-            }
-            saveSessions();
-        }
-
-        function loadSession(sessionId) {
-            const session = sessions.find(s => s.id === sessionId);
-            if (session) {
-                currentSessionId = session.id;
-                currentProjectId = session.projectId || null;
-                messages = [...session.messages];
-                chatHistory = [...session.chatHistory];
-
-                chatContainer.innerHTML = '';
-                chatHistory.forEach(item => {
-                    addMessageToDOM(item.role, item.content, item.reasoning);
-                });
-
-                // 画像を復元
-                clearImageSidebar();
-                // 新形式（images配列）と旧形式（lastImage）の両方に対応
-                if (session.images && session.images.length > 0) {
-                    // 旧形式（新しい画像が先頭）を新形式（古い画像が先頭）に変換
-                    if (!session.imageFormatV2) {
-                        currentSessionImages = [...session.images].reverse();
-                    } else {
-                        currentSessionImages = [...session.images];
-                    }
-                    // 古い順から表示（上が古い、下が新しい）
-                    currentSessionImages.forEach(img => {
-                        addImageToSidebar(img.url, img.prompt || '', true);
-                    });
-                    // 新形式で保存
-                    saveCurrentSession();
-                } else if (session.lastImage && session.lastImage.url) {
-                    // 旧形式のデータを変換
-                    currentSessionImages = [{ ...session.lastImage }];
-                    addImageToSidebar(session.lastImage.url, session.lastImage.prompt || '', true);
-                } else {
-                    currentSessionImages = [];
-                }
-
-                updateCurrentProjectDisplay();
-                saveGlobalSettings();
-                renderHistoryList();
-                closeMobileMenu();
-            }
-        }
-
-        function replacePromptVariables(prompt) {
-            // プロンプト内の変数を置換
-            return prompt
-                .replace(/\{name1\}/g, highlightSettings.h1.name || '')
-                .replace(/\{nickname1\}/g, highlightSettings.h1.nickname || '')
-                .replace(/\{name2\}/g, highlightSettings.h2.name || '')
-                .replace(/\{nickname2\}/g, highlightSettings.h2.nickname || '');
-        }
-
-        function startNewSession(projectId = null) {
-            saveCurrentSession();
-
-            currentSessionId = Date.now();
-            currentProjectId = projectId;
-            messages = [];
-            chatHistory = [];
-            chatContainer.innerHTML = '';
-            currentSessionImages = [];
-            clearImageSidebar();
-
-            // プロジェクトがある場合はシステムプロンプトを設定
-            if (projectId) {
-                const project = projects.find(p => p.id === projectId);
-                if (project && project.prompt) {
-                    const expandedPrompt = replacePromptVariables(project.prompt);
-                    messages.push({ role: 'system', content: expandedPrompt });
-                    // システムメッセージを表示
-                    const div = document.createElement('div');
-                    div.className = 'message system-msg';
-                    div.textContent = `📁 プロジェクト「${project.name}」を開始`;
-                    chatContainer.appendChild(div);
-                }
-            }
-
-            updateCurrentProjectDisplay();
-            saveGlobalSettings();
-            renderHistoryList();
-        }
-
-        function deleteSession(sessionId, event) {
-            event.stopPropagation();
-            if (!confirm('このセッションを削除しますか？')) return;
-
-            sessions = sessions.filter(s => s.id !== sessionId);
-            saveSessions();
-
-            if (currentSessionId === sessionId) {
-                if (sessions.length > 0) {
-                    loadSession(sessions[0].id);
-                } else {
-                    startNewSession();
-                }
-            }
-
-            renderHistoryList();
-        }
-
-        function deleteAllSessions() {
-            if (!confirm('全ての履歴を削除しますか？この操作は取り消せません。')) return;
-
-            // 現在のセッションもクリア
-            currentSessionId = null;
-            currentProjectId = null;
-            messages = [];
-            chatHistory = [];
-            chatContainer.innerHTML = '';
-
-            sessions = [];
-            saveSessions();
-            saveGlobalSettings();
-
-            // 新規セッション開始
-            currentSessionId = Date.now();
-            updateCurrentProjectDisplay();
-            renderHistoryList();
-        }
-
-        function renderHistoryList() {
-            historyItems.innerHTML = '';
-
-            if (sessions.length === 0) {
-                historyItems.innerHTML = '<div class="empty-message">履歴がありません</div>';
-                return;
-            }
-
-            // 全削除ボタン
-            const deleteAllBtn = document.createElement('button');
-            deleteAllBtn.className = 'list-item delete-all-btn';
-            deleteAllBtn.textContent = '全ての履歴を削除';
-            deleteAllBtn.addEventListener('click', deleteAllSessions);
-            historyItems.appendChild(deleteAllBtn);
-
-            sessions.forEach(session => {
-                const item = document.createElement('div');
-                item.className = 'list-item' + (session.id === currentSessionId ? ' active' : '');
-
-                // 画像枚数を計算（新形式と旧形式に対応）
-                let imageCount = 0;
-                if (session.images && session.images.length > 0) {
-                    imageCount = session.images.length;
-                } else if (session.lastImage && session.lastImage.url) {
-                    imageCount = 1;
-                }
-                const imageCountText = imageCount > 0 ? `<span class="list-item-images">🖼️${imageCount}</span>` : '';
-
-                item.innerHTML = `
-                    <span class="list-item-title">${session.title}</span>
-                    ${imageCountText}
-                    <button class="list-item-btn delete" title="削除">×</button>
-                `;
-                item.addEventListener('click', () => loadSession(session.id));
-                item.querySelector('.list-item-btn').addEventListener('click', (e) => deleteSession(session.id, e));
-                historyItems.appendChild(item);
-            });
-        }
-
-        function toggleHistoryPanel() {
-            projectList.classList.remove('show');
-            historyList.classList.toggle('show');
-            if (historyList.classList.contains('show')) {
-                renderHistoryList();
-            }
-        }
-
-        // ========== プロジェクト管理 ==========
-        function saveProjects() {
-            localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-        }
-
-        function loadProjects() {
-            const saved = localStorage.getItem(PROJECTS_KEY);
-            if (saved) {
-                projects = JSON.parse(saved);
-            }
-        }
-
-        function renderProjectList() {
-            projectItems.innerHTML = '';
-
-            // 新規プロジェクトボタン
-            const newItem = document.createElement('div');
-            newItem.className = 'list-item new-item';
-            newItem.innerHTML = `<span class="list-item-title">+ 新規プロジェクト</span>`;
-            newItem.addEventListener('click', () => openProjectModal());
-            projectItems.appendChild(newItem);
-
-            if (projects.length === 0) {
-                const empty = document.createElement('div');
-                empty.className = 'empty-message';
-                empty.textContent = 'プロジェクトがありません';
-                projectItems.appendChild(empty);
-                return;
-            }
-
-            projects.forEach(project => {
-                const item = document.createElement('div');
-                item.className = 'list-item';
-                item.innerHTML = `
-                    <span class="list-item-title">${project.name}</span>
-                    <button class="list-item-btn" title="編集">✎</button>
-                `;
-                item.querySelector('.list-item-title').addEventListener('click', () => startProjectChat(project.id));
-                item.querySelector('.list-item-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openProjectModal(project.id);
-                });
-                projectItems.appendChild(item);
-            });
-        }
-
-        function toggleProjectPanel() {
-            historyList.classList.remove('show');
-            projectList.classList.toggle('show');
-            if (projectList.classList.contains('show')) {
-                renderProjectList();
-            }
-        }
-
-        function openProjectModal(projectId = null) {
-            editingProjectId = projectId;
-            const nameInput = document.getElementById('project-name');
-            const promptInput = document.getElementById('project-prompt');
-            const deleteBtn = document.getElementById('project-delete');
-
-            if (projectId) {
-                const project = projects.find(p => p.id === projectId);
-                if (project) {
-                    nameInput.value = project.name;
-                    promptInput.value = project.prompt;
-                    deleteBtn.style.display = 'block';
-                }
-            } else {
-                nameInput.value = '';
-                promptInput.value = '';
-                deleteBtn.style.display = 'none';
-            }
-
-            projectModal.classList.add('show');
-            nameInput.focus();
-        }
-
-        function closeProjectModal() {
-            projectModal.classList.remove('show');
-            editingProjectId = null;
-        }
-
-        function saveProject() {
-            const name = document.getElementById('project-name').value.trim();
-            const prompt = document.getElementById('project-prompt').value.trim();
-
-            if (!name) {
-                alert('プロジェクト名を入力してください');
-                return;
-            }
-
-            if (editingProjectId) {
-                const index = projects.findIndex(p => p.id === editingProjectId);
-                if (index >= 0) {
-                    projects[index].name = name;
-                    projects[index].prompt = prompt;
-                }
-            } else {
-                projects.push({
-                    id: Date.now(),
-                    name: name,
-                    prompt: prompt,
-                    createdAt: Date.now()
-                });
-            }
-
-            saveProjects();
-            closeProjectModal();
-            renderProjectList();
-        }
-
-        function deleteProject(projectId) {
-            if (!confirm('このプロジェクトを削除しますか？')) return;
-
-            projects = projects.filter(p => p.id !== projectId);
-            saveProjects();
-            closeProjectModal();
-            renderProjectList();
-        }
-
-        async function startProjectChat(projectId) {
-            startNewSession(projectId);
-            projectList.classList.remove('show');
-            closeMobileMenu();
-
-            // プロジェクト開始時にシステムから最初のメッセージを送信
-            const project = projects.find(p => p.id === projectId);
-            if (project && project.prompt) {
-                if (!apiKey) {
-                    alert('APIキーが設定されていません。設定画面でOpenRouter APIキーを入力してください。');
-                    document.getElementById('settings-modal').classList.add('show');
-                    return;
-                }
-                sendBtn.disabled = true;
-                await streamResponse(messages);
-                sendBtn.disabled = false;
-            }
-
-            if (!isMobile()) {
-                messageInput.focus();
-            }
-        }
-
-        function updateCurrentProjectDisplay() {
-            const mobileProjectEl = document.getElementById('mobile-project');
-            if (currentProjectId) {
-                const project = projects.find(p => p.id === currentProjectId);
-                if (project) {
-                    currentProjectEl.textContent = `📁 ${project.name}`;
-                    mobileProjectEl.textContent = `📁 ${project.name}`;
-                    rightSidebarProject.textContent = `📁 ${project.name}`;
-                    return;
-                }
-            }
-            currentProjectEl.textContent = '';
-            mobileProjectEl.textContent = '';
-            rightSidebarProject.textContent = '';
-        }
-
-        // ========== グローバル設定 ==========
-        function saveGlobalSettings() {
-            const data = {
-                totalCost,
-                totalRunwareCost,
-                chatModel: chatModelSelect.value,
-                imageModel: imageModelSelect.value,
-                currentSessionId,
-                currentProjectId,
-                clickPrompt,
-                imageGenPrompt,
-                highlightSettings,
-                apiKey,
-                runwareApiKey
-            };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        }
-
-        function loadGlobalSettings() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                const data = JSON.parse(saved);
-                totalCost = data.totalCost || 0;
-                totalRunwareCost = data.totalRunwareCost || 0;
-                currentSessionId = data.currentSessionId || null;
-                currentProjectId = data.currentProjectId || null;
-                clickPrompt = data.clickPrompt || '{word}について詳しく';
-                imageGenPrompt = data.imageGenPrompt || DEFAULT_IMAGE_GEN_PROMPT;
-                apiKey = data.apiKey || '';
-                runwareApiKey = data.runwareApiKey || '';
-                if (data.highlightSettings) {
-                    highlightSettings = data.highlightSettings;
-                }
-
-                if (data.chatModel || data.selectedModel) {
-                    chatModelSelect.value = data.chatModel || data.selectedModel;
-                }
-                if (data.imageModel) {
-                    imageModelSelect.value = data.imageModel;
-                }
-
-                clickPromptInput.value = clickPrompt;
-                imageGenPromptInput.value = imageGenPrompt;
-                updateImagePromptPreview();
-                apiKeyInput.value = apiKey;
-                runwareApiKeyInput.value = runwareApiKey;
-                totalCostEl.textContent = '$' + totalCost.toFixed(2);
-                totalRunwareCostEl.textContent = '$' + totalRunwareCost.toFixed(2);
-
-                // Runware選択時はAPIキー入力欄を表示
-                updateRunwareApiKeyVisibility();
-            }
-            loadHighlightSettings();
-        }
-
-        function updateRunwareApiKeyVisibility() {
-            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:') || imageModelSelect.value.startsWith('x:');
-            runwareApiKeyGroup.style.display = isRunware ? 'block' : 'none';
-            runwareBalanceItem.style.display = isRunware ? 'flex' : 'none';
-            runwareCostItem.style.display = isRunware ? 'flex' : 'none';
-            if (isRunware && runwareApiKey) {
-                fetchRunwareBalance();
-            }
-        }
-
-        function loadHighlightSettings() {
-            document.getElementById('name1').value = highlightSettings.h1.name || '';
-            document.getElementById('nickname1').value = highlightSettings.h1.nickname || '';
-            document.getElementById('color1').value = highlightSettings.h1.color || '#00cc66';
-            document.getElementById('name2').value = highlightSettings.h2.name || '';
-            document.getElementById('nickname2').value = highlightSettings.h2.nickname || '';
-            document.getElementById('color2').value = highlightSettings.h2.color || '#00cc66';
-        }
-
-        function saveHighlightSettings() {
-            highlightSettings.h1.name = document.getElementById('name1').value;
-            highlightSettings.h1.nickname = document.getElementById('nickname1').value;
-            highlightSettings.h1.color = document.getElementById('color1').value;
-            highlightSettings.h2.name = document.getElementById('name2').value;
-            highlightSettings.h2.nickname = document.getElementById('nickname2').value;
-            highlightSettings.h2.color = document.getElementById('color2').value;
-            saveGlobalSettings();
-        }
-
-        // ========== チャット機能 ==========
-        async function fetchCredits() {
-            if (!apiKey) {
-                creditBalanceEl.textContent = '--';
-                return;
-            }
-            try {
-                const response = await fetch(CREDITS_URL, {
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`
-                    }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    const balance = data.data.total_credits - data.data.total_usage;
-                    creditBalanceEl.textContent = '$' + balance.toFixed(2);
-                }
-            } catch (error) {
-                creditBalanceEl.textContent = 'エラー';
-            }
-        }
-
-        async function fetchRunwareBalance() {
-            if (!runwareApiKey) {
-                runwareBalanceEl.textContent = '--';
-                return;
-            }
-            try {
-                const response = await fetch(RUNWARE_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${runwareApiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify([
-                        {
-                            taskType: 'accountManagement',
-                            taskUUID: generateUUID(),
-                            operation: 'getDetails'
-                        }
-                    ])
-                });
-                const data = await response.json();
-                const result = Array.isArray(data.data) ? data.data[0] : data.data;
-                if (result && result.balance !== undefined) {
-                    runwareBalanceEl.textContent = '$' + result.balance.toFixed(2);
-                }
-            } catch (error) {
-                runwareBalanceEl.textContent = 'エラー';
-            }
-        }
-
-        function updateStats(cost) {
-            totalCost += cost;
-            totalCostEl.textContent = '$' + totalCost.toFixed(2);
-            saveGlobalSettings();
-            fetchCredits(); // クレジット残高も更新
-        }
-
-        function updateRunwareStats(cost) {
-            totalRunwareCost += cost;
-            totalRunwareCostEl.textContent = '$' + totalRunwareCost.toFixed(2);
-            saveGlobalSettings();
-        }
-
-        function parseClickableWords(text) {
-            // [word] を検出してクリック可能なspanに変換（括弧は表示しない）
-            let result = text.replace(/\[([^\]]+)\]/g, (match, word) => {
-                const encoded = encodeURIComponent(word);
-                return `<span class="clickable-word" onclick="askAbout('${encoded}')">${word}</span>`;
-            });
-
-            // 【選択肢】が含まれている場合、番号付きリストをクリック可能にする
-            if (text.includes('【選択肢】')) {
-                result = result.replace(/^(\d+)\.\s?/gm, (match, num) => {
-                    return `<span class="clickable-choice" onclick="sendChoice('${num}')">${num}.</span> `;
-                });
-            }
-
-            return result;
-        }
-
-        window.sendChoice = function(num) {
-            messageInput.value = num;
-            sendMessage();
-        };
-
-        function parseDialogueColors(text) {
-            // 強調設定に基づいて色を付ける
-            let result = text;
-
-            // 名称１で色付け
-            if (highlightSettings.h1.name) {
-                const pattern = new RegExp(`^(${escapeRegex(highlightSettings.h1.name)})(：|:)(.*)$`, 'gm');
-                result = result.replace(pattern, (match, name, colon, dialogue) => {
-                    return `<span style="color: ${highlightSettings.h1.color}">${name}${colon}${dialogue}</span>`;
-                });
-            }
-
-            // 名称２で色付け
-            if (highlightSettings.h2.name) {
-                const pattern = new RegExp(`^(${escapeRegex(highlightSettings.h2.name)})(：|:)(.*)$`, 'gm');
-                result = result.replace(pattern, (match, name, colon, dialogue) => {
-                    return `<span style="color: ${highlightSettings.h2.color}">${name}${colon}${dialogue}</span>`;
-                });
-            }
-
-            return result;
-        }
-
-        function escapeRegex(str) {
-            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        window.askAbout = function(encodedWord) {
-            const word = decodeURIComponent(encodedWord);
-            const query = clickPrompt.replace(/{word}/g, word);
-            messageInput.value = query;
-            sendMessage();
-        };
-
-        function addMessageToDOM(role, content, reasoning = null) {
-            if (role === 'system') return; // システムメッセージは表示しない
-
-            const div = document.createElement('div');
-            div.className = `message ${role}`;
-
-            const escapedContent = escapeHtml(content);
-            let parsedContent = parseClickableWords(escapedContent);
-            parsedContent = parseDialogueColors(parsedContent);
-
-            if (reasoning) {
-                const toggleId = 'reasoning-' + Date.now() + Math.random();
-                div.innerHTML = `
-                    <div class="reasoning-toggle" onclick="toggleReasoning('${toggleId}')">
-                        💭 思考プロセスを表示
-                    </div>
-                    <div id="${toggleId}" class="reasoning-content">
-                        <div class="reasoning">${escapeHtml(reasoning)}</div>
-                    </div>
-                    ${parsedContent}
-                `;
-            } else {
-                div.innerHTML = parsedContent;
-            }
-
-            chatContainer.appendChild(div);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function addMessage(role, content, reasoning = null) {
-            if (messages.length === 0 && !currentSessionId) {
-                currentSessionId = Date.now();
-                saveGlobalSettings();
-            }
-
-            addMessageToDOM(role, content, reasoning);
-            chatHistory.push({ role, content, reasoning });
-            saveCurrentSession();
-        }
-
-        window.toggleReasoning = function(id) {
-            const el = document.getElementById(id);
-            el.classList.toggle('show');
-        };
-
-        function showLoading() {
-            const div = document.createElement('div');
-            div.className = 'message assistant loading';
-            div.id = 'loading';
-            div.innerHTML = '<span></span><span></span><span></span>';
-            chatContainer.appendChild(div);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function hideLoading() {
-            const loading = document.getElementById('loading');
-            if (loading) loading.remove();
-        }
-
-        function clearCost() {
-            if (confirm('累計コストをリセットしますか？')) {
-                totalCost = 0;
-                totalRunwareCost = 0;
-                totalCostEl.textContent = '$0.00';
-                totalRunwareCostEl.textContent = '$0.00';
-                saveGlobalSettings();
-            }
-        }
-
-        function isMobile() {
-            return window.innerWidth <= 768;
-        }
-
-        function closeMobileMenu() {
-            if (isMobile()) {
-                sidebar.classList.add('collapsed');
-            }
-        }
-
-        async function sendMessage() {
-            const content = messageInput.value.trim();
-            if (!content) return;
-
-            if (!apiKey) {
-                alert('APIキーが設定されていません。設定画面でOpenRouter APIキーを入力してください。');
-                document.getElementById('settings-modal').classList.add('show');
-                return;
-            }
-
-            messageInput.value = '';
-            sendBtn.disabled = true;
-
-            addMessage('user', content);
-            messages.push({ role: 'user', content });
-
-            await streamResponse(messages);
-
-            sendBtn.disabled = false;
-            if (!isMobile()) {
-                messageInput.focus();
-            }
-            renderHistoryList();
-        }
-
-        // 画像生成モデルかどうかを判定
-        function isImageModel(model) {
-            return model.includes('gemini') && model.includes('image');
-        }
-
-        // 画像を右側サイドバーに追加
-        function addImageToSidebar(imageUrl, prompt = '', skipSave = false) {
-            // 画像情報を配列に追加（末尾に追加、古い順に並ぶ）
-            if (!skipSave) {
-                currentSessionImages.push({ url: imageUrl, prompt: prompt });
-                // 最大枚数を超えたら古いものを削除
-                if (currentSessionImages.length > MAX_SESSION_IMAGES) {
-                    currentSessionImages = currentSessionImages.slice(-MAX_SESSION_IMAGES);
-                }
-                saveCurrentSession();
-            }
-
-            // 空メッセージを削除
-            const emptyMsg = imageContainer.querySelector('.empty-message');
-            if (emptyMsg) {
-                emptyMsg.remove();
-            }
-
-            const wrapper = document.createElement('div');
-            wrapper.className = 'image-wrapper';
-
-            const img = document.createElement('img');
-            img.src = imageUrl;
-            img.className = 'generated-image';
-            img.onclick = () => {
-                openImageModal(imageUrl, prompt);
-            };
-
-            wrapper.appendChild(img);
-
-            // 最新の画像を下に追加
-            imageContainer.appendChild(wrapper);
-            // 画像読み込み完了後に最下部にスクロール
-            img.onload = () => {
-                imageContainer.scrollTop = imageContainer.scrollHeight;
-            };
-            // 既にキャッシュされている場合も対応
-            if (img.complete) {
-                imageContainer.scrollTop = imageContainer.scrollHeight;
-            }
-        }
-
-        // 画像サイドバーをクリア
-        function clearImageSidebar() {
-            imageContainer.innerHTML = '<div class="empty-message">画像がありません</div>';
-        }
-
-        // 画像拡大モーダル
-        let currentModalPrompt = '';
-        let currentModalImageUrl = '';
-        let currentModalImageIndex = -1;
-
-        function openImageModal(imageUrl, prompt) {
-            const modal = document.getElementById('image-modal');
-            const modalImg = document.getElementById('image-modal-img');
-            const modalPrompt = document.getElementById('image-modal-prompt');
-            const controls = document.getElementById('image-modal-controls');
-
-            modalImg.src = imageUrl;
-            currentModalImageUrl = imageUrl;
-            currentModalPrompt = prompt || '';
-
-            // 現在の画像インデックスを取得
-            currentModalImageIndex = currentSessionImages.findIndex(img => img.url === imageUrl);
-
-            if (prompt) {
-                modalPrompt.textContent = prompt;
-                controls.style.display = 'block';
-            } else {
-                controls.style.display = 'none';
-            }
-
-            modal.classList.add('show');
-        }
-
-        function navigateModalImage(direction) {
-            if (currentSessionImages.length === 0) return;
-
-            let newIndex = currentModalImageIndex + direction;
-
-            // 範囲外なら循環
-            if (newIndex < 0) {
-                newIndex = currentSessionImages.length - 1;
-            } else if (newIndex >= currentSessionImages.length) {
-                newIndex = 0;
-            }
-
-            const newImage = currentSessionImages[newIndex];
-            if (newImage) {
-                const modalImg = document.getElementById('image-modal-img');
-                const modalPrompt = document.getElementById('image-modal-prompt');
-                const controls = document.getElementById('image-modal-controls');
-
-                modalImg.src = newImage.url;
-                currentModalImageUrl = newImage.url;
-                currentModalPrompt = newImage.prompt || '';
-                currentModalImageIndex = newIndex;
-
-                if (newImage.prompt) {
-                    modalPrompt.textContent = newImage.prompt;
-                    controls.style.display = 'block';
-                } else {
-                    controls.style.display = 'none';
-                }
-            }
-        }
-
-        function closeImageModal(event) {
-            // コントロール部分をクリックした場合は閉じない
-            if (event && event.target.closest('.image-modal-content')) {
-                return;
-            }
-            const modal = document.getElementById('image-modal');
-            modal.classList.remove('show');
-        }
-
-        // モーダルボタンのイベント設定
-        document.getElementById('image-modal-copy').addEventListener('click', () => {
-            const btn = document.getElementById('image-modal-copy');
-            navigator.clipboard.writeText(currentModalPrompt).then(() => {
-                const originalText = btn.textContent;
-                btn.textContent = '✓ コピー済';
-                btn.classList.add('active');
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.classList.remove('active');
-                }, 1500);
-            });
-        });
-
-        document.getElementById('image-modal-edit').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const modal = document.getElementById('image-modal');
-            modal.classList.remove('show');
-            const promptEl = document.getElementById('image-modal-prompt');
-            openEditPromptModal(promptEl);
-        });
-
-        document.getElementById('image-modal-generate').addEventListener('click', async () => {
-            await generateImageWithPrompt(currentModalPrompt);
-        });
-
-        document.getElementById('image-modal-delete').addEventListener('click', () => {
-            if (!currentModalImageUrl) return;
-
-            // 配列から削除
-            const index = currentSessionImages.findIndex(img => img.url === currentModalImageUrl);
-            if (index !== -1) {
-                currentSessionImages.splice(index, 1);
-                saveCurrentSession();
-            }
-
-            // DOMから削除
-            const images = imageContainer.querySelectorAll('.generated-image');
-            images.forEach(img => {
-                if (img.src === currentModalImageUrl) {
-                    img.closest('.image-wrapper').remove();
-                }
-            });
-
-            // 画像がなくなったら空メッセージを表示
-            if (imageContainer.querySelectorAll('.image-wrapper').length === 0) {
-                imageContainer.innerHTML = '<div class="empty-message">画像がありません</div>';
-            }
-
-            // 次の画像があれば表示、なければモーダルを閉じる
-            if (currentSessionImages.length === 0) {
-                closeImageModal();
-            } else {
-                // 同じインデックスに画像があれば表示（次の画像）、なければ前の画像
-                let newIndex = index;
-                if (newIndex >= currentSessionImages.length) {
-                    newIndex = currentSessionImages.length - 1;
-                }
-                const newImage = currentSessionImages[newIndex];
-                if (newImage) {
-                    const modalImg = document.getElementById('image-modal-img');
-                    const modalPrompt = document.getElementById('image-modal-prompt');
-                    const controls = document.getElementById('image-modal-controls');
-
-                    modalImg.src = newImage.url;
-                    currentModalImageUrl = newImage.url;
-                    currentModalPrompt = newImage.prompt || '';
-                    currentModalImageIndex = newIndex;
-
-                    if (newImage.prompt) {
-                        modalPrompt.textContent = newImage.prompt;
-                        controls.style.display = 'block';
-                    } else {
-                        controls.style.display = 'none';
-                    }
-                } else {
-                    closeImageModal();
-                }
-            }
-        });
-
-        // 画像クリックで前後の画像に移動
-        document.getElementById('image-modal-img').addEventListener('click', (e) => {
-            if (currentSessionImages.length <= 1) return;
-
-            const img = e.target;
-            const rect = img.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const halfWidth = rect.width / 2;
-
-            if (clickX < halfWidth) {
-                // 左半分クリック: 前の画像
-                navigateModalImage(-1);
-            } else {
-                // 右半分クリック: 次の画像
-                navigateModalImage(1);
-            }
-        });
-
-        // プロンプト編集モーダル
-        const editPromptModal = document.getElementById('edit-prompt-modal');
-        const editPromptTextarea = document.getElementById('edit-prompt-textarea');
-        let currentEditingPromptEl = null;
-
-        function openEditPromptModal(promptEl) {
-            currentEditingPromptEl = promptEl;
-            editPromptTextarea.value = promptEl.textContent;
-            editPromptModal.classList.add('show');
-            editPromptTextarea.focus();
-        }
-
-        function closeEditPromptModal() {
-            editPromptModal.classList.remove('show');
-            currentEditingPromptEl = null;
-        }
-
-        document.getElementById('edit-prompt-modal-close').addEventListener('click', closeEditPromptModal);
-        document.getElementById('edit-prompt-cancel').addEventListener('click', closeEditPromptModal);
-
-        document.getElementById('edit-prompt-save').addEventListener('click', () => {
-            if (currentEditingPromptEl) {
-                const newPrompt = editPromptTextarea.value.trim();
-                currentEditingPromptEl.textContent = newPrompt;
-                // モーダルから編集した場合はcurrentModalPromptも更新
-                if (currentEditingPromptEl.id === 'image-modal-prompt') {
-                    currentModalPrompt = newPrompt;
-                }
-            }
-            closeEditPromptModal();
-        });
-
-        document.getElementById('edit-prompt-generate').addEventListener('click', async () => {
-            const newPrompt = editPromptTextarea.value.trim();
-            if (currentEditingPromptEl && newPrompt) {
-                currentEditingPromptEl.textContent = newPrompt;
-                // モーダルから編集した場合はcurrentModalPromptも更新
-                if (currentEditingPromptEl.id === 'image-modal-prompt') {
-                    currentModalPrompt = newPrompt;
-                }
-                closeEditPromptModal();
-                await generateImageWithPrompt(newPrompt);
-            }
-        });
-
-        editPromptModal.addEventListener('click', (e) => {
-            if (e.target === editPromptModal) {
-                closeEditPromptModal();
-            }
-        });
-
-        // UUID生成
-        function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0;
-                const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        }
-
-        // Runware APIで画像生成
-        async function generateImageWithRunware(imagePrompt) {
-            const selectedModel = imageModelSelect.value;
-
-            // モデル別のパラメータ設定
-            const modelParams = {
-                'runware:z-image@turbo': {
-                    steps: 9,
-                    CFGScale: 0,
-                    scheduler: undefined,
-                    positivePrefix: '',
-                    negativePrompt: ''
-                },
-                'civitai:481162@558910': {
-                    steps: 25,
-                    CFGScale: 7,
-                    scheduler: 'Euler',
-                    positivePrefix: 'score_9, score_8_up, score_7_up, ',
-                    negativePrompt: 'score_6, score_5, score_4, source_furry, source_pony, source_cartoon, 3d, blur,'
-                },
-                'civitai:457669@691683': {
-                    steps: 20,
-                    CFGScale: 7.5,
-                    scheduler: 'Default',
-                    positivePrefix: 'score_9, score_8_up, score_7_up, ',
-                    negativePrompt: 'score_6, score_5, score_4, source_furry, source_pony, source_cartoon, 3d, blur,'
-                },
-                'x:42@1761560': {
-                    steps: 30,
-                    CFGScale: 7,
-                    scheduler: 'Default',
-                    positivePrefix: 'masterpiece, ultra-HD, cinematic lighting, ',
-                    negativePrompt: 'bad anatomy, deformed hands, missing finger, worst quality, low quality, displeasing, watermark, text, artist name, signature, hearts,'
-                }
-            };
-            const params = modelParams[selectedModel] || modelParams['runware:z-image@turbo'];
-
-            const finalPrompt = params.positivePrefix + imagePrompt;
-
-            const requestBody = {
-                taskType: 'imageInference',
-                taskUUID: generateUUID(),
-                positivePrompt: finalPrompt,
-                model: selectedModel,
-                width: 1024,
-                height: 1024,
-                steps: params.steps,
-                CFGScale: params.CFGScale,
-                numberResults: 1,
-                outputType: 'URL',
-                includeCost: true
-            };
-
-            if (params.scheduler) {
-                requestBody.scheduler = params.scheduler;
-            }
-
-            if (params.negativePrompt) {
-                requestBody.negativePrompt = params.negativePrompt;
-            }
-
-            const response = await fetch(RUNWARE_API_URL, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${runwareApiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify([requestBody])
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Runware API エラー');
-            }
-
-            const data = await response.json();
-            const results = Array.isArray(data.data) ? data.data : [data.data];
-
-            for (const result of results) {
-                if (result.imageURL) {
-                    addImageToSidebar(result.imageURL, imagePrompt);
-                }
-                if (result.cost) {
-                    updateRunwareStats(result.cost);
-                }
-            }
-
-            if (results.some(r => r.imageURL)) {
-                rightSidebar.classList.remove('collapsed');
-                if (isMobile()) document.body.classList.add('image-panel-open');
-                fetchRunwareBalance();
-            } else {
-                throw new Error('画像を生成できませんでした');
-            }
-        }
-
-        // 指定プロンプトで画像生成
-        async function generateImageWithPrompt(imagePrompt) {
-            if (!apiKey) {
-                alert('APIキーが設定されていません。');
-                return;
-            }
-
-            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:') || imageModelSelect.value.startsWith('x:');
-            if (isRunware && !runwareApiKey) {
-                alert('Runware APIキーが設定されていません。');
-                return;
-            }
-
-            generateImageBtn.disabled = true;
-            generateImageBtn.textContent = '⏳ 生成中...';
-
-            try {
-                if (isRunware) {
-                    await generateImageWithRunware(imagePrompt);
-                } else {
-                    // OpenRouter API (Gemini等)
-                    const imageResponse = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: imageModelSelect.value,
-                            messages: [{ role: 'user', content: imagePrompt }],
-                            modalities: ['text', 'image'],
-                            stream: false
-                        })
-                    });
-
-                    if (!imageResponse.ok) {
-                        throw new Error('画像生成に失敗しました');
-                    }
-
-                    const imageResult = await imageResponse.json();
-                    const choice = imageResult.choices?.[0];
-                    const message = choice?.message;
-
-                    const finishReason = choice?.finish_reason;
-                    const nativeReason = choice?.native_finish_reason;
-                    if (finishReason !== 'stop' || (nativeReason && nativeReason !== 'STOP')) {
-                        const blockReasons = {
-                            'content_filter': 'コンテンツフィルター',
-                            'PROHIBITED_CONTENT': 'コンテンツフィルター',
-                            'IMAGE_PROHIBITED_CONTENT': '画像コンテンツフィルター',
-                            'IMAGE_SAFETY': '画像安全フィルター',
-                            'SAFETY': '安全フィルター'
-                        };
-                        const reason = blockReasons[nativeReason] || blockReasons[finishReason] || '不明な理由';
-                        alert(`${reason}により画像生成がブロックされました`);
-                        return;
-                    }
-
-                    if (message?.images && Array.isArray(message.images)) {
-                        for (const img of message.images) {
-                            if (img.image_url?.url) {
-                                addImageToSidebar(img.image_url.url, imagePrompt);
-                            }
-                        }
-                        rightSidebar.classList.remove('collapsed');
-                        if (isMobile()) document.body.classList.add('image-panel-open');
-                    } else {
-                        alert('画像を生成できませんでした');
-                    }
-
-                    if (imageResult.usage) {
-                        updateStats(imageResult.usage.cost || 0);
-                    }
-                }
-            } catch (error) {
-                alert(`エラー: ${error.message}`);
-            } finally {
-                generateImageBtn.disabled = false;
-                generateImageBtn.textContent = '🎨 画像生成';
-            }
-        }
-
-        // 画像生成ボタンのクリック処理
-        async function generateImageFromContext() {
-            if (!apiKey) {
-                alert('APIキーが設定されていません。');
-                return;
-            }
-
-            const isRunware = imageModelSelect.value.startsWith('runware:') || imageModelSelect.value.startsWith('civitai:') || imageModelSelect.value.startsWith('x:');
-            if (isRunware && !runwareApiKey) {
-                alert('Runware APIキーが設定されていません。設定画面で入力してください。');
-                document.getElementById('settings-modal').classList.add('show');
-                return;
-            }
-
-            if (messages.length === 0) {
-                alert('会話履歴がありません。まず会話を始めてください。');
-                return;
-            }
-
-            generateImageBtn.disabled = true;
-            generateImageBtn.textContent = '⏳ 生成中...';
-
-            try {
-                // 1. 会話用モデルにプロンプト生成を依頼
-                const promptRequest = [...messages, {
-                    role: 'user',
-                    content: imageGenPrompt
-                }];
-
-                const promptResponse = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: chatModelSelect.value,
-                        messages: promptRequest,
-                        stream: false
-                    })
-                });
-
-                if (!promptResponse.ok) {
-                    throw new Error('プロンプト生成に失敗しました');
-                }
-
-                const promptResult = await promptResponse.json();
-                const imagePrompt = promptResult.choices?.[0]?.message?.content?.trim();
-
-                if (!imagePrompt) {
-                    throw new Error('プロンプトを取得できませんでした');
-                }
-
-                // 使用量を記録
-                if (promptResult.usage) {
-                    updateStats(promptResult.usage.cost || 0);
-                }
-
-                // 2. 画像生成
-                if (isRunware) {
-                    // Runware API
-                    await generateImageWithRunware(imagePrompt);
-                } else {
-                    // OpenRouter API (Gemini等)
-                    const imageResponse = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: imageModelSelect.value,
-                            messages: [{ role: 'user', content: imagePrompt }],
-                            modalities: ['text', 'image'],
-                            stream: false
-                        })
-                    });
-
-                    if (!imageResponse.ok) {
-                        throw new Error('画像生成に失敗しました');
-                    }
-
-                    const imageResult = await imageResponse.json();
-                    console.log('Image API Response:', imageResult);
-
-                    const choice = imageResult.choices?.[0];
-                    const message = choice?.message;
-
-                    // ブロックチェック
-                    const finishReason = choice?.finish_reason;
-                    const nativeReason = choice?.native_finish_reason;
-                    if (finishReason !== 'stop' || (nativeReason && nativeReason !== 'STOP')) {
-                        const blockReasons = {
-                            'content_filter': 'コンテンツフィルター',
-                            'PROHIBITED_CONTENT': 'コンテンツフィルター',
-                            'IMAGE_PROHIBITED_CONTENT': '画像コンテンツフィルター',
-                            'IMAGE_SAFETY': '画像安全フィルター',
-                            'SAFETY': '安全フィルター'
-                        };
-                        const reason = blockReasons[nativeReason] || blockReasons[finishReason] || '不明な理由';
-                        alert(`${reason}により画像生成がブロックされました`);
-                        return;
-                    }
-
-                    // 画像を表示
-                    if (message?.images && Array.isArray(message.images)) {
-                        for (const img of message.images) {
-                            if (img.image_url?.url) {
-                                addImageToSidebar(img.image_url.url, imagePrompt);
-                            }
-                        }
-                        rightSidebar.classList.remove('collapsed');
-                        if (isMobile()) document.body.classList.add('image-panel-open');
-                    } else {
-                        alert('画像を生成できませんでした');
-                    }
-
-                    // 使用量を記録
-                    if (imageResult.usage) {
-                        updateStats(imageResult.usage.cost || 0);
-                    }
-                }
-
-            } catch (error) {
-                alert(`エラー: ${error.message}`);
-            } finally {
-                generateImageBtn.disabled = false;
-                generateImageBtn.textContent = '🎨 画像生成';
-            }
-        }
-
-        async function streamResponse(msgs) {
-            // ストリーミング用のメッセージ要素を作成
-            const div = document.createElement('div');
-            div.className = 'message assistant';
-            chatContainer.appendChild(div);
-
-            let fullContent = '';
-            let reasoning = '';
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: chatModelSelect.value,
-                        messages: msgs,
-                        stream: true
-                    })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    const errorMsg = error.error?.message || response.statusText;
-                    if (errorMsg.includes('User not found') || errorMsg.includes('Invalid API key')) {
-                        div.textContent = 'エラー: APIキーが無効化されていないか確認してください';
-                    } else {
-                        div.textContent = `エラー: ${errorMsg}`;
-                    }
-                    return;
-                }
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
-                            if (data === '[DONE]') continue;
-
-                            try {
-                                const parsed = JSON.parse(data);
-                                const delta = parsed.choices?.[0]?.delta;
-
-                                if (delta?.reasoning) {
-                                    reasoning += delta.reasoning;
-                                    updateStreamingMessage(div, fullContent, reasoning);
-                                }
-                                if (delta?.content) {
-                                    fullContent += delta.content;
-                                    updateStreamingMessage(div, fullContent, reasoning);
-                                }
-
-                                // 使用量情報（最後のチャンクに含まれる場合）
-                                if (parsed.usage) {
-                                    const cost = parsed.usage.cost || 0;
-                                    updateStats(cost);
-                                }
-                            } catch (e) {
-                                // JSON解析エラーは無視
-                            }
-                        }
-                    }
-                }
-
-                // 完了後、メッセージを保存
-                if (fullContent) {
-                    messages.push({ role: 'assistant', content: fullContent });
-                    chatHistory.push({ role: 'assistant', content: fullContent, reasoning: reasoning || null });
-                    saveCurrentSession();
-                    // 最終的なパース処理を適用
-                    updateStreamingMessage(div, fullContent, reasoning, true);
-
-                    // 画像パネルが開いていれば自動で画像生成
-                    if (!rightSidebar.classList.contains('collapsed')) {
-                        generateImageFromContext();
-                    }
-                }
-
-            } catch (error) {
-                div.textContent = `エラー: ${error.message}`;
-            }
-
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function updateStreamingMessage(div, content, reasoning, final = false) {
-            if (final) {
-                // 最終更新時はパース処理を適用
-                const escapedContent = escapeHtml(content);
-                let parsedContent = parseClickableWords(escapedContent);
-                parsedContent = parseDialogueColors(parsedContent);
-
-                if (reasoning) {
-                    const toggleId = 'reasoning-' + Date.now() + Math.random();
-                    div.innerHTML = `
-                        <div class="reasoning-toggle" onclick="toggleReasoning('${toggleId}')">
-                            💭 思考プロセスを表示
-                        </div>
-                        <div id="${toggleId}" class="reasoning-content">
-                            <div class="reasoning">${escapeHtml(reasoning)}</div>
-                        </div>
-                        ${parsedContent}
-                    `;
-                } else {
-                    div.innerHTML = parsedContent;
-                }
-            } else {
-                // ストリーミング中も色付けを適用
-                const escapedContent = escapeHtml(content);
-                const coloredContent = parseDialogueColors(escapedContent);
-
-                let html = '';
-                if (reasoning) {
-                    html += `<div class="reasoning" style="margin-bottom: 0.5rem;">${escapeHtml(reasoning)}</div>`;
-                }
-                html += coloredContent;
-                div.innerHTML = html;
-            }
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        // ========== リサイズ機能 ==========
-        const resizeHandle = document.getElementById('resize-handle');
+        loadCachedData();
+        initResize();
+    });
+
+    // リサイズ機能
+    function initResize() {
+        const handle = document.getElementById('resize-handle');
+        const container = document.querySelector('.game-container');
+        const chatArea = document.getElementById('chat-area');
         let isResizing = false;
-        let startPos = 0;
-        let startSize = 0;
-        const MIN_WIDTH = 150;
-        const MAX_WIDTH = 800;
-        const MIN_HEIGHT = 100;
-        const MAX_HEIGHT_RATIO = 0.7; // 画面の70%まで
 
-        resizeHandle.addEventListener('mousedown', (e) => {
+        handle.addEventListener('mousedown', (e) => {
             isResizing = true;
-            if (isMobile()) {
-                startPos = e.clientY;
-                startSize = rightSidebar.offsetHeight;
-            } else {
-                startPos = e.clientX;
-                startSize = rightSidebar.offsetWidth;
-            }
-            document.body.classList.add('resizing');
-            resizeHandle.classList.add('dragging');
-            e.preventDefault();
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
         });
 
         document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
+            const containerRect = container.getBoundingClientRect();
+            const newChatWidth = containerRect.right - e.clientX;
+            const minWidth = 250;
+            const maxWidth = containerRect.width - 300;
 
-            if (isMobile()) {
-                // モバイル: 高さを変更
-                const deltaY = e.clientY - startPos;
-                let newHeight = startSize + deltaY;
-                const maxHeight = window.innerHeight * MAX_HEIGHT_RATIO;
-                newHeight = Math.max(MIN_HEIGHT, Math.min(maxHeight, newHeight));
-                rightSidebar.style.height = newHeight + 'px';
-            } else {
-                // デスクトップ: 幅を変更
-                const deltaX = startPos - e.clientX;
-                let newWidth = startSize + deltaX;
-                newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
-                rightSidebar.style.width = newWidth + 'px';
+            if (newChatWidth >= minWidth && newChatWidth <= maxWidth) {
+                container.style.gridTemplateColumns = `1fr 5px ${newChatWidth}px`;
             }
         });
 
         document.addEventListener('mouseup', () => {
             if (isResizing) {
                 isResizing = false;
-                document.body.classList.remove('resizing');
-                resizeHandle.classList.remove('dragging');
-            }
-        });
-
-        // タッチ対応
-        resizeHandle.addEventListener('touchstart', (e) => {
-            isResizing = true;
-            if (isMobile()) {
-                startPos = e.touches[0].clientY;
-                startSize = rightSidebar.offsetHeight;
-            } else {
-                startPos = e.touches[0].clientX;
-                startSize = rightSidebar.offsetWidth;
-            }
-            document.body.classList.add('resizing');
-            resizeHandle.classList.add('dragging');
-            e.preventDefault();
-        });
-
-        document.addEventListener('touchmove', (e) => {
-            if (!isResizing) return;
-
-            if (isMobile()) {
-                const deltaY = e.touches[0].clientY - startPos;
-                let newHeight = startSize + deltaY;
-                const maxHeight = window.innerHeight * MAX_HEIGHT_RATIO;
-                newHeight = Math.max(MIN_HEIGHT, Math.min(maxHeight, newHeight));
-                rightSidebar.style.height = newHeight + 'px';
-            } else {
-                const deltaX = startPos - e.touches[0].clientX;
-                let newWidth = startSize + deltaX;
-                newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
-                rightSidebar.style.width = newWidth + 'px';
-            }
-        });
-
-        document.addEventListener('touchend', () => {
-            if (isResizing) {
-                isResizing = false;
-                document.body.classList.remove('resizing');
-                resizeHandle.classList.remove('dragging');
-            }
-        });
-
-        // 画面サイズ変更時にインラインスタイルをリセット
-        window.addEventListener('resize', () => {
-            if (isMobile()) {
-                rightSidebar.style.width = '';
-            } else {
-                rightSidebar.style.height = '';
-            }
-        });
-
-        // ========== イベントリスナー ==========
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            // パネルを閉じる
-            historyList.classList.remove('show');
-            projectList.classList.remove('show');
-        });
-
-        headerMenuToggle.addEventListener('click', () => {
-            sidebar.classList.remove('collapsed');
-        });
-
-        rightSidebarMenuToggle.addEventListener('click', () => {
-            sidebar.classList.remove('collapsed');
-        });
-
-        rightSidebarToggle.addEventListener('click', () => {
-            rightSidebar.classList.toggle('collapsed');
-            // 閉じるときはインラインスタイルをリセット
-            if (rightSidebar.classList.contains('collapsed')) {
-                rightSidebar.style.width = '';
-                rightSidebar.style.height = '';
-            }
-            if (isMobile()) {
-                rightSidebar.classList.toggle('show-mobile');
-                document.body.classList.toggle('image-panel-open', !rightSidebar.classList.contains('collapsed'));
-            }
-        });
-
-        headerImageToggle.addEventListener('click', () => {
-            rightSidebar.classList.remove('collapsed');
-            if (isMobile()) {
-                rightSidebar.classList.add('show-mobile');
-                document.body.classList.add('image-panel-open');
-            }
-        });
-
-        sidebarImageToggle.addEventListener('click', () => {
-            rightSidebar.classList.remove('collapsed');
-            if (isMobile()) {
-                rightSidebar.classList.add('show-mobile');
-                document.body.classList.add('image-panel-open');
-            }
-        });
-
-        document.getElementById('menu-new-chat').addEventListener('click', () => {
-            if (messages.length === 0) return;
-            startNewSession();
-            closeMobileMenu();
-        });
-
-        document.getElementById('menu-history').addEventListener('click', toggleHistoryPanel);
-        document.getElementById('menu-projects').addEventListener('click', toggleProjectPanel);
-
-        document.getElementById('project-cancel').addEventListener('click', closeProjectModal);
-        document.getElementById('project-save').addEventListener('click', saveProject);
-        document.getElementById('project-delete').addEventListener('click', () => {
-            if (editingProjectId) {
-                deleteProject(editingProjectId);
-            }
-        });
-
-        projectModal.addEventListener('click', (e) => {
-            if (e.target === projectModal) closeProjectModal();
-        });
-
-        const settingsModal = document.getElementById('settings-modal');
-
-        document.getElementById('menu-settings').addEventListener('click', () => {
-            settingsModal.classList.add('show');
-        });
-
-        document.getElementById('settings-modal-close').addEventListener('click', () => {
-            settingsModal.classList.remove('show');
-        });
-
-        document.getElementById('settings-close').addEventListener('click', () => {
-            settingsModal.classList.remove('show');
-        });
-
-        settingsModal.addEventListener('click', (e) => {
-            if (e.target === settingsModal) settingsModal.classList.remove('show');
-        });
-
-        // 強調設定のイベントリスナー
-        ['name1', 'nickname1', 'color1', 'name2', 'nickname2', 'color2'].forEach(id => {
-            document.getElementById(id).addEventListener('input', saveHighlightSettings);
-        });
-
-        sendBtn.addEventListener('click', sendMessage);
-        clearCostBtn.addEventListener('click', clearCost);
-        chatModelSelect.addEventListener('change', saveGlobalSettings);
-        imageModelSelect.addEventListener('change', () => {
-            updateRunwareApiKeyVisibility();
-            saveGlobalSettings();
-        });
-        runwareApiKeyInput.addEventListener('input', () => {
-            runwareApiKey = runwareApiKeyInput.value;
-            saveGlobalSettings();
-            if (runwareApiKey) {
-                fetchRunwareBalance();
-            }
-        });
-        generateImageBtn.addEventListener('click', generateImageFromContext);
-        clickPromptInput.addEventListener('input', () => {
-            clickPrompt = clickPromptInput.value || '{word}について詳しく';
-            saveGlobalSettings();
-        });
-
-        // 画像生成プロンプト編集モーダル
-        document.getElementById('open-image-prompt-editor').addEventListener('click', () => {
-            imageGenPromptInput.value = imageGenPrompt;
-            imagePromptModal.classList.add('show');
-        });
-
-        document.getElementById('image-prompt-modal-close').addEventListener('click', () => {
-            imagePromptModal.classList.remove('show');
-        });
-
-        document.getElementById('image-prompt-save').addEventListener('click', () => {
-            imageGenPrompt = imageGenPromptInput.value || DEFAULT_IMAGE_GEN_PROMPT;
-            updateImagePromptPreview();
-            saveGlobalSettings();
-            imagePromptModal.classList.remove('show');
-        });
-
-        document.getElementById('image-prompt-reset').addEventListener('click', () => {
-            imageGenPromptInput.value = DEFAULT_IMAGE_GEN_PROMPT;
-        });
-
-        imagePromptModal.addEventListener('click', (e) => {
-            if (e.target === imagePromptModal) {
-                imagePromptModal.classList.remove('show');
-            }
-        });
-
-        apiKeyInput.addEventListener('input', () => {
-            apiKey = apiKeyInput.value;
-            saveGlobalSettings();
-            if (apiKey) {
-                fetchCredits();
-            }
-        });
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-
-
-        // ========== 初期化 ==========
-        loadSessions();
-        loadProjects();
-        loadGlobalSettings();
-
-        // デフォルト値を設定
-        if (!clickPromptInput.value) {
-            clickPromptInput.value = clickPrompt;
-        }
-        updateImagePromptPreview();
-
-        if (currentSessionId) {
-            const session = sessions.find(s => s.id === currentSessionId);
-            if (session) {
-                currentProjectId = session.projectId || null;
-                messages = [...session.messages];
-                chatHistory = [...session.chatHistory];
-                chatHistory.forEach(item => {
-                    addMessageToDOM(item.role, item.content, item.reasoning);
-                });
-                // 画像を復元（新形式と旧形式の両方に対応）
-                if (session.images && session.images.length > 0) {
-                    currentSessionImages = [...session.images];
-                    [...session.images].reverse().forEach(img => {
-                        addImageToSidebar(img.url, img.prompt || '', true);
-                    });
-                } else if (session.lastImage && session.lastImage.url) {
-                    currentSessionImages = [{ ...session.lastImage }];
-                    addImageToSidebar(session.lastImage.url, session.lastImage.prompt || '', true);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                // 幅を保存
+                const cols = container.style.gridTemplateColumns;
+                const match = cols.match(/(\d+)px$/);
+                if (match) {
+                    localStorage.setItem('chat_width', match[1]);
                 }
             }
+        });
+    }
+
+    // 文字サイズ切り替え
+    function setFontSize(size) {
+        const messagesDiv = document.getElementById('chat-messages');
+        const dialogueDiv = document.getElementById('scene-dialogue');
+        messagesDiv.classList.remove('font-small', 'font-large');
+        if (dialogueDiv) dialogueDiv.classList.remove('font-small', 'font-large');
+
+        document.querySelectorAll('.font-size-btns button').forEach(btn => btn.classList.remove('active'));
+
+        if (size === 'small') {
+            messagesDiv.classList.add('font-small');
+            if (dialogueDiv) dialogueDiv.classList.add('font-small');
+            document.getElementById('font-small').classList.add('active');
+        } else if (size === 'large') {
+            messagesDiv.classList.add('font-large');
+            if (dialogueDiv) dialogueDiv.classList.add('font-large');
+            document.getElementById('font-large').classList.add('active');
+        } else {
+            document.getElementById('font-normal').classList.add('active');
         }
 
-        updateCurrentProjectDisplay();
-        fetchCredits(); // 初期化時にクレジット残高を取得
-        if (!isMobile()) {
-            messageInput.focus();
+        localStorage.setItem('chat_font_size', size);
+    }
+
+    function toggleSettings() {
+        document.getElementById('settings-panel').classList.toggle('active');
+    }
+
+    function doSaveSettings() {
+        const gasUrl = document.getElementById('gasUrl').value.trim();
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const chatApiKey = document.getElementById('chatApiKey').value.trim();
+        const chatModel = document.getElementById('chatModel').value;
+
+        saveSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY, gasUrl, apiKey);
+        if (chatApiKey) localStorage.setItem(CHAT_API_KEY, chatApiKey);
+        if (chatModel) localStorage.setItem(CHAT_MODEL_KEY, chatModel);
+
+        showSettingsStatus('設定を保存しました');
+    }
+
+    function showSettingsStatus(msg, isError = false) {
+        const el = document.getElementById('settings-status');
+        el.textContent = msg;
+        el.style.color = isError ? '#e74c3c' : '#27ae60';
+        setTimeout(() => el.textContent = '', 3000);
+    }
+
+    function saveCachedData() {
+        localStorage.setItem(GAME_DATA_KEY, JSON.stringify({ models, characters, places, actions }));
+    }
+
+    function loadCachedData() {
+        try {
+            const cached = localStorage.getItem(GAME_DATA_KEY);
+            if (cached) {
+                const data = JSON.parse(cached);
+                models = data.models || {};
+                characters = data.characters || [];
+                places = data.places || [];
+                actions = data.actions || [];
+                updateAllSelects();
+            }
+        } catch (e) {
+            console.error('Cache load error:', e);
         }
-    </script>
+    }
+
+    async function loadAllFromGas() {
+        const baseUrl = document.getElementById('gasUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        doSaveSettings();
+        showSettingsStatus('読み込み中...', false);
+
+        try {
+            const [modelData, characterData, placeData, actionData] = await Promise.all([
+                fetchGasData(baseUrl, 'model'),
+                fetchGasData(baseUrl, 'character'),
+                fetchGasData(baseUrl, 'place'),
+                fetchGasData(baseUrl, 'action')
+            ]);
+
+            models = parseModels(modelData);
+            characters = parseCharacters(characterData);
+            places = parsePlaces(placeData);
+            actions = parseActionsWithCompositions(actionData);
+
+            saveCachedData();
+            updateAllSelects();
+            showSettingsStatus(`読込完了: キャラ${characters.length}, 場所${places.length}, アクション${actions.length}`);
+        } catch (error) {
+            console.error(error);
+            showSettingsStatus('エラー: ' + error.message, true);
+        }
+    }
+
+    function updateAllSelects() {
+        // キャラクター
+        const charSelect = document.getElementById('character');
+        charSelect.innerHTML = '<option value="">-- 選択 --</option>';
+        characters.forEach((char, i) => {
+            charSelect.innerHTML += `<option value="${i}">${char.name}${char.series ? ' (' + char.series + ')' : ''}</option>`;
+        });
+
+        // 場所
+        const placeSelect = document.getElementById('place');
+        placeSelect.innerHTML = '<option value="">-- 選択 --</option>';
+        places.forEach((place, i) => {
+            placeSelect.innerHTML += `<option value="${i}">${place.name}</option>`;
+        });
+
+        // アクション
+        const actionSelect = document.getElementById('action');
+        actionSelect.innerHTML = '<option value="">-- 選択 --</option>';
+        actions.forEach((action, i) => {
+            actionSelect.innerHTML += `<option value="${i}">${action.name}</option>`;
+        });
+    }
+
+    function onCharacterChange() {
+        const idx = document.getElementById('character').value;
+        const char = idx !== '' ? characters[idx] : null;
+
+        document.getElementById('current-char').textContent = char ? char.name : 'キャラクター未選択';
+        document.getElementById('chat-title').textContent = char ? `${char.name}とチャット` : 'チャット';
+
+        if (char) {
+            clearChat();
+            addMessage('system', `${char.name}が現れた！`);
+            if (char.profile) {
+                addMessage('system', `[${char.profile}]`);
+            }
+        }
+    }
+
+    function onPlaceChange() {
+        const idx = document.getElementById('place').value;
+        const place = idx !== '' ? places[idx] : null;
+        document.getElementById('current-place').textContent = place ? place.name : '場所未選択';
+
+        if (place) {
+            addMessage('system', `場所が「${place.name}」に変わった`);
+        }
+    }
+
+    function getFirstModel() {
+        return Object.keys(models)[0] || null;
+    }
+
+    function selectBestComposition(compositions) {
+        if (!compositions || compositions.length === 0) return null;
+        const best = compositions.find(c => c.quality === 'BEST' || c.quality === 'best');
+        if (best) return best;
+        const good = compositions.find(c => c.quality === 'Good' || c.quality === 'good');
+        if (good) return good;
+        return compositions[0];
+    }
+
+    function selectTopCompositions(compositions, count = 3) {
+        if (!compositions || compositions.length === 0) return [];
+
+        // 優先度でソート
+        const priority = { 'BEST': 0, 'best': 0, 'Good': 1, 'good': 1 };
+        const sorted = [...compositions].sort((a, b) => {
+            const pa = priority[a.quality] ?? 2;
+            const pb = priority[b.quality] ?? 2;
+            return pa - pb;
+        });
+
+        return sorted.slice(0, count);
+    }
+
+    function buildScenePrompt() {
+        const charIdx = document.getElementById('character').value;
+        const placeIdx = document.getElementById('place').value;
+        const modelId = getFirstModel();
+        const model = models[modelId] || {};
+        const char = charIdx !== '' ? characters[charIdx] : null;
+        const place = placeIdx !== '' ? places[placeIdx] : null;
+        const action = actions[0] || {};
+        const comp = selectBestComposition(action.compositions);
+
+        const parts = [
+            model.qualityPositive || '',
+            char?.tag || '',
+            place?.tag || '',
+            action.prompt || '',
+            comp?.tag || comp?.name || 'front view',
+            place?.additionalTag || '',
+            char?.additionalTag || ''
+        ].filter(p => p);
+
+        return parts.join(', ');
+    }
+
+    function buildActionPrompt(actionIdx, composition = null) {
+        const charIdx = document.getElementById('character').value;
+        const placeIdx = document.getElementById('place').value;
+        const modelId = getFirstModel();
+        const model = models[modelId] || {};
+        const char = charIdx !== '' ? characters[charIdx] : null;
+        const place = placeIdx !== '' ? places[placeIdx] : null;
+        const action = actions[actionIdx] || {};
+        const comp = composition || selectBestComposition(action.compositions);
+
+        const parts = [
+            model.qualityPositive || '',
+            char?.tag || '',
+            place?.tag || '',
+            action.prompt || '',
+            comp?.tag || comp?.name || '',
+            place?.additionalTag || '',
+            char?.additionalTag || ''
+        ].filter(p => p);
+
+        return parts.join(', ');
+    }
+
+    async function generateSceneImage() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを設定してください');
+            toggleSettings();
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('GASからデータを読み込んでください');
+            return;
+        }
+
+        const charIdx = document.getElementById('character').value;
+        const placeIdx = document.getElementById('place').value;
+        if (charIdx === '' && placeIdx === '') {
+            alert('キャラクターまたは場所を選択してください');
+            return;
+        }
+
+        const btn = document.getElementById('scene-btn');
+        btn.disabled = true;
+        btn.textContent = '生成中...';
+
+        const sceneDiv = document.getElementById('scene-image');
+        sceneDiv.innerHTML = '<div class="scene-placeholder">シーン画像を生成中...</div>';
+
+        try {
+            const model = models[modelId];
+            const prompt = buildScenePrompt();
+            const result = await generateImage(apiKey, modelId, prompt, {
+                negativePrompt: model?.qualityNegative || '',
+                steps: model?.steps || 20,
+                cfgScale: model?.cfgScale || 7,
+                scheduler: model?.scheduler || 'Default',
+                width: 1024,
+                height: 1024
+            });
+
+            currentSceneUrl = result.imageURL;
+            const dialogueDiv = document.getElementById('scene-dialogue');
+            const dialogueHtml = dialogueDiv ? dialogueDiv.outerHTML : '<div class="scene-dialogue" id="scene-dialogue"></div>';
+            sceneDiv.innerHTML = `<img src="${result.imageURL}" alt="Scene" onclick="window.open('${result.imageURL}', '_blank')">${dialogueHtml}`;
+            addMessage('system', 'シーン画像が更新されました');
+        } catch (error) {
+            console.error(error);
+            const dialogueDiv = document.getElementById('scene-dialogue');
+            const dialogueHtml = dialogueDiv ? dialogueDiv.outerHTML : '<div class="scene-dialogue" id="scene-dialogue"></div>';
+            sceneDiv.innerHTML = `<div class="scene-placeholder" style="color:#e74c3c;">エラー: ${error.message}</div>${dialogueHtml}`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'シーン生成';
+        }
+    }
+
+    async function executeAction() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを設定してください');
+            toggleSettings();
+            return;
+        }
+
+        const modelId = getFirstModel();
+        if (!modelId) {
+            alert('GASからデータを読み込んでください');
+            return;
+        }
+
+        const actionIdx = document.getElementById('action').value;
+        if (actionIdx === '') {
+            alert('アクションを選択してください');
+            return;
+        }
+
+        const action = actions[actionIdx];
+        const btn = document.getElementById('action-btn');
+        btn.disabled = true;
+        btn.textContent = '実行中...';
+
+        const sceneDiv = document.getElementById('scene-image');
+        const thumbsDiv = document.getElementById('scene-thumbnails');
+
+        // ローディング表示（画像は消さない）
+        let loadingDiv = document.getElementById('scene-loading');
+        if (!loadingDiv) {
+            loadingDiv = document.createElement('div');
+            loadingDiv.id = 'scene-loading';
+            loadingDiv.className = 'scene-loading';
+            sceneDiv.parentElement.appendChild(loadingDiv);
+        }
+        loadingDiv.textContent = `「${action.name}」を実行中...`;
+        loadingDiv.style.display = 'block';
+
+        try {
+            const model = models[modelId];
+
+            // 優先度の高い構図を3つ選択
+            const topCompositions = selectTopCompositions(action.compositions, 3);
+            if (topCompositions.length === 0) {
+                topCompositions.push({ name: 'front view', tag: 'front view' });
+            }
+
+            // 各構図で画像生成（並列）
+            const imagePromises = topCompositions.map(comp => {
+                const prompt = buildActionPrompt(actionIdx, comp);
+                return generateImage(apiKey, modelId, prompt, {
+                    negativePrompt: model?.qualityNegative || '',
+                    steps: model?.steps || 20,
+                    cfgScale: model?.cfgScale || 7,
+                    scheduler: model?.scheduler || 'Default',
+                    width: 1024,
+                    height: 1024
+                }).then(result => ({
+                    url: result.imageURL,
+                    composition: comp.name,
+                    quality: comp.quality
+                })).catch(e => {
+                    console.error(`Image gen failed for ${comp.name}:`, e);
+                    return null;
+                });
+            });
+
+            // LLMリクエストも並列（画像枚数分のパターンを要求）
+            const reactionPromise = getCharacterReaction(action, topCompositions.length);
+
+            // 全て完了を待つ
+            const results = await Promise.all([...imagePromises, reactionPromise]);
+            const imageResults = results.slice(0, -1).filter(r => r !== null);
+            const patterns = results[results.length - 1] || [];
+
+            // ローディング非表示
+            loadingDiv.style.display = 'none';
+
+            if (imageResults.length > 0) {
+                // 各画像にセリフパターンを紐付け
+                const imagesWithDialogue = imageResults.map((img, i) => ({
+                    ...img,
+                    narration: patterns[i]?.narration || '',
+                    dialogue: patterns[i]?.dialogue || ''
+                }));
+
+                // 新しい画像を先頭に追加
+                generatedImages = [...imagesWithDialogue, ...generatedImages];
+                displayGeneratedImages(0);
+
+                // 最初のパターンをチャット欄に表示
+                displayReactionPatterns(patterns);
+
+                addMessage('system', `「${action.name}」を実行した！（${imageResults.length}枚生成、計${generatedImages.length}枚）`);
+            } else {
+                addMessage('system', '画像生成に失敗しました');
+            }
+        } catch (error) {
+            console.error(error);
+            const loadingDiv = document.getElementById('scene-loading');
+            if (loadingDiv) loadingDiv.style.display = 'none';
+            addMessage('system', `エラー: ${error.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'アクション実行';
+        }
+    }
+
+    function displayGeneratedImages(activeIndex) {
+        const sceneDiv = document.getElementById('scene-image');
+        const thumbsDiv = document.getElementById('scene-thumbnails');
+
+        if (generatedImages.length === 0) return;
+
+        currentImageIndex = activeIndex;
+        const activeImg = generatedImages[activeIndex];
+        currentSceneUrl = activeImg.url;
+
+        // 画像を更新（dialogue divも再作成）
+        sceneDiv.innerHTML = `<img src="${activeImg.url}" alt="${activeImg.composition}" onclick="window.open('${activeImg.url}', '_blank')"><div class="scene-dialogue" id="scene-dialogue"></div>`;
+
+        // この画像に紐付くセリフを表示
+        if (activeImg.dialogue) {
+            showSceneDialogue(activeImg.dialogue);
+        } else {
+            const dialogueDiv = document.getElementById('scene-dialogue');
+            if (dialogueDiv) dialogueDiv.style.display = 'none';
+        }
+
+        // サムネイル表示
+        if (generatedImages.length > 1) {
+            thumbsDiv.innerHTML = generatedImages.map((img, i) =>
+                `<img src="${img.url}" class="scene-thumb ${i === activeIndex ? 'active' : ''}"
+                      onclick="displayGeneratedImages(${i})"
+                      title="${img.composition} [${img.quality || ''}]">`
+            ).join('');
+            thumbsDiv.style.display = 'flex';
+        } else {
+            thumbsDiv.style.display = 'none';
+        }
+    }
+
+    // キーボード操作
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        if (e.key === 'ArrowLeft' && generatedImages.length > 1) {
+            const newIndex = (currentImageIndex - 1 + generatedImages.length) % generatedImages.length;
+            displayGeneratedImages(newIndex);
+        } else if (e.key === 'ArrowRight' && generatedImages.length > 1) {
+            const newIndex = (currentImageIndex + 1) % generatedImages.length;
+            displayGeneratedImages(newIndex);
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const actionSelect = document.getElementById('action');
+            const currentIdx = parseInt(actionSelect.value);
+            if (currentIdx < actions.length - 1) {
+                actionSelect.value = currentIdx + 1;
+                executeAction();
+            } else if (actions.length > 0) {
+                actionSelect.value = 0;
+                executeAction();
+            }
+        }
+    });
+
+    async function getCharacterReaction(action, patternCount = 1) {
+        const charIdx = document.getElementById('character').value;
+        if (charIdx === '') return [];
+
+        const chatApiKey = document.getElementById('chatApiKey').value.trim();
+        if (!chatApiKey) return [];
+
+        const char = characters[charIdx];
+        const placeIdx = document.getElementById('place').value;
+        const place = placeIdx !== '' ? places[placeIdx] : null;
+
+        try {
+            const systemPrompt = buildCharacterSystemPrompt(char, true, patternCount);
+            const actionContext = `[アクション: ${action.name}]\n[状況: ${action.prompt || action.name}]`;
+
+            const messages = [
+                { role: 'system', content: systemPrompt },
+                ...chatHistory.map(m => ({ role: m.role, content: m.content })),
+                { role: 'user', content: actionContext }
+            ];
+
+            const chatModel = document.getElementById('chatModel').value || 'x-ai/grok-4.1-fast';
+            console.log('[Reaction] Model:', chatModel);
+            console.log('[Reaction] Messages:', JSON.stringify(messages, null, 2));
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${chatApiKey}`
+                },
+                body: JSON.stringify({
+                    model: chatModel,
+                    messages: messages,
+                    max_tokens: 300 * patternCount,
+                    stream: false
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('Reaction API error:', JSON.stringify(error, null, 2));
+                addMessage('system', `リアクションエラー: ${JSON.stringify(error.error)}`);
+                return [];
+            }
+
+            const data = await response.json();
+            if (data.choices && data.choices[0]) {
+                const reply = data.choices[0].message.content;
+                chatHistory.push({ role: 'user', content: actionContext });
+
+                // 複数パターンをパースして返す
+                return parseMultiplePatterns(reply, patternCount);
+            }
+            return [];
+        } catch (error) {
+            console.error('Reaction error:', error);
+            addMessage('system', `リアクション通信エラー: ${error.message}`);
+            return [];
+        }
+    }
+
+    function parseMultiplePatterns(reply, expectedCount) {
+        const patterns = [];
+
+        // [パターンN]で分割
+        const patternRegex = /\[パターン(\d+)\]/g;
+        const parts = reply.split(patternRegex);
+
+        // parts[0]は最初の[パターン1]より前のテキスト（空か無視）
+        // parts[1]は"1", parts[2]はパターン1の内容, parts[3]は"2", parts[4]はパターン2の内容...
+        for (let i = 1; i < parts.length; i += 2) {
+            const content = parts[i + 1] || '';
+            const narrationMatch = content.match(/\[地の文\]\s*([\s\S]*?)(?=\[セリフ\]|$)/);
+            const dialogueMatch = content.match(/\[セリフ\]\s*([\s\S]*?)(?=\[パターン|$)/);
+
+            patterns.push({
+                narration: narrationMatch ? narrationMatch[1].trim() : '',
+                dialogue: dialogueMatch ? dialogueMatch[1].trim() : ''
+            });
+        }
+
+        // パターンが見つからない場合、旧形式でパース
+        if (patterns.length === 0) {
+            const narrationMatch = reply.match(/\[地の文\]\s*([\s\S]*?)(?=\[セリフ\]|$)/);
+            const dialogueMatch = reply.match(/\[セリフ\]\s*([\s\S]*?)$/);
+            patterns.push({
+                narration: narrationMatch ? narrationMatch[1].trim() : '',
+                dialogue: dialogueMatch ? dialogueMatch[1].trim() : reply.trim()
+            });
+        }
+
+        // 足りない分は最後のパターンで埋める
+        while (patterns.length < expectedCount) {
+            patterns.push(patterns[patterns.length - 1] || { narration: '', dialogue: '' });
+        }
+
+        return patterns;
+    }
+
+    function displayReactionPatterns(patterns) {
+        // 最初のパターンをチャット欄に表示
+        if (patterns.length > 0 && patterns[0]) {
+            if (patterns[0].narration) {
+                addMessage('narration', patterns[0].narration);
+            }
+            if (patterns[0].dialogue) {
+                addMessage('assistant', patterns[0].dialogue);
+            }
+        }
+    }
+
+    function showSceneDialogue(text) {
+        const charIdx = document.getElementById('character').value;
+        const char = charIdx !== '' ? characters[charIdx] : null;
+        const dialogueDiv = document.getElementById('scene-dialogue');
+
+        if (char) {
+            dialogueDiv.innerHTML = `<span class="char-name">${char.name}</span>${text}`;
+        } else {
+            dialogueDiv.textContent = text;
+        }
+
+        // チャット欄と同じフォントサイズを適用
+        const messagesDiv = document.getElementById('chat-messages');
+        dialogueDiv.classList.remove('font-small', 'font-large');
+        if (messagesDiv.classList.contains('font-small')) {
+            dialogueDiv.classList.add('font-small');
+        } else if (messagesDiv.classList.contains('font-large')) {
+            dialogueDiv.classList.add('font-large');
+        }
+
+        dialogueDiv.style.display = 'block';
+    }
+
+    // チャット機能
+    function addMessage(role, content) {
+        const messagesDiv = document.getElementById('chat-messages');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+        msgDiv.textContent = content;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        // APIに送信可能なroleのみ履歴に追加
+        if (role === 'user' || role === 'assistant') {
+            chatHistory.push({ role, content });
+        }
+    }
+
+    function clearChat() {
+        document.getElementById('chat-messages').innerHTML = '';
+        chatHistory = [];
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        const charIdx = document.getElementById('character').value;
+        if (charIdx === '') {
+            alert('キャラクターを選択してください');
+            return;
+        }
+
+        const chatApiKey = document.getElementById('chatApiKey').value.trim();
+        if (!chatApiKey) {
+            alert('OpenRouter API Keyを設定してください');
+            toggleSettings();
+            return;
+        }
+
+        const char = characters[charIdx];
+        input.value = '';
+        addMessage('user', message);
+
+        try {
+            const systemPrompt = buildCharacterSystemPrompt(char);
+            const messages = [
+                { role: 'system', content: systemPrompt },
+                ...chatHistory.map(m => ({ role: m.role, content: m.content }))
+            ];
+
+            const chatModel = document.getElementById('chatModel').value || 'x-ai/grok-4.1-fast';
+            console.log('[Chat] Model:', chatModel);
+            console.log('[Chat] Messages:', JSON.stringify(messages, null, 2));
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${chatApiKey}`
+                },
+                body: JSON.stringify({
+                    model: chatModel,
+                    messages: messages,
+                    max_tokens: 500,
+                    stream: false
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                addMessage('system', `エラー: ${error.error?.message || response.statusText}`);
+                return;
+            }
+
+            const data = await response.json();
+            if (data.choices && data.choices[0]) {
+                const reply = data.choices[0].message.content;
+                addMessage('assistant', reply);
+            }
+        } catch (error) {
+            console.error(error);
+            addMessage('system', `通信エラー: ${error.message}`);
+        }
+    }
+
+    function buildCharacterSystemPrompt(char, isAction = false, patternCount = 1) {
+        const placeIdx = document.getElementById('place').value;
+        const place = placeIdx !== '' ? places[placeIdx] : null;
+
+        let prompt = `あなたは「${char.name}」というキャラクターです。`;
+        if (char.series) prompt += `作品「${char.series}」に登場します。`;
+        if (char.profile) prompt += `\n\nプロフィール: ${char.profile}`;
+        if (place) prompt += `\n\n現在の場所: ${place.name}`;
+
+        if (isAction) {
+            prompt += `\n\n【出力形式】
+${patternCount}パターンの反応を生成してください。各パターンは以下の形式で出力：
+
+[パターン1]
+[地の文]
+官能小説のような生々しい描写。身体の状態、性的な部位の様子、肌の感触、体温、濡れ具合、締め付けなどを具体的かつ官能的に表現。
+
+[セリフ]
+キャラクターの声、吐息、言葉。「」で囲む。
+
+[パターン2]
+[地の文]
+（別の描写バリエーション）
+
+[セリフ]
+（別のセリフバリエーション）
+
+...以下同様に${patternCount}パターンまで
+
+必ず[パターンN]、[地の文]、[セリフ]のタグを使用してください。各パターンは異なる表現・セリフにしてください。`;
+        } else {
+            prompt += '\n\nキャラクターになりきって、短く自然な会話で応答してください。';
+        }
+        return prompt;
+    }
+</script>
+
 </body>
 </html>
