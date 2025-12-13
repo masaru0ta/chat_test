@@ -70,14 +70,29 @@
         .scene-narration {
             max-width: 800px;
             padding: 30px 40px;
-            color: #c9a0dc;
+            color: #fff;
             font-size: 1.3rem;
+            font-weight: 100;
             line-height: 2;
             text-align: left;
+            position: relative;
+            z-index: 2;
         }
 
         .scene-narration p {
             margin: 0;
+        }
+
+        .scene-bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            z-index: 1;
         }
 
         .scene-loading {
@@ -100,6 +115,8 @@
             background: rgba(0, 0, 0, 0.6);
             color: #fff;
             padding: 15px 20px;
+            font-family: "M PLUS 1 Code", sans-serif;
+            font-weight: 200;
             font-size: 1.35rem;
             line-height: 1.8;
             z-index: 5;
@@ -156,10 +173,14 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.5rem;
+            font-size: 0.7rem;
             font-weight: bold;
             color: #fff;
             opacity: 0.8;
+            text-align: center;
+            padding: 4px;
+            line-height: 1.2;
+            word-break: break-all;
         }
 
         .scene-thumb.narration-thumb:hover {
@@ -1093,6 +1114,8 @@
                             type: 'narration',
                             narration: patterns[0].narration,
                             charName: char?.name || '',
+                            actionName: action.name || '',  // アクション名を保存
+                            placeImage: getCurrentPlaceImage(),  // 生成時の場所画像を保存
                             groupId: groupId,
                             order: -1  // 画像より前に来るように
                         };
@@ -1197,10 +1220,21 @@
         }
     }
 
+    // 現在選択中の場所画像URLを取得
+    function getCurrentPlaceImage() {
+        const placeIdx = document.getElementById('place').value;
+        const place = placeIdx !== '' ? places[placeIdx] : null;
+        return place?.image || '';
+    }
+
     // 地の文を画像エリアに表示
     function showNarrationInSceneArea(narration) {
         const sceneDiv = document.getElementById('scene-image');
+        const placeImage = getCurrentPlaceImage();
+        const bgHtml = placeImage ? `<div class="scene-bg-image" style="background-image: url('${placeImage}');"></div>` : '';
+
         sceneDiv.innerHTML = `
+            ${bgHtml}
             <div class="scene-narration">
                 <p>${narration.replace(/\n/g, '<br>')}</p>
             </div>
@@ -1276,7 +1310,17 @@
 
         // タイプに応じて表示を切り替え
         if (activeItem.type === 'narration') {
-            showNarrationInSceneArea(activeItem.narration);
+            // 地の文アイテムに保存された場所画像があればそれを使用、なければ現在の場所画像を使用
+            const placeImage = activeItem.placeImage || getCurrentPlaceImage();
+            const sceneDiv = document.getElementById('scene-image');
+            const bgHtml = placeImage ? `<div class="scene-bg-image" style="background-image: url('${placeImage}');"></div>` : '';
+            sceneDiv.innerHTML = `
+                ${bgHtml}
+                <div class="scene-narration">
+                    <p>${activeItem.narration.replace(/\n/g, '<br>')}</p>
+                </div>
+                <div class="scene-dialogue" id="scene-dialogue"></div>
+            `;
             currentSceneUrl = '';
         } else {
             currentSceneUrl = activeItem.url;
@@ -1344,9 +1388,10 @@
         if (generatedImages.length > 1) {
             thumbsDiv.innerHTML = generatedImages.map((item, i) => {
                 if (item.type === 'narration') {
+                    const displayName = item.actionName || '文';
                     return `<div class="scene-thumb narration-thumb ${i === activeIndex ? 'active' : ''}"
                                 onclick="displayGeneratedImages(${i})"
-                                title="地の文"><span>文</span></div>`;
+                                title="${displayName}"><span>${displayName}</span></div>`;
                 } else {
                     return `<img src="${item.url}" class="scene-thumb ${i === activeIndex ? 'active' : ''}"
                                 onclick="displayGeneratedImages(${i})"
@@ -1486,8 +1531,11 @@
                 if (!firstChunkLogged) {
                     console.log(`[Timing] LLM受信開始: ${Date.now() - streamStartTime}ms`);
                     firstChunkLogged = true;
-                    // 地の文ストリーミング表示用のエリアを作成
+                    // 地の文ストリーミング表示用のエリアを作成（背景画像付き）
+                    const placeImage = getCurrentPlaceImage();
+                    const bgHtml = placeImage ? `<div class="scene-bg-image" style="background-image: url('${placeImage}');"></div>` : '';
                     sceneDiv.innerHTML = `
+                        ${bgHtml}
                         <div class="scene-narration" id="streaming-narration">
                             <p></p>
                         </div>

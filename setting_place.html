@@ -47,6 +47,10 @@
             <label>Runware API Key:</label>
             <input type="password" id="apiKey" placeholder="Runware API Keyを入力">
         </div>
+        <div class="settings-row">
+            <label>画像アップロードGAS URL:</label>
+            <input type="text" id="imageUploadUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec (画像保存用)">
+        </div>
         <div id="status"></div>
     </div>
 </div>
@@ -101,6 +105,7 @@
     let places = [];
     let actions = [];
     let placeImages = {};
+    let originalGasImages = {};
     let currentDetailIndex = -1;
 
     // 初期化
@@ -108,6 +113,8 @@
         const settings = loadSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY);
         if (settings.gasUrl) document.getElementById('apiUrl').value = settings.gasUrl;
         if (settings.apiKey) document.getElementById('apiKey').value = settings.apiKey;
+        const savedImageUploadUrl = localStorage.getItem(STORAGE_KEYS.IMAGE_UPLOAD_URL);
+        if (savedImageUploadUrl) document.getElementById('imageUploadUrl').value = savedImageUploadUrl;
         loadCachedData();
     });
 
@@ -159,7 +166,66 @@
     function doSaveSettings() {
         const gasUrl = document.getElementById('apiUrl').value.trim();
         const apiKey = document.getElementById('apiKey').value.trim();
+        const imageUploadUrl = document.getElementById('imageUploadUrl').value.trim();
         saveSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY, gasUrl, apiKey);
+        if (imageUploadUrl) localStorage.setItem(STORAGE_KEYS.IMAGE_UPLOAD_URL, imageUploadUrl);
+    }
+
+    // RunwareのURLかどうかを判定
+    function isRunwareUrl(url) {
+        return url && (url.includes('runware.ai') || url.includes('im.runware'));
+    }
+
+    // GoogleドライブのURLかどうかを判定
+    function isGoogleDriveUrl(url) {
+        return url && (url.includes('drive.google.com') || url.includes('lh3.googleusercontent.com'));
+    }
+
+    // GoogleドライブURLからfileIdを抽出
+    function extractGoogleDriveFileId(url) {
+        if (!url) return null;
+        let match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (match) return match[1];
+        match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match) return match[1];
+        return null;
+    }
+
+    // 画像URLをBase64に変換
+    async function imageUrlToBase64(url) {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    // GASに画像をアップロードして永続URLを取得
+    async function uploadImageToGas(baseUrl, base64Data, filename, oldFileId = null) {
+        const payload = {
+            filename: filename,
+            mimeType: 'image/png',
+            image: base64Data
+        };
+
+        if (oldFileId) {
+            payload.oldFileId = oldFileId;
+        }
+
+        const response = await fetch(baseUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.status === 'success' && result.data && result.data.directUrl) {
+            return result.data.directUrl;
+        }
+        throw new Error(result.message || '画像アップロード失敗');
     }
 
     function showStatusWithDetail(msg, type = 'ok') {
@@ -197,8 +263,20 @@
 
             models = parseModels(modelData);
             characters = parseCharacters(characterData);
-            places = parsePlaces(placeData);
             actions = parseActionsWithCompositions(actionData);
+
+            // 場所設定（画像URL処理があるため個別）
+            originalGasImages = {};
+            places = placeData.map(item => {
+                const place = parsePlaces([item])[0];
+                if (item.image) {
+                    placeImages[place.name] = item.image;
+                    if (isGoogleDriveUrl(item.image)) {
+                        originalGasImages[place.name] = item.image;
+                    }
+                }
+                return place;
+            });
 
             saveCachedData();
             renderPlaceGrid();
@@ -211,6 +289,8 @@
 
     async function saveToGas() {
         const baseUrl = document.getElementById('apiUrl').value.trim();
+        const imageUploadUrl = document.getElementById('imageUploadUrl').value.trim();
+
         if (!baseUrl) {
             alert('GAS URLを入力してください');
             return;
@@ -220,16 +300,59 @@
             return;
         }
 
+        const runwareCount = places.filter(place => isRunwareUrl(placeImages[place.name])).length;
+        if (runwareCount > 0 && !imageUploadUrl) {
+            alert('Runware画像をアップロードするには「画像アップロードGAS URL」を入力してください');
+            return;
+        }
+
+        let confirmMsg = `${places.length} 件の場所をGASに保存しますか？`;
+        if (runwareCount > 0) {
+            confirmMsg += `\n\n※ ${runwareCount} 件のRunware画像をGASにアップロードします（時間がかかります）`;
+        }
+        if (!confirm(confirmMsg)) return;
+
         doSaveSettings();
-        showStatusWithDetail('GASに保存中...', 'loading');
+        showStatusWithDetail('保存中...', 'loading');
 
         try {
+            // Runware画像をGASにアップロード
+            for (let i = 0; i < places.length; i++) {
+                const place = places[i];
+                const imageUrl = placeImages[place.name];
+
+                if (isRunwareUrl(imageUrl)) {
+                    showStatusWithDetail(`画像アップロード中: ${i + 1}/${places.length} (${place.name})`, 'loading');
+                    try {
+                        const base64Data = await imageUrlToBase64(imageUrl);
+                        const safeName = (place.name || 'place').replace(/[\/\\:*?"<>|,\s]+/g, '_').replace(/^_+|_+$/g, '');
+                        const filename = `place_${safeName}.png`;
+                        const oldImageUrl = originalGasImages[place.name];
+                        const oldFileId = oldImageUrl ? extractGoogleDriveFileId(oldImageUrl) : null;
+
+                        const gasUrl = await uploadImageToGas(imageUploadUrl, base64Data, filename, oldFileId);
+                        placeImages[place.name] = gasUrl;
+                        originalGasImages[place.name] = gasUrl;
+                        saveCachedData();
+
+                        const imageDiv = document.getElementById(`image-${i}`);
+                        if (imageDiv) {
+                            imageDiv.innerHTML = `<img src="${gasUrl}" alt="${place.name}" onclick="openDetailPage(${i})">`;
+                        }
+                    } catch (error) {
+                        console.error(`${place.name}の画像アップロード失敗:`, error);
+                    }
+                }
+            }
+
             const gasData = places.map(place => ({
                 'name': place.name,
                 'tag': place.tag,
-                'additional tag': place.additionalTag
+                'additional tag': place.additionalTag,
+                'image': placeImages[place.name] || ''
             }));
 
+            showStatusWithDetail('場所データ保存中...', 'loading');
             const result = await saveGasData(baseUrl, 'place', gasData);
 
             if (result.status === 'success') {

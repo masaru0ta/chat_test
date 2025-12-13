@@ -52,7 +52,8 @@ function parsePlaces(rawData) {
     return rawData.map(item => ({
         name: item.name || '',
         tag: item.tag || '',
-        additionalTag: item['additional tag'] || ''
+        additionalTag: item['additional tag'] || '',
+        image: item.image || ''
     }));
 }
 
