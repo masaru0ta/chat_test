@@ -59,9 +59,33 @@
             font-size: 0.9rem;
         }
 
-        .detail-info .field-row input:focus {
+        .detail-info .field-row input:focus,
+        .detail-info .field-row select:focus {
             outline: none;
             border-color: #4a9eff;
+        }
+
+        .detail-info .field-row select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .card-info .card-name {
+            text-align: left;
+        }
+
+        .card-info .action-link {
+            font-size: 0.7rem;
+            color: #888;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .detail-info .field-value.editable:focus {
@@ -273,16 +297,16 @@
                     <input type="text" id="detail-command-list" onchange="updateActionField('command_list', this.value)">
                 </div>
                 <div class="field-row">
-                    <label>Pre-Action:</label>
-                    <input type="text" id="detail-pre-action" onchange="updateActionField('pre_action', this.value)">
+                    <label>前提アクション:</label>
+                    <select id="detail-pre-action" onchange="updateActionField('pre_action', this.value)"></select>
                 </div>
                 <div class="field-row">
-                    <label>Public-Action:</label>
-                    <input type="text" id="detail-public-action" onchange="updateActionField('public_action', this.value)">
+                    <label>公開アクション:</label>
+                    <select id="detail-public-action" onchange="updateActionField('public_action', this.value)"></select>
                 </div>
                 <div class="field-row">
-                    <label>Next-Action:</label>
-                    <input type="text" id="detail-next-action" onchange="updateActionField('next_action', this.value)">
+                    <label>次アクション:</label>
+                    <select id="detail-next-action" onchange="updateActionField('next_action', this.value)"></select>
                 </div>
                 <div class="field-label">プロンプト</div>
                 <textarea class="field-value editable" id="detail-prompt" onchange="updateActionPrompt(this.value)"></textarea>
@@ -497,7 +521,10 @@
             return;
         }
 
-        container.innerHTML = actions.map((action, index) => `
+        container.innerHTML = actions.map((action, index) => {
+            const preActionName = getActionNameById(action.pre_action);
+            const nextActionName = getActionNameById(action.next_action);
+            return `
             <div class="card" id="card-${index}">
                 <div class="card-image" id="image-${index}">
                     ${actionImages[action.action_id]
@@ -506,10 +533,19 @@
                     }
                 </div>
                 <div class="card-info">
+                    <div class="action-link">${preActionName ? '↓ ' + preActionName : '&nbsp;'}</div>
                     <div class="card-name">${action.name || '(名前未設定)'}</div>
+                    <div class="action-link">${nextActionName ? '↓ ' + nextActionName : '&nbsp;'}</div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
+    }
+
+    // action_idからアクション名を取得
+    function getActionNameById(actionId) {
+        if (!actionId) return '';
+        const action = actions.find(a => a.action_id === actionId);
+        return action ? action.name : '';
     }
 
     // モデルリストの最初のモデルを取得
@@ -673,9 +709,11 @@
         document.getElementById('detail-name').value = action.name || '';
         document.getElementById('detail-prompt').value = action.prompt || '';
         document.getElementById('detail-command-list').value = action.command_list || '';
-        document.getElementById('detail-pre-action').value = action.pre_action || '';
-        document.getElementById('detail-public-action').value = action.public_action || '';
-        document.getElementById('detail-next-action').value = action.next_action || '';
+
+        // アクション選択プルダウンを更新
+        updateActionSelectOptions('detail-pre-action', action.pre_action);
+        updateActionSelectOptions('detail-public-action', action.public_action);
+        updateActionSelectOptions('detail-next-action', action.next_action);
 
         // 画像を設定
         const imageDiv = document.getElementById('detail-image');
@@ -721,7 +759,7 @@
         if (!action) return;
 
         const container = document.getElementById('composition-grid');
-        const actionCompositions = compositionImages[action.name] || {};
+        const actionCompositions = compositionImages[action.action_id] || {};
 
         container.innerHTML = action.compositions.map((comp, index) => {
             const imageUrl = actionCompositions[comp.name];
@@ -787,6 +825,15 @@
         saveCachedData();
     }
 
+    // アクション選択プルダウンを更新
+    function updateActionSelectOptions(selectId, selectedValue) {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '<option value="">無し</option>' + actions.map(action =>
+            `<option value="${action.action_id}">${action.name} [${action.action_id}]</option>`
+        ).join('');
+        select.value = selectedValue || '';
+    }
+
     // アクション名更新
     function updateActionName(name) {
         if (currentDetailIndex < 0) return;
@@ -821,7 +868,25 @@
         if (!action) return;
 
         action[field] = value;
+
+        // 前提アクションを設定したとき、その前提アクションの次アクションが空なら自動設定
+        if (field === 'pre_action' && value) {
+            const preAction = actions.find(a => a.action_id === value);
+            if (preAction && !preAction.next_action) {
+                preAction.next_action = action.action_id;
+            }
+        }
+
+        // 次アクションを設定したとき、その次アクションの前提アクションが空なら自動設定
+        if (field === 'next_action' && value) {
+            const nextAction = actions.find(a => a.action_id === value);
+            if (nextAction && !nextAction.pre_action) {
+                nextAction.pre_action = action.action_id;
+            }
+        }
+
         saveCachedData();
+        renderActionGrid();
     }
 
     function closeDetailPage() {
@@ -906,10 +971,10 @@
             const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
 
             // 保存
-            if (!compositionImages[action.name]) {
-                compositionImages[action.name] = {};
+            if (!compositionImages[action.action_id]) {
+                compositionImages[action.action_id] = {};
             }
-            compositionImages[action.name][comp.name] = imageUrl;
+            compositionImages[action.action_id][comp.name] = imageUrl;
             saveCachedData();
 
             // 表示更新
