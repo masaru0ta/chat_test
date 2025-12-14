@@ -159,6 +159,7 @@
                 <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
             </div>
             <div class="detail-info">
+                <div class="field-label">Character ID: <span id="detail-character-id" style="color: #4a9eff; font-weight: normal;"></span></div>
                 <div class="field-label">シリーズ</div>
                 <input type="text" class="field-input" id="detail-series" onchange="updateCharacterField('series', this.value)">
                 <div class="field-label">キャラタグ</div>
@@ -303,15 +304,15 @@
 
             // キャラクター設定（画像URL処理があるため個別）
             originalGasImages = {};
-            characters = characterData.map(item => {
-                const char = parseCharacters([item])[0];
+            characters = parseCharacters(characterData);
+            characters.forEach((char, index) => {
+                const item = characterData[index];
                 if (item.image) {
                     characterImages[char.name] = item.image;
                     if (isGoogleDriveUrl(item.image)) {
                         originalGasImages[char.name] = item.image;
                     }
                 }
-                return char;
             });
 
             saveCachedData();
@@ -442,6 +443,7 @@
             }
 
             const dataToSave = characters.map(char => ({
+                character_id: char.character_id || '',
                 name: char.name,
                 series: char.series,
                 tag: char.tag,
@@ -613,6 +615,7 @@
         if (!char) return;
 
         // データを設定
+        document.getElementById('detail-character-id').textContent = char.character_id || '(未設定)';
         document.getElementById('detail-title').textContent = char.name || '(名前未設定)';
         document.getElementById('detail-series').value = char.series || '';
         document.getElementById('detail-tag').value = char.tag || '';

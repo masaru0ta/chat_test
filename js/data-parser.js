@@ -31,16 +31,36 @@ function parseModels(rawData) {
  * @returns {Array} パース済みキャラクター配列
  */
 function parseCharacters(rawData) {
-    return rawData.map(item => ({
-        name: item.name || '',
-        series: item.series || '',
-        tag: item.tag || '',
-        profile: item.profile || '',
-        uniform1: item.uniform1 || '',
-        uniform2: item.uniform2 || '',
-        additionalTag: item['additional tag'] || '',
-        image: item.image || ''
-    }));
+    // 既存のchr_xxx形式のIDから最大番号を取得
+    let maxNum = 0;
+    rawData.forEach(item => {
+        const id = item['character_id'] || '';
+        const match = id.match(/^chr_(\d+)$/);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+        }
+    });
+
+    return rawData.map(item => {
+        let characterId = item['character_id'] || '';
+        if (!characterId) {
+            maxNum++;
+            characterId = 'chr_' + String(maxNum).padStart(3, '0');
+        }
+
+        return {
+            character_id: characterId,
+            name: item.name || '',
+            series: item.series || '',
+            tag: item.tag || '',
+            profile: item.profile || '',
+            uniform1: item.uniform1 || '',
+            uniform2: item.uniform2 || '',
+            additionalTag: item['additional tag'] || '',
+            image: item.image || ''
+        };
+    });
 }
 
 /**
@@ -49,13 +69,34 @@ function parseCharacters(rawData) {
  * @returns {Array} パース済み場所配列
  */
 function parsePlaces(rawData) {
-    return rawData.map(item => ({
-        name: item.name || '',
-        tag: item.tag || '',
-        additionalTag: item['additional tag'] || '',
-        command_list: item['command_list'] || '',
-        image: item.image || ''
-    }));
+    // 既存のplc_xxx形式のIDから最大番号を取得
+    let maxNum = 0;
+    rawData.forEach(item => {
+        const id = item['place_id'] || '';
+        const match = id.match(/^plc_(\d+)$/);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+        }
+    });
+
+    return rawData.map(item => {
+        let placeId = item['place_id'] || '';
+        if (!placeId) {
+            maxNum++;
+            placeId = 'plc_' + String(maxNum).padStart(3, '0');
+        }
+
+        return {
+            place_id: placeId,
+            name: item.name || '',
+            tag: item.tag || '',
+            additionalTag: item['additional tag'] || '',
+            command_list: item['command_list'] || '',
+            public_flag: item['public_flag'] || '',
+            image: item.image || ''
+        };
+    });
 }
 
 /**

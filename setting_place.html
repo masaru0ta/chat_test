@@ -22,6 +22,35 @@
         .detail-header #detail-status {
             margin-right: 15px;
         }
+
+        .detail-info .field-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .detail-info .field-row label {
+            color: #888;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            min-width: 100px;
+        }
+
+        .detail-info .field-row input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .detail-info .field-row input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
     </style>
 </head>
 <body>
@@ -80,6 +109,17 @@
                 <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
             </div>
             <div class="detail-info">
+                <div class="field-label">Place ID: <span id="detail-place-id" style="color: #4a9eff; font-weight: normal;"></span></div>
+                <div class="field-label">場所名</div>
+                <input type="text" class="field-input" id="detail-name" onchange="updatePlaceName(this.value)">
+                <div class="field-row">
+                    <label>コマンドリスト:</label>
+                    <input type="text" id="detail-command-list" onchange="updatePlaceField('command_list', this.value)">
+                </div>
+                <div class="field-row">
+                    <label>公開フラグ:</label>
+                    <input type="text" id="detail-public-flag" onchange="updatePlaceField('public_flag', this.value)">
+                </div>
                 <div class="field-label">場所タグ</div>
                 <textarea class="field-textarea" id="detail-tag" onchange="updatePlaceField('tag', this.value)"></textarea>
                 <div class="field-label">追加タグ</div>
@@ -267,15 +307,15 @@
 
             // 場所設定（画像URL処理があるため個別）
             originalGasImages = {};
-            places = placeData.map(item => {
-                const place = parsePlaces([item])[0];
+            places = parsePlaces(placeData);
+            places.forEach((place, index) => {
+                const item = placeData[index];
                 if (item.image) {
-                    placeImages[place.name] = item.image;
+                    placeImages[place.place_id] = item.image;
                     if (isGoogleDriveUrl(item.image)) {
                         originalGasImages[place.name] = item.image;
                     }
                 }
-                return place;
             });
 
             saveCachedData();
@@ -300,7 +340,7 @@
             return;
         }
 
-        const runwareCount = places.filter(place => isRunwareUrl(placeImages[place.name])).length;
+        const runwareCount = places.filter(place => isRunwareUrl(placeImages[place.place_id])).length;
         if (runwareCount > 0 && !imageUploadUrl) {
             alert('Runware画像をアップロードするには「画像アップロードGAS URL」を入力してください');
             return;
@@ -319,7 +359,7 @@
             // Runware画像をGASにアップロード
             for (let i = 0; i < places.length; i++) {
                 const place = places[i];
-                const imageUrl = placeImages[place.name];
+                const imageUrl = placeImages[place.place_id];
 
                 if (isRunwareUrl(imageUrl)) {
                     showStatusWithDetail(`画像アップロード中: ${i + 1}/${places.length} (${place.name})`, 'loading');
@@ -331,7 +371,7 @@
                         const oldFileId = oldImageUrl ? extractGoogleDriveFileId(oldImageUrl) : null;
 
                         const gasUrl = await uploadImageToGas(imageUploadUrl, base64Data, filename, oldFileId);
-                        placeImages[place.name] = gasUrl;
+                        placeImages[place.place_id] = gasUrl;
                         originalGasImages[place.name] = gasUrl;
                         saveCachedData();
 
@@ -346,11 +386,13 @@
             }
 
             const gasData = places.map(place => ({
+                'place_id': place.place_id || '',
                 'name': place.name,
                 'tag': place.tag,
                 'additional tag': place.additionalTag,
                 'command_list': place.command_list || '',
-                'image': placeImages[place.name] || ''
+                'public_flag': place.public_flag || '',
+                'image': placeImages[place.place_id] || ''
             }));
 
             showStatusWithDetail('場所データ保存中...', 'loading');
@@ -378,8 +420,8 @@
         container.innerHTML = places.map((place, index) => `
             <div class="card" id="card-${index}">
                 <div class="card-image" id="image-${index}">
-                    ${placeImages[place.name]
-                        ? `<img src="${placeImages[place.name]}" alt="${place.name}" onclick="openDetailPage(${index})">`
+                    ${placeImages[place.place_id]
+                        ? `<img src="${placeImages[place.place_id]}" alt="${place.name}" onclick="openDetailPage(${index})">`
                         : `<div class="placeholder" onclick="openDetailPage(${index})" style="cursor:pointer;">画像未生成</div>`
                     }
                 </div>
@@ -465,7 +507,7 @@
         try {
             const prompt = buildPlacePrompt(placeIndex);
             const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
-            placeImages[place.name] = imageUrl;
+            placeImages[place.place_id] = imageUrl;
             saveCachedData();
             imageDiv.innerHTML = `<img src="${imageUrl}" alt="${place.name}" onclick="openDetailPage(${placeIndex})">`;
         } catch (error) {
@@ -495,7 +537,7 @@
             try {
                 const prompt = buildPlacePrompt(i);
                 const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
-                placeImages[place.name] = imageUrl;
+                placeImages[place.place_id] = imageUrl;
                 saveCachedData();
                 imageDiv.innerHTML = `<img src="${imageUrl}" alt="${place.name}" onclick="openDetailPage(${i})">`;
                 showStatusWithDetail(`画像生成中: ${i + 1}/${places.length}`, 'loading');
@@ -528,11 +570,15 @@
         if (!place) return;
 
         document.getElementById('detail-title').textContent = place.name || '(名前未設定)';
+        document.getElementById('detail-place-id').textContent = place.place_id || '(未設定)';
+        document.getElementById('detail-name').value = place.name || '';
+        document.getElementById('detail-command-list').value = place.command_list || '';
+        document.getElementById('detail-public-flag').value = place.public_flag || '';
         document.getElementById('detail-tag').value = place.tag || '';
         document.getElementById('detail-additional').value = place.additionalTag || '';
 
         const imageDiv = document.getElementById('detail-image');
-        const imageUrl = placeImages[place.name];
+        const imageUrl = placeImages[place.place_id];
         imageDiv.innerHTML = imageUrl
             ? `<img src="${imageUrl}" alt="${place.name}" onclick="window.open('${imageUrl}', '_blank')">`
             : '<div class="placeholder">画像未生成</div>';
@@ -565,6 +611,17 @@
         document.getElementById('detail-page').classList.remove('active');
         document.body.style.overflow = '';
         currentDetailIndex = -1;
+    }
+
+    function updatePlaceName(name) {
+        if (currentDetailIndex < 0) return;
+        const place = places[currentDetailIndex];
+        if (!place) return;
+
+        place.name = name;
+        document.getElementById('detail-title').textContent = name || '(名前未設定)';
+        saveCachedData();
+        renderPlaceGrid();
     }
 
     function updatePlaceField(field, value) {
@@ -600,7 +657,7 @@
         try {
             const prompt = buildPlacePrompt(currentDetailIndex);
             const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
-            placeImages[place.name] = imageUrl;
+            placeImages[place.place_id] = imageUrl;
             saveCachedData();
 
             detailImageDiv.innerHTML = `<img src="${imageUrl}" alt="${place.name}" onclick="window.open('${imageUrl}', '_blank')">`;
