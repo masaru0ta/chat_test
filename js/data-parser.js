@@ -94,6 +94,7 @@ function parsePlaces(rawData) {
             additionalTag: item['additional tag'] || '',
             command_list: item['command_list'] || '',
             public_flag: item['public_flag'] || '',
+            root_place: item['root_place'] || '',
             image: item.image || ''
         };
     });

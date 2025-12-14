@@ -6,6 +6,20 @@
     <title>アクション設定</title>
     <link rel="stylesheet" href="css/common.css">
     <style>
+        /* 横幅制限解除 */
+        .container {
+            max-width: none;
+        }
+
+        /* カードグリッド: 固定幅で列数可変 */
+        .card-grid {
+            grid-template-columns: repeat(auto-fill, 180px);
+        }
+
+        .card {
+            width: 180px;
+        }
+
         /* ページ固有スタイル */
         .action-prompt {
             font-size: 0.7rem;
@@ -115,12 +129,13 @@
 
         .composition-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fill, 180px);
             gap: 15px;
         }
 
         .composition-item {
             text-align: center;
+            width: 180px;
         }
 
         .composition-label {
@@ -235,6 +250,123 @@
             color: #666;
         }
 
+        /* 詳細ページ2ペインレイアウト */
+        .detail-page.active {
+            display: flex;
+        }
+
+        .action-chain-pane {
+            width: 210px;
+            min-width: 210px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 15px;
+            background: #1a1a1a;
+            height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .detail-right-pane {
+            flex: 1;
+            margin-left: 230px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .detail-right-pane .detail-header {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .detail-right-pane .detail-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            max-width: none;
+            margin: 0;
+        }
+
+        .detail-right-pane .detail-main {
+            max-width: none;
+        }
+
+        .detail-right-pane .composition-section {
+            max-width: none;
+        }
+
+        .action-chain-pane h4 {
+            color: #888;
+            font-size: 0.8rem;
+            margin: 0 0 15px 0;
+            font-weight: normal;
+        }
+
+        .chain-item {
+            width: 180px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .chain-item:hover {
+            transform: scale(1.03);
+        }
+
+        .chain-item.current {
+            outline: 2px solid #4a9eff;
+            border-radius: 8px;
+        }
+
+        .chain-item .chain-thumbnail {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #111;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chain-item .chain-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .chain-item .chain-thumbnail .placeholder {
+            color: #444;
+            font-size: 0.7rem;
+        }
+
+        .chain-item .chain-name {
+            font-size: 0.75rem;
+            color: #aaa;
+            text-align: center;
+            margin-top: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chain-item.current .chain-name {
+            color: #4a9eff;
+            font-weight: bold;
+        }
+
+        .chain-arrow {
+            color: #444;
+            font-size: 1.2rem;
+            margin: 5px 0;
+        }
+
     </style>
 </head>
 <body>
@@ -266,57 +398,66 @@
 
 <!-- アクション詳細ページ -->
 <div id="detail-page" class="detail-page">
-    <div class="detail-header">
-        <button class="detail-back" onclick="closeDetailPage()">← 戻る</button>
-        <h1 class="detail-title" id="detail-title"></h1>
-        <div class="header-selects">
-            <label>キャラ:</label>
-            <select id="preview-character"></select>
-            <label>場所:</label>
-            <select id="preview-place"></select>
-        </div>
-        <button class="btn btn-save" onclick="saveToGas()">GASに保存</button>
-        <div id="detail-status"></div>
-        <div class="detail-nav">
-            <button class="btn btn-nav" onclick="navigateAction(-1)" id="btn-prev">← 前</button>
-            <button class="btn btn-nav" onclick="navigateAction(1)" id="btn-next">次 →</button>
-        </div>
+    <!-- 左ペイン: アクションチェーン -->
+    <div class="action-chain-pane">
+        <h4>アクションの流れ</h4>
+        <div id="action-chain"></div>
     </div>
-    <div class="detail-content">
-        <div class="detail-main">
-            <div class="detail-image-section">
-                <div class="detail-image-area" id="detail-image"></div>
-                <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
+
+    <!-- 右ペイン: ヘッダー + コンテンツ -->
+    <div class="detail-right-pane">
+        <div class="detail-header">
+            <button class="detail-back" onclick="closeDetailPage()">← 戻る</button>
+            <h1 class="detail-title" id="detail-title"></h1>
+            <div class="header-selects">
+                <label>キャラ:</label>
+                <select id="preview-character"></select>
+                <label>場所:</label>
+                <select id="preview-place"></select>
             </div>
-            <div class="detail-info">
-                <div class="field-label">Action ID: <span id="detail-action-id" style="color: #4a9eff; font-weight: normal;"></span></div>
-                <div class="field-label">アクション名</div>
-                <input type="text" class="field-value editable" id="detail-name" onchange="updateActionName(this.value)" style="min-height: auto;">
-                <div class="field-row">
-                    <label>コマンドリスト:</label>
-                    <input type="text" id="detail-command-list" onchange="updateActionField('command_list', this.value)">
-                </div>
-                <div class="field-row">
-                    <label>前提アクション:</label>
-                    <select id="detail-pre-action" onchange="updateActionField('pre_action', this.value)"></select>
-                </div>
-                <div class="field-row">
-                    <label>公開アクション:</label>
-                    <select id="detail-public-action" onchange="updateActionField('public_action', this.value)"></select>
-                </div>
-                <div class="field-row">
-                    <label>次アクション:</label>
-                    <select id="detail-next-action" onchange="updateActionField('next_action', this.value)"></select>
-                </div>
-                <div class="field-label">プロンプト</div>
-                <textarea class="field-value editable" id="detail-prompt" onchange="updateActionPrompt(this.value)"></textarea>
+            <button class="btn btn-save" onclick="saveToGas()">GASに保存</button>
+            <div id="detail-status"></div>
+            <div class="detail-nav">
+                <button class="btn btn-nav" onclick="navigateAction(-1)" id="btn-prev">← 前</button>
+                <button class="btn btn-nav" onclick="navigateAction(1)" id="btn-next">次 →</button>
             </div>
         </div>
+        <div class="detail-content">
+            <div class="detail-main">
+                <div class="detail-image-section">
+                    <div class="detail-image-area" id="detail-image"></div>
+                    <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
+                </div>
+                <div class="detail-info">
+                    <div class="field-label">Action ID: <span id="detail-action-id" style="color: #4a9eff; font-weight: normal;"></span></div>
+                    <div class="field-label">アクション名</div>
+                    <input type="text" class="field-value editable" id="detail-name" onchange="updateActionName(this.value)" style="min-height: auto;">
+                    <div class="field-row">
+                        <label>コマンドリスト:</label>
+                        <input type="text" id="detail-command-list" onchange="updateActionField('command_list', this.value)">
+                    </div>
+                    <div class="field-row">
+                        <label>前提アクション:</label>
+                        <select id="detail-pre-action" onchange="updateActionField('pre_action', this.value)"></select>
+                    </div>
+                    <div class="field-row">
+                        <label>公開アクション:</label>
+                        <select id="detail-public-action" onchange="updateActionField('public_action', this.value)"></select>
+                    </div>
+                    <div class="field-row">
+                        <label>次アクション:</label>
+                        <select id="detail-next-action" onchange="updateActionField('next_action', this.value)"></select>
+                    </div>
+                    <div class="field-label">プロンプト</div>
+                    <textarea class="field-value editable" id="detail-prompt" onchange="updateActionPrompt(this.value)"></textarea>
+                </div>
+            </div>
 
-        <!-- 構図セクション -->
-        <div class="composition-section">
-            <h3 class="composition-title">構図別プレビュー</h3>
-            <div id="composition-grid" class="composition-grid"></div>
+            <!-- 構図セクション -->
+            <div class="composition-section">
+                <h3 class="composition-title">構図別プレビュー</h3>
+                <div id="composition-grid" class="composition-grid"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -687,6 +828,92 @@
     // 詳細ページ関連
     let currentDetailIndex = -1;
 
+    // アクションチェーンを取得（前提アクション→現在→次アクション）
+    function getActionChain(actionId) {
+        const chain = [];
+        const visited = new Set();
+
+        // 前提アクションを遡る
+        let current = actions.find(a => a.action_id === actionId);
+        const preActions = [];
+        while (current && current.pre_action && !visited.has(current.pre_action)) {
+            visited.add(current.pre_action);
+            const preAction = actions.find(a => a.action_id === current.pre_action);
+            if (preAction) {
+                preActions.unshift(preAction);
+                current = preAction;
+            } else {
+                break;
+            }
+        }
+
+        // チェーンに前提アクションを追加
+        chain.push(...preActions);
+
+        // 現在のアクションを追加
+        const currentAction = actions.find(a => a.action_id === actionId);
+        if (currentAction) {
+            chain.push(currentAction);
+        }
+
+        // 次アクションを辿る
+        visited.clear();
+        current = currentAction;
+        while (current && current.next_action && !visited.has(current.next_action)) {
+            visited.add(current.next_action);
+            const nextAction = actions.find(a => a.action_id === current.next_action);
+            if (nextAction) {
+                chain.push(nextAction);
+                current = nextAction;
+            } else {
+                break;
+            }
+        }
+
+        return chain;
+    }
+
+    // アクションチェーンをレンダリング
+    function renderActionChain() {
+        const container = document.getElementById('action-chain');
+        const action = actions[currentDetailIndex];
+        if (!action) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const chain = getActionChain(action.action_id);
+
+        let html = '';
+        chain.forEach((chainAction, index) => {
+            const isCurrent = chainAction.action_id === action.action_id;
+            const imageUrl = actionImages[chainAction.action_id];
+            const actionIndex = actions.findIndex(a => a.action_id === chainAction.action_id);
+
+            if (index > 0) {
+                html += '<div class="chain-arrow">↓</div>';
+            }
+
+            html += `
+                <div class="chain-item ${isCurrent ? 'current' : ''}" onclick="openDetailPage(${actionIndex})">
+                    <div class="chain-thumbnail">
+                        ${imageUrl
+                            ? `<img src="${imageUrl}" alt="${chainAction.name}">`
+                            : '<span class="placeholder">No Image</span>'
+                        }
+                    </div>
+                    <div class="chain-name">${chainAction.name || '(名前未設定)'}</div>
+                </div>
+            `;
+        });
+
+        if (chain.length === 0) {
+            html = '<div style="color: #666; font-size: 0.8rem; text-align: center;">チェーンなし</div>';
+        }
+
+        container.innerHTML = html;
+    }
+
     function openDetailPage(index) {
         const action = actions[index];
         if (!action) return;
@@ -729,6 +956,9 @@
 
         // 構図グリッドを更新
         updateCompositionGrid();
+
+        // アクションチェーンを更新
+        renderActionChain();
 
         // ナビゲーションボタンの状態を更新
         document.getElementById('btn-prev').disabled = currentDetailIndex <= 0;
@@ -887,6 +1117,11 @@
 
         saveCachedData();
         renderActionGrid();
+
+        // アクションリンクが変更されたらチェーンを更新
+        if (field === 'pre_action' || field === 'next_action') {
+            renderActionChain();
+        }
     }
 
     function closeDetailPage() {
@@ -917,11 +1152,37 @@
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
             navigateAction(1);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            navigateChain(-1);
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            navigateChain(1);
         } else if (e.key === 'Escape') {
             e.preventDefault();
             closeDetailPage();
         }
     });
+
+    // アクションチェーン内をナビゲート
+    function navigateChain(direction) {
+        const action = actions[currentDetailIndex];
+        if (!action) return;
+
+        const chain = getActionChain(action.action_id);
+        const currentChainIndex = chain.findIndex(a => a.action_id === action.action_id);
+
+        if (currentChainIndex < 0) return;
+
+        const newChainIndex = currentChainIndex + direction;
+        if (newChainIndex >= 0 && newChainIndex < chain.length) {
+            const targetAction = chain[newChainIndex];
+            const targetIndex = actions.findIndex(a => a.action_id === targetAction.action_id);
+            if (targetIndex >= 0) {
+                openDetailPage(targetIndex);
+            }
+        }
+    }
 
     async function generateDetailImage() {
         if (currentDetailIndex < 0) return;

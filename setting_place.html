@@ -6,6 +6,103 @@
     <title>場所設定</title>
     <link rel="stylesheet" href="css/common.css">
     <style>
+        /* 2ペインレイアウト */
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 200px);
+            min-height: 500px;
+        }
+
+        .tree-pane {
+            width: 280px;
+            min-width: 280px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .tree-pane h3 {
+            margin: 0 0 15px 0;
+            color: #4a9eff;
+            font-size: 0.95rem;
+        }
+
+        .content-pane {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* ツリースタイル */
+        .tree-node {
+            margin-left: 0;
+        }
+
+        .tree-node .tree-children {
+            margin-left: 20px;
+            border-left: 1px solid #333;
+            padding-left: 10px;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            margin: 2px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #ccc;
+            font-size: 0.85rem;
+            transition: background 0.15s;
+        }
+
+        .tree-item:hover {
+            background: #2a2a2a;
+        }
+
+        .tree-item.selected {
+            background: #2a4a6a;
+            color: #fff;
+        }
+
+        .tree-item .tree-icon {
+            margin-right: 8px;
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .tree-item .tree-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tree-toggle {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 4px;
+            color: #666;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        .tree-toggle:hover {
+            color: #aaa;
+        }
+
+        .tree-root-label {
+            color: #666;
+            font-size: 0.75rem;
+            margin: 15px 0 5px 0;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+
         /* ページ固有スタイル */
         .place-tag {
             font-size: 0.7rem;
@@ -51,16 +148,102 @@
             outline: none;
             border-color: #4a9eff;
         }
+
+        .detail-info .field-row select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .detail-info .field-row select:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        /* 詳細ページでの2ペイン対応 */
+        .detail-page.active {
+            position: relative;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: auto;
+        }
+
+        .detail-page .detail-content {
+            padding: 0;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>場所設定</h1>
+    <!-- 2ペインレイアウト -->
+    <div class="main-layout">
+        <!-- 左ペイン: ツリービュー -->
+        <div class="tree-pane">
+            <h3>場所ツリー</h3>
+            <div id="place-tree"></div>
+        </div>
 
-    <!-- 場所グリッド -->
-    <div id="place-grid" class="card-grid">
-        <div class="empty-message">「GASから読み込み」ボタンで場所データを読み込んでください</div>
+        <!-- 右ペイン: コンテンツ -->
+        <div class="content-pane">
+            <!-- 場所グリッド -->
+            <div id="place-grid" class="card-grid">
+                <div class="empty-message">「GASから読み込み」ボタンで場所データを読み込んでください</div>
+            </div>
+
+            <!-- 場所詳細（インライン表示） -->
+            <div id="detail-page" class="detail-page">
+                <div class="detail-header">
+                    <button class="detail-back" onclick="closeDetailPage()">← 一覧に戻る</button>
+                    <div class="header-selects">
+                        <label>キャラ:</label>
+                        <select id="preview-character"></select>
+                        <label>アクション:</label>
+                        <select id="preview-action"></select>
+                    </div>
+                    <div id="detail-status"></div>
+                    <div class="detail-nav">
+                        <button class="btn btn-nav" onclick="navigatePlace(-1)" id="btn-prev">← 前</button>
+                        <button class="btn btn-nav" onclick="navigatePlace(1)" id="btn-next">次 →</button>
+                    </div>
+                </div>
+                <div class="detail-content">
+                    <div class="detail-main">
+                        <div class="detail-image-section">
+                            <div class="detail-image-area" id="detail-image"></div>
+                            <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
+                        </div>
+                        <div class="detail-info">
+                            <div class="field-label">Place ID: <span id="detail-place-id" style="color: #4a9eff; font-weight: normal;"></span></div>
+                            <div class="field-label">場所名</div>
+                            <input type="text" class="field-input" id="detail-name" onchange="updatePlaceName(this.value)">
+                            <div class="field-row">
+                                <label>コマンドリスト:</label>
+                                <input type="text" id="detail-command-list" onchange="updatePlaceField('command_list', this.value)">
+                            </div>
+                            <div class="field-row">
+                                <label>公開フラグ:</label>
+                                <input type="text" id="detail-public-flag" onchange="updatePlaceField('public_flag', this.value)">
+                            </div>
+                            <div class="field-row">
+                                <label>ルート場所:</label>
+                                <select id="detail-root-place" onchange="updatePlaceField('root_place', this.value)"></select>
+                            </div>
+                            <div class="field-label">場所タグ</div>
+                            <textarea class="field-textarea" id="detail-tag" onchange="updatePlaceField('tag', this.value)"></textarea>
+                            <div class="field-label">追加タグ</div>
+                            <textarea class="field-textarea" id="detail-additional" onchange="updatePlaceField('additionalTag', this.value)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 設定バー -->
@@ -81,51 +264,6 @@
             <input type="text" id="imageUploadUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec (画像保存用)">
         </div>
         <div id="status"></div>
-    </div>
-</div>
-
-<!-- 場所詳細ページ -->
-<div id="detail-page" class="detail-page">
-    <div class="detail-header">
-        <button class="detail-back" onclick="closeDetailPage()">← 戻る</button>
-        <h1 class="detail-title" id="detail-title"></h1>
-        <div class="header-selects">
-            <label>キャラ:</label>
-            <select id="preview-character"></select>
-            <label>アクション:</label>
-            <select id="preview-action"></select>
-        </div>
-        <button class="btn btn-save" onclick="saveToGas()">GASに保存</button>
-        <div id="detail-status"></div>
-        <div class="detail-nav">
-            <button class="btn btn-nav" onclick="navigatePlace(-1)" id="btn-prev">← 前</button>
-            <button class="btn btn-nav" onclick="navigatePlace(1)" id="btn-next">次 →</button>
-        </div>
-    </div>
-    <div class="detail-content">
-        <div class="detail-main">
-            <div class="detail-image-section">
-                <div class="detail-image-area" id="detail-image"></div>
-                <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
-            </div>
-            <div class="detail-info">
-                <div class="field-label">Place ID: <span id="detail-place-id" style="color: #4a9eff; font-weight: normal;"></span></div>
-                <div class="field-label">場所名</div>
-                <input type="text" class="field-input" id="detail-name" onchange="updatePlaceName(this.value)">
-                <div class="field-row">
-                    <label>コマンドリスト:</label>
-                    <input type="text" id="detail-command-list" onchange="updatePlaceField('command_list', this.value)">
-                </div>
-                <div class="field-row">
-                    <label>公開フラグ:</label>
-                    <input type="text" id="detail-public-flag" onchange="updatePlaceField('public_flag', this.value)">
-                </div>
-                <div class="field-label">場所タグ</div>
-                <textarea class="field-textarea" id="detail-tag" onchange="updatePlaceField('tag', this.value)"></textarea>
-                <div class="field-label">追加タグ</div>
-                <textarea class="field-textarea" id="detail-additional" onchange="updatePlaceField('additionalTag', this.value)"></textarea>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -196,6 +334,7 @@
 
             if (places.length > 0) {
                 renderPlaceGrid();
+                renderPlaceTree();
                 showStatusWithDetail(`キャッシュから復元: 場所${places.length}件`);
             }
         } catch (error) {
@@ -320,6 +459,7 @@
 
             saveCachedData();
             renderPlaceGrid();
+            renderPlaceTree();
             showStatusWithDetail(`読み込み完了: モデル${Object.keys(models).length}件, キャラ${characters.length}件, 場所${places.length}件, アクション${actions.length}件`);
         } catch (error) {
             console.error(error);
@@ -392,6 +532,7 @@
                 'additional tag': place.additionalTag,
                 'command_list': place.command_list || '',
                 'public_flag': place.public_flag || '',
+                'root_place': place.root_place || '',
                 'image': placeImages[place.place_id] || ''
             }));
 
@@ -407,6 +548,91 @@
             console.error(error);
             showStatusWithDetail('保存エラー: ' + error.message, 'error');
         }
+    }
+
+    // ツリー構造を構築
+    function buildPlaceTree() {
+        const tree = { roots: [], children: {} };
+
+        // 子場所のマップを作成
+        places.forEach((place, index) => {
+            place._index = index;
+            if (place.root_place) {
+                if (!tree.children[place.root_place]) {
+                    tree.children[place.root_place] = [];
+                }
+                tree.children[place.root_place].push(place);
+            } else {
+                tree.roots.push(place);
+            }
+        });
+
+        return tree;
+    }
+
+    // ツリーノードのHTMLを再帰的に生成
+    function renderTreeNode(place, tree, level = 0) {
+        const children = tree.children[place.place_id] || [];
+        const hasChildren = children.length > 0;
+        const isSelected = currentDetailIndex === place._index;
+
+        let html = `
+            <div class="tree-node">
+                <div class="tree-item ${isSelected ? 'selected' : ''}" onclick="selectPlaceFromTree(${place._index})" data-index="${place._index}">
+                    <span class="tree-toggle">${hasChildren ? '▼' : '　'}</span>
+                    <span class="tree-icon">📍</span>
+                    <span class="tree-name">${place.name || '(名前未設定)'}</span>
+                </div>
+        `;
+
+        if (hasChildren) {
+            html += '<div class="tree-children">';
+            children.forEach(child => {
+                html += renderTreeNode(child, tree, level + 1);
+            });
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    // ツリービューをレンダリング
+    function renderPlaceTree() {
+        const container = document.getElementById('place-tree');
+
+        if (places.length === 0) {
+            container.innerHTML = '<div style="color: #666; font-size: 0.85rem;">場所データがありません</div>';
+            return;
+        }
+
+        const tree = buildPlaceTree();
+        let html = '';
+
+        // ルートノードを表示
+        tree.roots.forEach(place => {
+            html += renderTreeNode(place, tree);
+        });
+
+        // 孤立ノード（親が存在しない子ノード）を表示
+        const orphans = places.filter(place => {
+            if (!place.root_place) return false;
+            return !places.some(p => p.place_id === place.root_place);
+        });
+
+        if (orphans.length > 0) {
+            html += '<div class="tree-root-label">（親なし）</div>';
+            orphans.forEach(place => {
+                html += renderTreeNode(place, tree);
+            });
+        }
+
+        container.innerHTML = html;
+    }
+
+    // ツリーから場所を選択
+    function selectPlaceFromTree(index) {
+        openDetailPage(index);
     }
 
     function renderPlaceGrid() {
@@ -561,19 +787,24 @@
 
         currentDetailIndex = index;
         updateDetailPage();
+
+        // グリッドを非表示、詳細を表示
+        document.getElementById('place-grid').style.display = 'none';
         document.getElementById('detail-page').classList.add('active');
-        document.body.style.overflow = 'hidden';
+
+        // ツリーの選択状態を更新
+        renderPlaceTree();
     }
 
     function updateDetailPage() {
         const place = places[currentDetailIndex];
         if (!place) return;
 
-        document.getElementById('detail-title').textContent = place.name || '(名前未設定)';
         document.getElementById('detail-place-id').textContent = place.place_id || '(未設定)';
         document.getElementById('detail-name').value = place.name || '';
         document.getElementById('detail-command-list').value = place.command_list || '';
         document.getElementById('detail-public-flag').value = place.public_flag || '';
+        updateRootPlaceSelect(place.root_place);
         document.getElementById('detail-tag').value = place.tag || '';
         document.getElementById('detail-additional').value = place.additionalTag || '';
 
@@ -609,8 +840,11 @@
 
     function closeDetailPage() {
         document.getElementById('detail-page').classList.remove('active');
-        document.body.style.overflow = '';
+        document.getElementById('place-grid').style.display = '';
         currentDetailIndex = -1;
+
+        // ツリーの選択状態をクリア
+        renderPlaceTree();
     }
 
     function updatePlaceName(name) {
@@ -619,9 +853,24 @@
         if (!place) return;
 
         place.name = name;
-        document.getElementById('detail-title').textContent = name || '(名前未設定)';
         saveCachedData();
         renderPlaceGrid();
+        renderPlaceTree();
+    }
+
+    function updateRootPlaceSelect(currentValue) {
+        const select = document.getElementById('detail-root-place');
+        const currentPlace = places[currentDetailIndex];
+
+        let options = '<option value="">（なし）</option>';
+        places.forEach(place => {
+            // 自分自身は選択肢から除外
+            if (currentPlace && place.place_id === currentPlace.place_id) return;
+            const selected = place.place_id === currentValue ? 'selected' : '';
+            const displayName = place.name || place.place_id;
+            options += `<option value="${place.place_id}" ${selected}>${displayName}</option>`;
+        });
+        select.innerHTML = options;
     }
 
     function updatePlaceField(field, value) {
@@ -632,6 +881,11 @@
         place[field] = value;
         saveCachedData();
         renderPlaceGrid();
+
+        // root_placeが変更されたらツリーを更新
+        if (field === 'root_place') {
+            renderPlaceTree();
+        }
     }
 
     function navigatePlace(direction) {
@@ -639,6 +893,7 @@
         if (newIndex >= 0 && newIndex < places.length) {
             currentDetailIndex = newIndex;
             updateDetailPage();
+            renderPlaceTree();
         }
     }
 
