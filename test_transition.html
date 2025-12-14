@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transition Test</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        body { padding: 0; }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: 100vh;
+        }
+
+        /* サイドバー */
+        .sidebar {
+            background: #1a1a1a;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            background: #222;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            color: #4a9eff;
+            font-size: 1rem;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .current-state {
+            background: #222;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .current-state h3 {
+            margin: 0 0 10px 0;
+            color: #4a9eff;
+            font-size: 0.9rem;
+        }
+
+        .state-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+            font-size: 0.85rem;
+        }
+
+        .state-item:last-child {
+            border-bottom: none;
+        }
+
+        .state-label {
+            color: #888;
+        }
+
+        .state-value {
+            color: #fff;
+            text-align: right;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-footer {
+            padding: 15px;
+            background: #222;
+            border-top: 1px solid #333;
+        }
+
+        .sidebar-footer input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+
+        /* チャットエリア */
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            background: #111;
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .chat-header h2 {
+            margin: 0;
+            color: #fff;
+            font-size: 1.1rem;
+            flex: 1;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 80%;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .message.system {
+            background: #2a2a2a;
+            color: #888;
+            align-self: center;
+            font-size: 0.85rem;
+            max-width: 90%;
+        }
+
+        .message.action {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+            color: #fff;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.transition {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: #e2e8f0;
+            align-self: flex-start;
+            border-left: 3px solid #4a9eff;
+        }
+
+        .message.state-change {
+            background: #1a1a1a;
+            color: #68d391;
+            align-self: center;
+            font-size: 0.85rem;
+            border: 1px solid #2f855a;
+        }
+
+        .message.error {
+            background: #742a2a;
+            color: #feb2b2;
+            align-self: center;
+        }
+
+        .action-name {
+            font-weight: bold;
+            color: #90cdf4;
+            margin-bottom: 5px;
+        }
+
+        .action-prompt {
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+
+        .transition-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .transition-arrow {
+            color: #4a9eff;
+            font-size: 1.2rem;
+        }
+
+        /* アクションボタンエリア */
+        .action-buttons {
+            padding: 15px 20px;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+        }
+
+        .action-buttons-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .action-buttons-header h3 {
+            margin: 0;
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .action-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 10px 16px;
+            border: 1px solid #444;
+            border-radius: 20px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #3a3a3a;
+            border-color: #4a9eff;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .action-btn.current {
+            background: #4a9eff;
+            border-color: #4a9eff;
+        }
+
+        #status {
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid #333;
+                max-height: 40vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- サイドバー -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Transition Test</h2>
+        </div>
+        <div class="sidebar-content">
+            <div class="current-state">
+                <h3>現在の状態</h3>
+                <div class="state-item">
+                    <span class="state-label">キャラ</span>
+                    <span class="state-value" id="current-char">未選択</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">場所</span>
+                    <span class="state-value" id="current-place">未選択</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">アクション</span>
+                    <span class="state-value" id="current-action">未選択</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>キャラクター</label>
+                <select id="character" onchange="onCharacterChange()">
+                    <option value="-1">無し</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>場所</label>
+                <select id="place" onchange="onPlaceChange()">
+                    <option value="-1">無し</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>初期アクション</label>
+                <select id="action" onchange="onActionChange()">
+                    <option value="-1">無し</option>
+                </select>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <input type="text" id="gasUrl" placeholder="GAS URL">
+            <button class="btn btn-primary" onclick="loadAllFromGas()" style="width:100%;">GAS読み込み</button>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <!-- チャットエリア -->
+    <div class="chat-area">
+        <div class="chat-header">
+            <h2 id="chat-title">アクション遷移テスト</h2>
+            <button class="btn btn-small" onclick="clearChat()" style="background:#555;">クリア</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message system">GASからデータを読み込んでください</div>
+        </div>
+        <div class="action-buttons">
+            <div class="action-buttons-header">
+                <h3>次のアクション</h3>
+                <span id="action-count">0件</span>
+            </div>
+            <div class="action-grid" id="action-grid">
+                <span style="color:#666;font-size:0.85rem;">アクションがありません</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/constants.js"></script>
+<script src="js/gas-api.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/data-parser.js"></script>
+<script src="js/ui-utils.js"></script>
+<script>
+    const CACHE_KEY = 'transition_test_cache';
+
+    // データストア
+    let models = {};
+    let characters = [];
+    let places = [];
+    let actions = [];
+    let transitions = [];  // 遷移データ（将来用）
+
+    // 現在の状態
+    let currentState = {
+        characterIndex: -1,
+        placeIndex: -1,
+        actionIndex: -1
+    };
+
+    // 履歴
+    let actionHistory = [];
+
+    // 初期化
+    document.addEventListener('DOMContentLoaded', () => {
+        const settings = loadSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY);
+        if (settings.gasUrl) document.getElementById('gasUrl').value = settings.gasUrl;
+        loadCachedData();
+    });
+
+    function saveCachedData() {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ models, characters, places, actions }));
+    }
+
+    function loadCachedData() {
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                const data = JSON.parse(cached);
+                models = data.models || {};
+                characters = data.characters || [];
+                places = data.places || [];
+                actions = data.actions || [];
+                updateAllSelects();
+                updateActionButtons();
+                if (actions.length > 0) {
+                    addSystemMessage(`キャッシュから復元: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
+                }
+            }
+        } catch (e) {
+            console.error('Cache load error:', e);
+        }
+    }
+
+    async function loadAllFromGas() {
+        const baseUrl = document.getElementById('gasUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        localStorage.setItem(STORAGE_KEYS.GAS_URL, baseUrl);
+        showStatus('読み込み中...', 'loading');
+
+        try {
+            const [modelData, characterData, placeData, actionData] = await Promise.all([
+                fetchGasData(baseUrl, 'model'),
+                fetchGasData(baseUrl, 'character'),
+                fetchGasData(baseUrl, 'place'),
+                fetchGasData(baseUrl, 'action')
+            ]);
+
+            models = parseModels(modelData);
+            characters = parseCharacters(characterData);
+            places = parsePlaces(placeData);
+            actions = parseActionsWithCompositions(actionData);
+
+            saveCachedData();
+            updateAllSelects();
+            updateActionButtons();
+
+            showStatus(`読込完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
+            addSystemMessage(`データ読み込み完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
+        } catch (error) {
+            console.error(error);
+            showStatus('エラー: ' + error.message, 'error');
+        }
+    }
+
+    function updateAllSelects() {
+        const charSelect = document.getElementById('character');
+        charSelect.innerHTML = '<option value="-1">無し</option>';
+        characters.forEach((char, i) => {
+            charSelect.innerHTML += `<option value="${i}">${char.name}${char.series ? ' (' + char.series + ')' : ''}</option>`;
+        });
+
+        const placeSelect = document.getElementById('place');
+        placeSelect.innerHTML = '<option value="-1">無し</option>';
+        places.forEach((place, i) => {
+            placeSelect.innerHTML += `<option value="${i}">${place.name}</option>`;
+        });
+
+        const actionSelect = document.getElementById('action');
+        actionSelect.innerHTML = '<option value="-1">無し</option>';
+        actions.forEach((action, i) => {
+            actionSelect.innerHTML += `<option value="${i}">${action.name}${action.action_id ? ' [' + action.action_id + ']' : ''}</option>`;
+        });
+    }
+
+    function updateActionButtons() {
+        const grid = document.getElementById('action-grid');
+        const countEl = document.getElementById('action-count');
+
+        if (actions.length === 0) {
+            grid.innerHTML = '<span style="color:#666;font-size:0.85rem;">アクションがありません</span>';
+            countEl.textContent = '0件';
+            return;
+        }
+
+        countEl.textContent = `${actions.length}件`;
+
+        grid.innerHTML = actions.map((action, i) => {
+            const isCurrent = i === currentState.actionIndex;
+            return `<button class="action-btn ${isCurrent ? 'current' : ''}"
+                            onclick="executeAction(${i})"
+                            title="${action.action_id || ''}: ${action.prompt || ''}">
+                ${action.name}
+            </button>`;
+        }).join('');
+    }
+
+    function updateCurrentStateDisplay() {
+        const char = currentState.characterIndex >= 0 ? characters[currentState.characterIndex] : null;
+        const place = currentState.placeIndex >= 0 ? places[currentState.placeIndex] : null;
+        const action = currentState.actionIndex >= 0 ? actions[currentState.actionIndex] : null;
+
+        document.getElementById('current-char').textContent = char?.name || '無し';
+        document.getElementById('current-place').textContent = place?.name || '無し';
+        document.getElementById('current-action').textContent = action?.name || '無し';
+
+        // タイトル更新
+        const title = char ? `${char.name}の遷移テスト` : 'アクション遷移テスト';
+        document.getElementById('chat-title').textContent = title;
+    }
+
+    function onCharacterChange() {
+        const index = parseInt(document.getElementById('character').value);
+        const prevIndex = currentState.characterIndex;
+        currentState.characterIndex = index;
+
+        if (index >= 0 && index !== prevIndex) {
+            const char = characters[index];
+            addStateChangeMessage(`キャラクター変更: ${char.name}`);
+        }
+
+        updateCurrentStateDisplay();
+    }
+
+    function onPlaceChange() {
+        const index = parseInt(document.getElementById('place').value);
+        const prevIndex = currentState.placeIndex;
+        currentState.placeIndex = index;
+
+        if (index >= 0 && index !== prevIndex) {
+            const place = places[index];
+            addStateChangeMessage(`場所変更: ${place.name}`);
+        }
+
+        updateCurrentStateDisplay();
+    }
+
+    function onActionChange() {
+        const index = parseInt(document.getElementById('action').value);
+        currentState.actionIndex = index;
+        updateCurrentStateDisplay();
+        updateActionButtons();
+
+        if (index >= 0) {
+            const action = actions[index];
+            addActionMessage(action, '初期アクション設定');
+        }
+    }
+
+    function executeAction(actionIndex) {
+        const action = actions[actionIndex];
+        if (!action) return;
+
+        const prevActionIndex = currentState.actionIndex;
+        const prevAction = prevActionIndex >= 0 ? actions[prevActionIndex] : null;
+
+        // 遷移情報を表示
+        if (prevAction) {
+            addTransitionMessage(prevAction, action);
+        } else {
+            addActionMessage(action, 'アクション開始');
+        }
+
+        // 状態更新
+        currentState.actionIndex = actionIndex;
+        document.getElementById('action').value = actionIndex;
+
+        // 履歴に追加
+        actionHistory.push({
+            timestamp: new Date().toISOString(),
+            fromAction: prevAction?.action_id || null,
+            toAction: action.action_id,
+            character: currentState.characterIndex >= 0 ? characters[currentState.characterIndex]?.name : null,
+            place: currentState.placeIndex >= 0 ? places[currentState.placeIndex]?.name : null
+        });
+
+        updateCurrentStateDisplay();
+        updateActionButtons();
+    }
+
+    // メッセージ追加関数
+    function addSystemMessage(text) {
+        const messagesDiv = document.getElementById('chat-messages');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message system';
+        msgDiv.textContent = text;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function addStateChangeMessage(text) {
+        const messagesDiv = document.getElementById('chat-messages');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message state-change';
+        msgDiv.textContent = text;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function addActionMessage(action, label) {
+        const messagesDiv = document.getElementById('chat-messages');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message action';
+        msgDiv.innerHTML = `
+            <div class="action-name">${label}: ${action.name}</div>
+            <div class="action-prompt">${action.action_id ? '[' + action.action_id + '] ' : ''}${action.prompt || '(プロンプトなし)'}</div>
+        `;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function addTransitionMessage(fromAction, toAction) {
+        const messagesDiv = document.getElementById('chat-messages');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message transition';
+        msgDiv.innerHTML = `
+            <div class="transition-info">
+                <div><strong>${fromAction.name}</strong> ${fromAction.action_id ? '[' + fromAction.action_id + ']' : ''}</div>
+                <div class="transition-arrow">↓</div>
+                <div><strong>${toAction.name}</strong> ${toAction.action_id ? '[' + toAction.action_id + ']' : ''}</div>
+            </div>
+        `;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function clearChat() {
+        document.getElementById('chat-messages').innerHTML = '';
+        actionHistory = [];
+        addSystemMessage('チャットをクリアしました');
+    }
+
+    // 履歴をコンソールに出力（デバッグ用）
+    function dumpHistory() {
+        console.log('Action History:', actionHistory);
+        return actionHistory;
+    }
+</script>
+
+</body>
+</html>

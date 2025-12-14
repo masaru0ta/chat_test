@@ -35,6 +35,35 @@
             font-family: inherit;
         }
 
+        .detail-info .field-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .detail-info .field-row label {
+            color: #888;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            min-width: 100px;
+        }
+
+        .detail-info .field-row input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .detail-info .field-row input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
         .detail-info .field-value.editable:focus {
             outline: none;
             border-color: #4a9eff;
@@ -236,6 +265,25 @@
                 <button class="btn btn-generate" onclick="generateDetailImage()">画像生成</button>
             </div>
             <div class="detail-info">
+                <div class="field-label">Action ID: <span id="detail-action-id" style="color: #4a9eff; font-weight: normal;"></span></div>
+                <div class="field-label">アクション名</div>
+                <input type="text" class="field-value editable" id="detail-name" onchange="updateActionName(this.value)" style="min-height: auto;">
+                <div class="field-row">
+                    <label>コマンドリスト:</label>
+                    <input type="text" id="detail-command-list" onchange="updateActionField('command_list', this.value)">
+                </div>
+                <div class="field-row">
+                    <label>Pre-Action:</label>
+                    <input type="text" id="detail-pre-action" onchange="updateActionField('pre_action', this.value)">
+                </div>
+                <div class="field-row">
+                    <label>Public-Action:</label>
+                    <input type="text" id="detail-public-action" onchange="updateActionField('public_action', this.value)">
+                </div>
+                <div class="field-row">
+                    <label>Next-Action:</label>
+                    <input type="text" id="detail-next-action" onchange="updateActionField('next_action', this.value)">
+                </div>
                 <div class="field-label">プロンプト</div>
                 <textarea class="field-value editable" id="detail-prompt" onchange="updateActionPrompt(this.value)"></textarea>
             </div>
@@ -373,11 +421,33 @@
             characters = parseCharacters(characterData);
             places = parsePlaces(placeData);
 
+            // 既存のact_xxx形式のIDから最大番号を取得
+            let maxNum = 0;
+            actionData.forEach(item => {
+                const id = item['action_id'] || '';
+                const match = id.match(/^act_(\d+)$/);
+                if (match) {
+                    const num = parseInt(match[1], 10);
+                    if (num > maxNum) maxNum = num;
+                }
+            });
+
             // アクション設定（品質正規化とenabled付き）
             actions = actionData.map(item => {
+                let actionId = item['action_id'] || '';
+                if (!actionId) {
+                    maxNum++;
+                    actionId = 'act_' + String(maxNum).padStart(3, '0');
+                }
+
                 const action = {
+                    action_id: actionId,
                     name: item['action name'] || '',
                     prompt: item.prompt || '',
+                    command_list: item['command_list'] || '',
+                    pre_action: item['pre-action'] || '',
+                    public_action: item['public-action'] || '',
+                    next_action: item['next-action'] || '',
                     compositions: []
                 };
                 COMPOSITION_KEYS.forEach(key => {
@@ -430,17 +500,13 @@
         container.innerHTML = actions.map((action, index) => `
             <div class="card" id="card-${index}">
                 <div class="card-image" id="image-${index}">
-                    ${actionImages[action.name]
-                        ? `<img src="${actionImages[action.name]}" alt="${action.name}" onclick="openDetailPage(${index})">`
+                    ${actionImages[action.action_id]
+                        ? `<img src="${actionImages[action.action_id]}" alt="${action.name}" onclick="openDetailPage(${index})">`
                         : `<div class="placeholder" onclick="openDetailPage(${index})" style="cursor:pointer;">画像未生成</div>`
                     }
                 </div>
                 <div class="card-info">
                     <div class="card-name">${action.name || '(名前未設定)'}</div>
-                    <div class="action-prompt">${action.prompt || ''}</div>
-                </div>
-                <div class="card-actions">
-                    <button class="btn btn-generate btn-small" onclick="generateSingleImage(${index})">画像生成</button>
                 </div>
             </div>
         `).join('');
@@ -473,10 +539,10 @@
         if (!action) return '';
 
         const model = models[getFirstModel()] || {};
-        const charIndex = parseInt(document.getElementById('preview-character')?.value) || 0;
-        const placeIndex = parseInt(document.getElementById('preview-place')?.value) || 0;
-        const char = characters[charIndex] || characters[0] || {};
-        const place = places[placeIndex] || places[0] || {};
+        const charIndex = parseInt(document.getElementById('preview-character')?.value);
+        const placeIndex = parseInt(document.getElementById('preview-place')?.value);
+        const char = charIndex >= 0 ? (characters[charIndex] || {}) : {};
+        const place = placeIndex >= 0 ? (places[placeIndex] || {}) : {};
 
         // 構図タグ: 指定があればその構図、なければBEST選択
         let compositionTag;
@@ -531,7 +597,7 @@
         try {
             const prompt = buildActionPrompt(actionIndex);
             const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
-            actionImages[action.name] = imageUrl;
+            actionImages[action.action_id] = imageUrl;
             saveCachedData();
             imageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="openDetailPage(${actionIndex})">`;
         } catch (error) {
@@ -563,7 +629,7 @@
             try {
                 const prompt = buildActionPrompt(i);
                 const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
-                actionImages[action.name] = imageUrl;
+                actionImages[action.action_id] = imageUrl;
                 saveCachedData();
                 imageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="openDetailPage(${i})">`;
                 showStatusWithDetail(`画像生成中: ${i + 1}/${actions.length}`, 'loading');
@@ -603,11 +669,17 @@
 
         // データを設定
         document.getElementById('detail-title').textContent = action.name || '(名前未設定)';
+        document.getElementById('detail-action-id').textContent = action.action_id || '(未設定)';
+        document.getElementById('detail-name').value = action.name || '';
         document.getElementById('detail-prompt').value = action.prompt || '';
+        document.getElementById('detail-command-list').value = action.command_list || '';
+        document.getElementById('detail-pre-action').value = action.pre_action || '';
+        document.getElementById('detail-public-action').value = action.public_action || '';
+        document.getElementById('detail-next-action').value = action.next_action || '';
 
         // 画像を設定
         const imageDiv = document.getElementById('detail-image');
-        const imageUrl = actionImages[action.name];
+        const imageUrl = actionImages[action.action_id];
         if (imageUrl) {
             imageDiv.innerHTML = `<img src="${imageUrl}" alt="${action.name}" onclick="window.open('${imageUrl}', '_blank')">`;
         } else {
@@ -632,16 +704,16 @@
         const charValue = charSelect.value;
         const placeValue = placeSelect.value;
 
-        charSelect.innerHTML = characters.map((char, index) =>
+        charSelect.innerHTML = '<option value="-1">無し</option>' + characters.map((char, index) =>
             `<option value="${index}">${char.name || '(名前なし)'}</option>`
         ).join('');
 
-        placeSelect.innerHTML = places.map((place, index) =>
+        placeSelect.innerHTML = '<option value="-1">無し</option>' + places.map((place, index) =>
             `<option value="${index}">${place.name || '(名前なし)'}</option>`
         ).join('');
 
-        if (charValue !== '' && parseInt(charValue) < characters.length) charSelect.value = charValue;
-        if (placeValue !== '' && parseInt(placeValue) < places.length) placeSelect.value = placeValue;
+        if (charValue !== '' && parseInt(charValue) >= -1 && parseInt(charValue) < characters.length) charSelect.value = charValue;
+        if (placeValue !== '' && parseInt(placeValue) >= -1 && parseInt(placeValue) < places.length) placeSelect.value = placeValue;
     }
 
     function updateCompositionGrid() {
@@ -715,6 +787,19 @@
         saveCachedData();
     }
 
+    // アクション名更新
+    function updateActionName(name) {
+        if (currentDetailIndex < 0) return;
+
+        const action = actions[currentDetailIndex];
+        if (!action) return;
+
+        action.name = name;
+        document.getElementById('detail-title').textContent = name || '(名前未設定)';
+        saveCachedData();
+        renderActionGrid();
+    }
+
     // アクションプロンプト更新
     function updateActionPrompt(prompt) {
         if (currentDetailIndex < 0) return;
@@ -727,6 +812,16 @@
 
         // 一覧のカードも更新
         renderActionGrid();
+    }
+
+    function updateActionField(field, value) {
+        if (currentDetailIndex < 0) return;
+
+        const action = actions[currentDetailIndex];
+        if (!action) return;
+
+        action[field] = value;
+        saveCachedData();
     }
 
     function closeDetailPage() {
@@ -778,7 +873,7 @@
         try {
             const prompt = buildActionPrompt(currentDetailIndex);
             const imageUrl = await generateImageWithPrompt(settings.modelId, settings.apiKey, prompt);
-            actionImages[action.name] = imageUrl;
+            actionImages[action.action_id] = imageUrl;
             saveCachedData();
 
             // 詳細ページ画像を更新
@@ -857,8 +952,13 @@
             // アクションデータをGAS形式に変換
             const gasData = actions.map(action => {
                 const row = {
+                    'action_id': action.action_id,
                     'action name': action.name,
-                    'prompt': action.prompt
+                    'prompt': action.prompt,
+                    'command_list': action.command_list,
+                    'pre-action': action.pre_action,
+                    'public-action': action.public_action,
+                    'next-action': action.next_action
                 };
 
                 // 各構図のquality/tagを追加

@@ -53,6 +53,7 @@ function parsePlaces(rawData) {
         name: item.name || '',
         tag: item.tag || '',
         additionalTag: item['additional tag'] || '',
+        command_list: item['command_list'] || '',
         image: item.image || ''
     }));
 }
@@ -63,10 +64,32 @@ function parsePlaces(rawData) {
  * @returns {Array} パース済みアクション配列（構図情報付き）
  */
 function parseActionsWithCompositions(rawData) {
+    // 既存のact_xxx形式のIDから最大番号を取得
+    let maxNum = 0;
+    rawData.forEach(item => {
+        const id = item['action_id'] || '';
+        const match = id.match(/^act_(\d+)$/);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+        }
+    });
+
     return rawData.map(item => {
+        let actionId = item['action_id'] || '';
+        if (!actionId) {
+            maxNum++;
+            actionId = 'act_' + String(maxNum).padStart(3, '0');
+        }
+
         const action = {
+            action_id: actionId,
             name: item['action name'] || '',
             prompt: item.prompt || '',
+            command_list: item['command_list'] || '',
+            pre_action: item['pre-action'] || '',
+            public_action: item['public-action'] || '',
+            next_action: item['next-action'] || '',
             compositions: []
         };
 
