@@ -6,7 +6,12 @@
     <title>Transition Test</title>
     <link rel="stylesheet" href="css/common.css">
     <style>
-        body { padding: 0; }
+        html, body {
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            height: 100%;
+        }
 
         .app-container {
             display: grid;
@@ -38,6 +43,7 @@
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
+            overscroll-behavior: contain;
             padding: 15px;
         }
 
@@ -122,6 +128,7 @@
             display: flex;
             flex-direction: column;
             background: #111;
+            overflow: hidden;
         }
 
         .chat-header {
@@ -140,57 +147,155 @@
             flex: 1;
         }
 
-        .chat-messages {
+        /* ページ表示エリア（固定表示） */
+        .page-area {
             flex: 1;
-            overflow-y: auto;
-            padding: 20px;
+            min-height: 0;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            background: #111;
         }
 
-        .message {
-            padding: 12px 16px;
-            border-radius: 12px;
-            max-width: 80%;
-            line-height: 1.6;
-            font-size: 0.95rem;
-        }
-
-        .message.system {
-            background: #2a2a2a;
-            color: #888;
-            align-self: center;
-            font-size: 0.85rem;
-            max-width: 90%;
-        }
-
-        .message.action {
-            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
-            color: #fff;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-
-        .message.transition {
-            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-            color: #e2e8f0;
-            align-self: flex-start;
-            border-left: 3px solid #4a9eff;
-        }
-
-        .message.state-change {
+        #page-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             background: #1a1a1a;
-            color: #68d391;
-            align-self: center;
-            font-size: 0.85rem;
-            border: 1px solid #2f855a;
+            overflow: hidden;
+            position: relative;
         }
 
-        .message.error {
-            background: #742a2a;
-            color: #feb2b2;
-            align-self: center;
+        .page-content {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .page-image .placeholder {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .page-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            line-height: 1.8;
+            font-size: 1rem;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.6);
+            max-height: 60%;
+            overflow-y: auto;
+        }
+
+        .page-text.system-text {
+            position: static;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #888;
+            height: 100%;
+            max-height: none;
+            background: #1a1a1a;
+        }
+
+        /* 画像なしのページ（dialogue等）*/
+        .page-content:not(:has(.page-image)) .page-text {
+            position: static;
+            height: 100%;
+            max-height: none;
+            background: #1a1a1a;
+        }
+
+        .page-label {
+            background: #4a9eff;
+            color: #fff;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin-bottom: 12px;
+            border-radius: 4px;
+        }
+
+        .page-label.character {
+            background: #e53e3e;
+        }
+
+        .page-label.system {
+            background: #555;
+        }
+
+        /* ページナビゲーション */
+        .page-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+        }
+
+        .page-nav button {
+            padding: 8px 16px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-nav button:hover:not(:disabled) {
+            background: #3a3a3a;
+            border-color: #4a9eff;
+        }
+
+        .page-nav button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        #page-indicator {
+            color: #888;
+            font-size: 0.9rem;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .page-nav .latest-btn {
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            background: #4a9eff;
+            border-color: #4a9eff;
+        }
+
+        .page-nav .latest-btn:hover:not(:disabled) {
+            background: #3a8eef;
         }
 
         .action-name {
@@ -337,48 +442,83 @@
             <h2>Transition Test</h2>
         </div>
         <div class="sidebar-content">
+            <!-- キャラクター1ステータス -->
             <div class="current-state">
-                <h3>現在の状態</h3>
+                <h3>キャラクター1</h3>
                 <div class="state-item">
-                    <span class="state-label">キャラ</span>
-                    <span class="state-value" id="current-char">未選択</span>
+                    <span class="state-label">名前</span>
+                    <span class="state-value" id="char1-name">未選択</span>
                 </div>
                 <div class="state-item">
-                    <span class="state-label">場所</span>
-                    <span class="state-value" id="current-place">未選択</span>
+                    <span class="state-label">現在地</span>
+                    <span class="state-value" id="char1-place">未選択</span>
                 </div>
                 <div class="state-item">
-                    <span class="state-label">アクション</span>
-                    <span class="state-value" id="current-action">未選択</span>
+                    <span class="state-label">拒絶</span>
+                    <span class="state-value" id="char1-rejection">0</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">服従</span>
+                    <span class="state-value" id="char1-submission">0</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">慈愛</span>
+                    <span class="state-value" id="char1-compassion">0</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">誘惑</span>
+                    <span class="state-value" id="char1-seduction">0</span>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>キャラクター</label>
-                <select id="character" onchange="onCharacterChange()">
-                    <option value="-1">無し</option>
-                </select>
+            <!-- キャラクター2ステータス -->
+            <div class="current-state">
+                <h3>キャラクター2</h3>
+                <div class="state-item">
+                    <span class="state-label">名前</span>
+                    <span class="state-value" id="char2-name">未選択</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">現在地</span>
+                    <span class="state-value" id="char2-place">未選択</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">拒絶</span>
+                    <span class="state-value" id="char2-rejection">0</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">服従</span>
+                    <span class="state-value" id="char2-submission">0</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">慈愛</span>
+                    <span class="state-value" id="char2-compassion">0</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">誘惑</span>
+                    <span class="state-value" id="char2-seduction">0</span>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>場所</label>
-                <select id="place" onchange="onPlaceChange()">
-                    <option value="-1">無し</option>
-                </select>
+            <!-- ユーザーステータス -->
+            <div class="current-state">
+                <h3>ユーザー</h3>
+                <div class="state-item">
+                    <span class="state-label">現在地</span>
+                    <span class="state-value" id="user-place">未選択</span>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>アクション</label>
-                <select id="action" onchange="onActionChange()">
-                    <option value="-1">無し</option>
-                </select>
-                <button class="btn btn-primary" onclick="executeSelectedAction()" style="width:100%; margin-top:8px;">実行</button>
-            </div>
+            <button class="btn btn-primary" onclick="startInitialSetup()" style="width:100%; margin-bottom:15px;">初期設定</button>
         </div>
         <div class="sidebar-footer">
             <input type="text" id="gasUrl" placeholder="GAS URL" style="margin-bottom:8px;">
             <button class="btn btn-primary" onclick="loadAllFromGas()" style="width:100%; margin-bottom:12px;">GAS読み込み</button>
-            <input type="password" id="chatApiKey" placeholder="OpenRouter API Key">
+            <input type="password" id="chatApiKey" placeholder="OpenRouter API Key" style="margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                <input type="password" id="runwareApiKey" placeholder="Runware API Key" style="flex:1; margin-bottom:0;">
+                <button class="btn" id="imageGenToggle" onclick="toggleImageGen()" style="padding:8px 12px; font-size:0.8rem;">ON</button>
+            </div>
             <div id="status"></div>
         </div>
     </div>
@@ -389,8 +529,14 @@
             <h2 id="chat-title">アクション遷移テスト</h2>
             <button class="btn btn-small" onclick="clearChat()" style="background:#555;">クリア</button>
         </div>
-        <div class="chat-messages" id="chat-messages">
-            <div class="message system">GASからデータを読み込んでください</div>
+        <div class="page-area">
+            <div id="page-view"></div>
+            <div class="page-nav">
+                <button id="prev-page-btn" onclick="prevPage()" disabled>&lt;</button>
+                <span id="page-indicator">-- / --</span>
+                <button id="next-page-btn" onclick="nextPage()" disabled>&gt;</button>
+                <button class="latest-btn" onclick="goToLatestPage()">最新</button>
+            </div>
         </div>
         <div class="command-area">
             <div class="command-row">
@@ -413,6 +559,8 @@
 <script src="js/storage.js"></script>
 <script src="js/data-parser.js"></script>
 <script src="js/ui-utils.js"></script>
+<script src="js/prompt-utils.js"></script>
+<script src="js/runware-api.js"></script>
 <script>
     const CACHE_KEY = 'transition_test_cache';
 
@@ -422,13 +570,39 @@
     let places = [];
     let actions = [];
     let transitions = [];  // 遷移データ（将来用）
+    let promptTemplates = {};  // LLMプロンプトテンプレート
 
-    // 現在の状態
+    // 現在の状態（後方互換用）
     let currentState = {
         characterIndex: -1,
         placeIndex: -1,
         actionIndex: -1
     };
+
+    // ユーザーステータス
+    let userState = {
+        placeIndex: -1
+    };
+
+    // キャラクターステータス（2人分）
+    let characterStatus = [
+        {
+            characterIndex: -1,
+            placeIndex: -1,
+            rejection: 0,      // 拒絶フラグ
+            submission: 0,     // 服従フラグ
+            compassion: 0,     // 慈愛フラグ
+            seduction: 0       // 誘惑フラグ
+        },
+        {
+            characterIndex: -1,
+            placeIndex: -1,
+            rejection: 0,
+            submission: 0,
+            compassion: 0,
+            seduction: 0
+        }
+    ];
 
     // コマンドタイプ
     let currentCommandType = 'speech';
@@ -442,8 +616,32 @@
     // 履歴
     let actionHistory = [];
 
+    // ページ履歴（ページ単位表示用）
+    let pages = [];
+    let currentPageIndex = -1;
+
     // ストレージキー
     const CHAT_API_KEY = 'transition_chat_api_key';
+    const RUNWARE_API_KEY = 'transition_runware_api_key';
+    const IMAGE_GEN_ENABLED_KEY = 'transition_image_gen_enabled';
+
+    // 画像生成On/Off
+    let imageGenEnabled = true;
+
+    // 画像生成On/Off切り替え
+    function toggleImageGen() {
+        imageGenEnabled = !imageGenEnabled;
+        localStorage.setItem(IMAGE_GEN_ENABLED_KEY, imageGenEnabled ? 'on' : 'off');
+        updateImageGenButton();
+    }
+
+    function updateImageGenButton() {
+        const btn = document.getElementById('imageGenToggle');
+        if (btn) {
+            btn.textContent = imageGenEnabled ? 'ON' : 'OFF';
+            btn.style.background = imageGenEnabled ? '#4a9eff' : '#555';
+        }
+    }
 
     // ターゲットタイプ切り替え（移動/行為）
     function toggleTargetType() {
@@ -466,7 +664,7 @@
         if (currentTargetType === 'move') {
             places.forEach((place, i) => {
                 if (place.command_list === 'use') {
-                    const selected = i === currentState.placeIndex ? ' selected' : '';
+                    const selected = i === userState.placeIndex ? ' selected' : '';
                     select.innerHTML += `<option value="${i}"${selected}>${place.name}</option>`;
                 }
             });
@@ -481,22 +679,31 @@
     }
 
     // ターゲット選択時
-    function onTargetSelect() {
+    async function onTargetSelect() {
         const select = document.getElementById('target-select');
         const index = parseInt(select.value);
         if (isNaN(index) || index < 0) return;
 
         if (currentTargetType === 'move') {
-            // 場所変更
-            currentState.placeIndex = index;
-            document.getElementById('place').value = index;
-            updateCurrentStateDisplay();
-            const place = places[index];
-            addSystemMessage(`${place.name} に移動しました`);
+            // ユーザーの場所変更
+            const previousPlace = userState.placeIndex >= 0 ? places[userState.placeIndex] : null;
+            userState.placeIndex = index;
+            updateUserStatusDisplay();
+            const newPlace = places[index];
+
+            // ページ生成
+            await generatePages('move', '', previousPlace, newPlace);
         } else {
-            // アクション実行
-            executeAction(index);
+            // アクション選択（実行はしない）
+            currentState.actionIndex = index;
+            console.log('[行為選択]', actions[index]?.name);
         }
+    }
+
+    // アクション実行（ボタンまたはEnterキーで呼び出し）
+    async function runSelectedAction() {
+        if (currentTargetType !== 'action' || currentState.actionIndex < 0) return;
+        await executeAction(currentState.actionIndex);
     }
 
     // コマンドタイプ切り替え（発言→行為→脚本→発言...）
@@ -526,7 +733,10 @@
     async function executeCommand() {
         const input = document.getElementById('command-input');
         const text = input.value.trim();
-        if (!text) return;
+        const hasAction = currentTargetType === 'action' && currentState.actionIndex >= 0;
+
+        // テキストも行為もない場合は何もしない
+        if (!text && !hasAction) return;
 
         const chatApiKey = document.getElementById('chatApiKey').value.trim();
         if (!chatApiKey) {
@@ -535,11 +745,27 @@
         }
         localStorage.setItem(CHAT_API_KEY, chatApiKey);
 
-        if (currentState.characterIndex < 0) {
-            alert('キャラクターを選択してください');
+        if (userState.placeIndex < 0) {
+            alert('初期設定を実行してください');
             return;
         }
 
+        // 行為のみ（テキストなし）
+        if (!text && hasAction) {
+            await runSelectedAction();
+            return;
+        }
+
+        // 行為＋テキスト（発言しながら行為）
+        if (text && hasAction) {
+            const action = actions[currentState.actionIndex];
+            addCommandMessage('行為＋発言', `${action.name} / 「${text}」`);
+            input.value = '';
+            await generatePages('action_with_speech', text, null, null);
+            return;
+        }
+
+        // テキストのみ
         const typeLabels = {
             speech: '発言',
             action: '行為',
@@ -549,8 +775,8 @@
         addCommandMessage(typeLabels[currentCommandType], text);
         input.value = '';
 
-        // API呼び出し
-        await sendToGrok(currentCommandType, text);
+        // ページ生成
+        await generatePages(currentCommandType, text, null, null);
     }
 
     // Grok API呼び出し
@@ -560,14 +786,16 @@
         const place = currentState.placeIndex >= 0 ? places[currentState.placeIndex] : null;
         const action = currentState.actionIndex >= 0 ? actions[currentState.actionIndex] : null;
 
-        // システムプロンプト構築
-        let systemPrompt = `あなたは「${char.name}」というキャラクターです。`;
+        // システムプロンプト構築（テンプレートから取得）
+        const charTemplate = getPromptTemplate(promptTemplates, 'llm_002', { name: char.name });
+        // テンプレートが " + " で分割されている場合、前半と後半に分ける
+        const templateParts = charTemplate ? charTemplate.split(' + ') : [];
+        let systemPrompt = templateParts[0] || `あなたは「${char.name}」というキャラクターです。`;
         if (char.series) systemPrompt += `作品「${char.series}」に登場します。`;
         if (char.profile) systemPrompt += `\n\nプロフィール: ${char.profile}`;
         if (place) systemPrompt += `\n\n現在の場所: ${place.name}`;
         if (action) systemPrompt += `\n\n現在のアクション: ${action.name}`;
-
-        systemPrompt += `\n\nキャラクターとして自然に応答してください。`;
+        systemPrompt += `\n\n${templateParts[1] || 'キャラクターとして自然に応答してください。'}`;
 
         // ユーザーメッセージ構築
         let userMessage = '';
@@ -666,24 +894,19 @@
         }
     }
 
-    // コマンドメッセージ追加
+    // コマンドメッセージ追加（コンソールのみ）
     function addCommandMessage(type, text) {
-        const messagesDiv = document.getElementById('chat-messages');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message action';
-        msgDiv.innerHTML = `<div class="action-name">[${type}]</div><div class="action-prompt">${text}</div>`;
-        messagesDiv.appendChild(msgDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        console.log(`[${type}]`, text);
     }
 
     // アシスタントメッセージ追加
     function addAssistantMessage(name, text) {
-        const messagesDiv = document.getElementById('chat-messages');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message transition';
-        msgDiv.innerHTML = `<div class="action-name">${name}</div><div class="action-prompt">${text}</div>`;
-        messagesDiv.appendChild(msgDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        addPage({
+            type: 'dialogue',
+            image: null,
+            text: text,
+            label: name
+        });
     }
 
     // 初期化
@@ -695,10 +918,33 @@
         const savedApiKey = localStorage.getItem(CHAT_API_KEY);
         if (savedApiKey) document.getElementById('chatApiKey').value = savedApiKey;
 
+        const savedRunwareKey = localStorage.getItem(RUNWARE_API_KEY);
+        if (savedRunwareKey) document.getElementById('runwareApiKey').value = savedRunwareKey;
+
+        // 画像生成On/Off状態を復元
+        const savedImageGenEnabled = localStorage.getItem(IMAGE_GEN_ENABLED_KEY);
+        imageGenEnabled = savedImageGenEnabled !== 'off';
+        updateImageGenButton();
+
         // ターゲットタイプ初期化
         setTargetType('move');
 
         loadCachedData();
+
+        // キーボードナビゲーション
+        document.addEventListener('keydown', (e) => {
+            // 入力フィールドにフォーカスがある場合は無視
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                nextPage();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevPage();
+            }
+        });
     });
 
     function saveCachedData() {
@@ -736,17 +982,19 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, promptData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
-                fetchGasData(baseUrl, 'action')
+                fetchGasData(baseUrl, 'action'),
+                fetchGasData(baseUrl, 'llm_prompt_template')
             ]);
 
             models = parseModels(modelData);
             characters = parseCharacters(characterData);
             places = parsePlaces(placeData);
             actions = parseActionsWithCompositions(actionData);
+            promptTemplates = parsePromptTemplates(promptData);
 
             saveCachedData();
             updateAllSelects();
@@ -761,84 +1009,19 @@
     }
 
     function updateAllSelects() {
-        const charSelect = document.getElementById('character');
-        charSelect.innerHTML = '<option value="-1">無し</option>';
-        characters.forEach((char, i) => {
-            charSelect.innerHTML += `<option value="${i}">${char.name}${char.series ? ' (' + char.series + ')' : ''}</option>`;
-        });
-
-        const placeSelect = document.getElementById('place');
-        placeSelect.innerHTML = '<option value="-1">無し</option>';
-        places.forEach((place, i) => {
-            if (place.command_list === 'use') {
-                placeSelect.innerHTML += `<option value="${i}">${place.name}</option>`;
-            }
-        });
-
-        const actionSelect = document.getElementById('action');
-        actionSelect.innerHTML = '<option value="-1">無し</option>';
-        actions.forEach((action, i) => {
-            if (action.command_list === 'use') {
-                actionSelect.innerHTML += `<option value="${i}">${action.name}${action.action_id ? ' [' + action.action_id + ']' : ''}</option>`;
-            }
-        });
+        // プルダウン削除済み - ターゲット選択のみ更新
+        updateTargetSelect();
     }
 
-    function updateCurrentStateDisplay() {
-        const char = currentState.characterIndex >= 0 ? characters[currentState.characterIndex] : null;
-        const place = currentState.placeIndex >= 0 ? places[currentState.placeIndex] : null;
-        const action = currentState.actionIndex >= 0 ? actions[currentState.actionIndex] : null;
-
-        document.getElementById('current-char').textContent = char?.name || '無し';
-        document.getElementById('current-place').textContent = place?.name || '無し';
-        document.getElementById('current-action').textContent = action?.name || '無し';
-
-        // タイトル更新
-        const title = char ? `${char.name}の遷移テスト` : 'アクション遷移テスト';
-        document.getElementById('chat-title').textContent = title;
-    }
-
-    function onCharacterChange() {
-        const index = parseInt(document.getElementById('character').value);
-        currentState.characterIndex = index;
-        updateCurrentStateDisplay();
-    }
-
-    function onPlaceChange() {
-        const index = parseInt(document.getElementById('place').value);
-        currentState.placeIndex = index;
-        updateCurrentStateDisplay();
-    }
-
-    function onActionChange() {
-        const index = parseInt(document.getElementById('action').value);
-        updateCurrentStateDisplay();
-    }
-
-    function executeSelectedAction() {
-        const index = parseInt(document.getElementById('action').value);
-        if (index >= 0) {
-            executeAction(index);
-        }
-    }
-
-    function executeAction(actionIndex) {
+    async function executeAction(actionIndex) {
         const action = actions[actionIndex];
         if (!action) return;
 
         const prevActionIndex = currentState.actionIndex;
         const prevAction = prevActionIndex >= 0 ? actions[prevActionIndex] : null;
 
-        // 遷移情報を表示
-        if (prevAction) {
-            addTransitionMessage(prevAction, action);
-        } else {
-            addActionMessage(action, 'アクション開始');
-        }
-
         // 状態更新
         currentState.actionIndex = actionIndex;
-        document.getElementById('action').value = actionIndex;
 
         // 履歴に追加
         actionHistory.push({
@@ -849,66 +1032,633 @@
             place: currentState.placeIndex >= 0 ? places[currentState.placeIndex]?.name : null
         });
 
-        updateCurrentStateDisplay();
+        // ページ生成（アクション実行）
+        await generatePages('action_select', action.name, null, null);
     }
 
-    // メッセージ追加関数
+    // ========== ページ管理関数 ==========
+
+    // ページを追加（DOM要素を事前作成）
+    function addPage(pageData) {
+        const pageIndex = pages.length;
+        pages.push(pageData);
+
+        // DOM要素を作成
+        const pageView = document.getElementById('page-view');
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'page-content';
+        pageDiv.dataset.pageIndex = pageIndex;
+        pageDiv.style.display = 'none';
+
+        let imageHtml = '';
+        if (pageData.image) {
+            imageHtml = `<img src="${pageData.image}" alt="${pageData.label}">`;
+        } else if (pageData.type !== 'system' && pageData.type !== 'dialogue') {
+            imageHtml = '<div class="placeholder">画像なし</div>';
+        }
+
+        let labelClass = '';
+        if (pageData.type === 'character' || pageData.type === 'dialogue') {
+            labelClass = 'character';
+        }
+
+        const showImage = pageData.type !== 'system' && pageData.type !== 'dialogue';
+        pageDiv.innerHTML = `
+            ${showImage ? `<div class="page-image">${imageHtml}</div>` : ''}
+            <div class="page-text ${pageData.type === 'dialogue' ? 'dialogue-text' : ''}">
+                <span class="page-label ${labelClass}">${pageData.label}</span>
+                <div>${pageData.text.replace(/\n/g, '<br>')}</div>
+            </div>
+        `;
+
+        pageView.appendChild(pageDiv);
+
+        updatePageIndicator();
+
+        // 最初のページの場合は表示
+        if (pages.length === 1) {
+            currentPageIndex = 0;
+            showPage(0);
+        }
+    }
+
+    // 指定インデックスのページを表示（display切り替えのみ）
+    function showPage(index) {
+        if (index < 0 || index >= pages.length) return;
+        currentPageIndex = index;
+
+        // 全ページを非表示にして、指定ページのみ表示
+        const pageView = document.getElementById('page-view');
+        const pageContents = pageView.querySelectorAll('.page-content');
+        pageContents.forEach((el, i) => {
+            el.style.display = (i === index) ? 'flex' : 'none';
+        });
+
+        updatePageIndicator();
+    }
+
+    // 次のページへ
+    function nextPage() {
+        if (currentPageIndex < pages.length - 1) {
+            showPage(currentPageIndex + 1);
+        }
+    }
+
+    // 前のページへ
+    function prevPage() {
+        if (currentPageIndex > 0) {
+            showPage(currentPageIndex - 1);
+        }
+    }
+
+    // 最新ページへ
+    function goToLatestPage() {
+        if (pages.length > 0) {
+            showPage(pages.length - 1);
+        }
+    }
+
+    // ページインジケーター更新
+    function updatePageIndicator() {
+        const indicator = document.getElementById('page-indicator');
+        if (indicator) {
+            if (pages.length === 0) {
+                indicator.textContent = '-- / --';
+            } else {
+                indicator.textContent = `${currentPageIndex + 1} / ${pages.length}`;
+            }
+        }
+        // ナビボタンの有効/無効
+        const prevBtn = document.getElementById('prev-page-btn');
+        const nextBtn = document.getElementById('next-page-btn');
+        if (prevBtn) prevBtn.disabled = currentPageIndex <= 0;
+        if (nextBtn) nextBtn.disabled = currentPageIndex >= pages.length - 1;
+    }
+
+    // ========== メッセージ追加関数（システムログはコンソールのみ） ==========
+
     function addSystemMessage(text) {
-        const messagesDiv = document.getElementById('chat-messages');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message system';
-        msgDiv.textContent = text;
-        messagesDiv.appendChild(msgDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        console.log('[System]', text);
     }
 
     function addStateChangeMessage(text) {
-        const messagesDiv = document.getElementById('chat-messages');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message state-change';
-        msgDiv.textContent = text;
-        messagesDiv.appendChild(msgDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        console.log('[StateChange]', text);
     }
 
     function addActionMessage(action, label) {
-        const messagesDiv = document.getElementById('chat-messages');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message action';
-        msgDiv.innerHTML = `
-            <div class="action-name">${label}: ${action.name}</div>
-            <div class="action-prompt">${action.action_id ? '[' + action.action_id + '] ' : ''}${action.prompt || '(プロンプトなし)'}</div>
-        `;
-        messagesDiv.appendChild(msgDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        console.log('[Action]', label, action.name);
     }
 
     function addTransitionMessage(fromAction, toAction) {
-        const messagesDiv = document.getElementById('chat-messages');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message transition';
-        msgDiv.innerHTML = `
-            <div class="transition-info">
-                <div><strong>${fromAction.name}</strong> ${fromAction.action_id ? '[' + fromAction.action_id + ']' : ''}</div>
-                <div class="transition-arrow">↓</div>
-                <div><strong>${toAction.name}</strong> ${toAction.action_id ? '[' + toAction.action_id + ']' : ''}</div>
-            </div>
-        `;
-        messagesDiv.appendChild(msgDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        console.log('[Transition]', fromAction.name, '→', toAction.name);
     }
 
     function clearChat() {
-        document.getElementById('chat-messages').innerHTML = '';
+        pages = [];
+        currentPageIndex = -1;
         actionHistory = [];
         chatHistory = [];
-        addSystemMessage('チャットをクリアしました');
+        // DOM要素を全削除
+        const pageView = document.getElementById('page-view');
+        pageView.innerHTML = '';
+        updatePageIndicator();
+        console.log('[System] チャットをクリアしました');
     }
 
     // 履歴をコンソールに出力（デバッグ用）
     function dumpHistory() {
         console.log('Action History:', actionHistory);
         return actionHistory;
+    }
+
+    // キャラクターステータス表示更新
+    function updateCharacterStatusDisplay() {
+        for (let i = 0; i < 2; i++) {
+            const status = characterStatus[i];
+            const num = i + 1;
+            const char = status.characterIndex >= 0 ? characters[status.characterIndex] : null;
+            const place = status.placeIndex >= 0 ? places[status.placeIndex] : null;
+
+            document.getElementById(`char${num}-name`).textContent = char ? char.name : '未選択';
+            document.getElementById(`char${num}-place`).textContent = place ? place.name : '未選択';
+            document.getElementById(`char${num}-rejection`).textContent = status.rejection;
+            document.getElementById(`char${num}-submission`).textContent = status.submission;
+            document.getElementById(`char${num}-compassion`).textContent = status.compassion;
+            document.getElementById(`char${num}-seduction`).textContent = status.seduction;
+        }
+    }
+
+    // 初期設定開始
+    function startInitialSetup() {
+        // cast='on' のキャラクターを取得
+        const castCharacters = characters
+            .map((char, index) => ({ char, index }))
+            .filter(item => item.char.cast === 'on');
+
+        if (castCharacters.length < 2) {
+            addSystemMessage('cast=onのキャラクターが2人以上必要です。GASから読み込んでください。');
+            return;
+        }
+
+        // publicな場所を取得
+        const publicPlaces = places
+            .map((place, index) => ({ place, index }))
+            .filter(item => item.place.public_flag === 'public');
+
+        if (publicPlaces.length < 2) {
+            addSystemMessage('publicな場所が2つ以上必要です。');
+            return;
+        }
+
+        // 2人のキャラクターをランダム選択（cast=onから、重複なし）
+        const charIndices = [];
+        const shuffledCast = [...castCharacters].sort(() => Math.random() - 0.5);
+        charIndices.push(shuffledCast[0].index);
+        charIndices.push(shuffledCast[1].index);
+
+        // 2つの場所をランダム選択（重複なし）
+        const placeIndices = [];
+        while (placeIndices.length < 2) {
+            const randItem = publicPlaces[Math.floor(Math.random() * publicPlaces.length)];
+            if (!placeIndices.includes(randItem.index)) {
+                placeIndices.push(randItem.index);
+            }
+        }
+
+        // ステータスを設定
+        for (let i = 0; i < 2; i++) {
+            characterStatus[i] = {
+                characterIndex: charIndices[i],
+                placeIndex: placeIndices[i],
+                rejection: 0,
+                submission: 0,
+                compassion: 0,
+                seduction: 0
+            };
+        }
+
+        // 後方互換: currentStateも更新
+        currentState.characterIndex = charIndices[0];
+        currentState.placeIndex = placeIndices[0];
+        currentState.actionIndex = -1;
+
+        // ユーザーの初期位置を「101号室 玄関」に設定
+        const userPlaceIndex = places.findIndex(p => p.name === '101号室 玄関');
+        userState.placeIndex = userPlaceIndex >= 0 ? userPlaceIndex : -1;
+
+        updateCharacterStatusDisplay();
+        updateUserStatusDisplay();
+        updateTargetSelect();
+
+        const char1 = characters[charIndices[0]];
+        const char2 = characters[charIndices[1]];
+        const place1 = places[placeIndices[0]];
+        const place2 = places[placeIndices[1]];
+        const userPlace = userState.placeIndex >= 0 ? places[userState.placeIndex] : null;
+        addSystemMessage(`初期設定完了:`);
+        addSystemMessage(`  ${char1.name} → ${place1.name}`);
+        addSystemMessage(`  ${char2.name} → ${place2.name}`);
+        addSystemMessage(`  ユーザー → ${userPlace ? userPlace.name : '未設定'}`);
+    }
+
+    // ユーザーステータス表示更新
+    function updateUserStatusDisplay() {
+        const place = userState.placeIndex >= 0 ? places[userState.placeIndex] : null;
+        document.getElementById('user-place').textContent = place ? place.name : '未選択';
+    }
+
+    // ユーザーと同じ場所にいるキャラクターを取得
+    function getCharacterAtUserLocation() {
+        if (userState.placeIndex < 0) return null;
+        for (const status of characterStatus) {
+            if (status.placeIndex === userState.placeIndex && status.characterIndex >= 0) {
+                return {
+                    character: characters[status.characterIndex],
+                    status: status
+                };
+            }
+        }
+        return null;
+    }
+
+    // ページ1を追加（説明文 + 場所画像）
+    function addPage1(placeImage, text) {
+        addPage({
+            type: 'narrative',
+            image: placeImage,
+            text: text,
+            label: '状況'
+        });
+    }
+
+    // ページ2を追加（キャラクターセリフ + アクション画像）
+    function addPage2(characterName, image, text) {
+        addPage({
+            type: 'character',
+            image: image,
+            text: text,
+            label: characterName
+        });
+    }
+
+    // 会話モード：最後のページがdialogueまたはcharacterなら追記、そうでなければ新規ページ
+    function addDialogue(characterName, text) {
+        const lastPage = pages[pages.length - 1];
+
+        // 最後のページがdialogueまたはcharacterタイプなら追記
+        if (lastPage && (lastPage.type === 'dialogue' || lastPage.type === 'character')) {
+            // データ更新
+            lastPage.text += `\n\n<strong>${characterName}</strong>\n${text}`;
+
+            // DOM更新
+            const pageView = document.getElementById('page-view');
+            const lastPageDiv = pageView.querySelector(`.page-content[data-page-index="${pages.length - 1}"]`);
+            if (lastPageDiv) {
+                const textDiv = lastPageDiv.querySelector('.page-text > div');
+                if (textDiv) {
+                    textDiv.innerHTML += `<br><br><strong>${characterName}</strong><br>${text.replace(/\n/g, '<br>')}`;
+                }
+            }
+
+            // 最新ページへ移動
+            showPage(pages.length - 1);
+        } else {
+            // 新規ページ作成
+            addPage({
+                type: 'dialogue',
+                image: null,
+                text: `<strong>${characterName}</strong>\n${text}`,
+                label: '会話'
+            });
+            goToLatestPage();
+        }
+    }
+
+    // ページ生成メイン処理
+    async function generatePages(actionType, userInput, previousPlace, newPlace) {
+        const chatApiKey = document.getElementById('chatApiKey').value.trim();
+        if (!chatApiKey) {
+            addSystemMessage('OpenRouter API Keyが必要です');
+            return;
+        }
+
+        const currentPlace = places[userState.placeIndex];
+        const charAtLocation = getCharacterAtUserLocation();
+
+        // 発言かつキャラクターがいる場合は会話モード（セリフのみ）
+        if (actionType === 'speech' && charAtLocation) {
+            // ユーザーの発言を追加
+            addDialogue('あなた', `「${userInput}」`);
+
+            const prompt = buildCombinedPrompt(actionType, userInput, null, null, charAtLocation, currentPlace, true);
+            console.log('[会話モード] プロンプト:', prompt);
+
+            const response = await callLLM(chatApiKey, prompt, 'character', charAtLocation.character);
+            addDialogue(charAtLocation.character.name, response);
+            return;
+        }
+
+        // 発言だがキャラクターがいない場合
+        if (actionType === 'speech' && !charAtLocation) {
+            addSystemMessage('この場所には誰もいません');
+            return;
+        }
+
+        // 通常モード：ページ1 + ページ2を1回のLLM呼び出しで取得
+        const combinedPrompt = buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace);
+        console.log('[Combined] プロンプト:', combinedPrompt);
+
+        const response = await callLLM(chatApiKey, combinedPrompt, 'combined');
+        console.log('[LLM] レスポンス:', response);
+        const { narrative, dialogue } = parseCombinedResponse(response, charAtLocation);
+        console.log('[LLM] パース結果 - 地の文:', narrative, '/ セリフ:', dialogue);
+
+        // ページ1表示
+        const placeImage = currentPlace?.image || null;
+        addPage1(placeImage, narrative);
+
+        // ページ2: キャラクターがいる場合のみ
+        if (charAtLocation && dialogue) {
+            // 画像生成（On/Offチェック）
+            let charImage = null;
+            if (imageGenEnabled) {
+                const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
+                if (runwareApiKey) {
+                    localStorage.setItem(RUNWARE_API_KEY, runwareApiKey);
+                    try {
+                        charImage = await generateCharacterImage(charAtLocation.character, currentPlace, currentState.actionIndex);
+                    } catch (e) {
+                        console.error('[画像生成エラー]', e);
+                    }
+                }
+            }
+
+            addPage2(charAtLocation.character.name, charImage, dialogue);
+        }
+    }
+
+    // 統合プロンプト構築
+    // dialogueOnly: true の場合はセリフのみ要求（会話モード）
+    function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace, dialogueOnly = false) {
+        // 会話モード：ミニマルプロンプト
+        if (dialogueOnly && charAtLocation) {
+            const charName = charAtLocation.character.name;
+            const dialogueInstruction = getPromptTemplate(promptTemplates, 'llm_003', { name: charName })
+                || `${charName}のセリフのみを「」付きで1-2文で出力してください。`;
+            return `主人公「${userInput}」\n${dialogueInstruction}`;
+        }
+
+        let prompt = '';
+
+        // 状況説明（日本語）
+        let situationText = '';
+        if (actionType === 'action_select' && currentState.actionIndex >= 0) {
+            const action = actions[currentState.actionIndex];
+            situationText = action?.name || '';
+        } else if (actionType === 'action_with_speech' && currentState.actionIndex >= 0) {
+            const action = actions[currentState.actionIndex];
+            situationText = `${action?.name || ''} + 主人公の発言「${userInput}」`;
+        } else if (actionType === 'action' || actionType === 'scenario') {
+            situationText = userInput;
+        } else if (actionType === 'move') {
+            situationText = `${previousPlace?.name || ''}から${newPlace?.name || ''}に移動`;
+        } else if (actionType === 'speech') {
+            situationText = `主人公の発言「${userInput}」`;
+        }
+
+        // 画像プロンプト（タグ）
+        const imageParts = [];
+        if (charAtLocation?.character?.tag) {
+            imageParts.push(charAtLocation.character.tag);
+        }
+        if (currentPlace?.tag) {
+            imageParts.push(currentPlace.tag);
+        }
+        if ((actionType === 'action_select' || actionType === 'action_with_speech') && currentState.actionIndex >= 0) {
+            const action = actions[currentState.actionIndex];
+            if (action?.prompt) imageParts.push(action.prompt);
+            const compositionTag = getCompositionTag(actions, currentState.actionIndex);
+            console.log('[LLMプロンプト] アクション:', action?.name, '構図:', compositionTag || '(なし)', 'compositions数:', action?.compositions?.length || 0);
+            if (compositionTag) imageParts.push(compositionTag);
+        }
+        if (currentPlace?.additionalTag) {
+            imageParts.push(currentPlace.additionalTag);
+        }
+        if (charAtLocation?.character?.additionalTag) {
+            imageParts.push(charAtLocation.character.additionalTag);
+        }
+
+        prompt += `状況：${situationText}\n`;
+        prompt += `画像プロンプト：${imageParts.filter(p => p).join(', ')}\n`;
+
+        if (charAtLocation) {
+            const char = charAtLocation.character;
+            prompt += `\n【その場にいる人物】${char.name}`;
+            if (char.series) prompt += `（${char.series}）`;
+            if (char.profile) prompt += `\nプロフィール: ${char.profile}`;
+            prompt += '\n';
+        }
+
+        // 通常モード：地の文 + セリフ（テンプレートから取得）
+        const charName = charAtLocation?.character?.name || '';
+        const formatPrompt = getPromptTemplate(promptTemplates, 'llm_004', { name: charName })
+            || `以下の形式で出力してください：\n【地の文】（2-3文で状況を描写）\n${charName ? `【${charName}のセリフ】（「」付きで1-2文）` : ''}`;
+        prompt += `\n${formatPrompt}`;
+
+        return prompt;
+    }
+
+    // 統合レスポンスをパース
+    function parseCombinedResponse(response, charAtLocation) {
+        let narrative = '';
+        let dialogue = '';
+
+        // 【地の文】セクションを抽出
+        const narrativeMatch = response.match(/【地の文】\s*([\s\S]*?)(?=【|$)/);
+        if (narrativeMatch) {
+            narrative = narrativeMatch[1].trim();
+        } else {
+            // フォーマットが異なる場合は全体を地の文として扱う
+            narrative = response.trim();
+        }
+
+        // キャラクターがいる場合、セリフセクションを抽出
+        if (charAtLocation) {
+            const charName = charAtLocation.character.name;
+            const dialogueRegex = new RegExp(`【${charName}のセリフ】\\s*([\\s\\S]*?)(?=【|$)`);
+            const dialogueMatch = response.match(dialogueRegex);
+            if (dialogueMatch) {
+                dialogue = dialogueMatch[1].trim();
+            }
+        }
+
+        return { narrative, dialogue };
+    }
+
+    // 構図タグ取得（共通関数を使用）
+    // selectBestComposition, getCompositionTag は js/prompt-utils.js で定義
+
+    // キャラクター画像生成（image_gen_base.htmlと同じ方式）
+    async function generateCharacterImage(character, place, actionIndex) {
+        const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
+        if (!runwareApiKey) return null;
+
+        // モデル取得
+        const modelId = getFirstModelId(models);
+        if (!modelId) {
+            console.log('[画像生成] モデルが未設定');
+            return null;
+        }
+        const model = models[modelId];
+
+        // 構図タグを取得（BESTから選択）
+        const compositionTag = getCompositionTag(actions, actionIndex);
+
+        // プロンプト構築（image_gen_base.htmlと同じ順序）
+        const parts = [
+            model?.qualityPositive || '',           // 品質タグ（ポジティブ）
+            character?.tag || '',                    // キャラタグ
+            place?.tag || '',                        // 場所タグ
+            (actionIndex >= 0 && actions[actionIndex]) ? actions[actionIndex].prompt : '',  // アクションプロンプト
+            compositionTag,                          // 構図タグ（BEST選択）
+            place?.additionalTag || '',              // 場所の追加タグ
+            character?.additionalTag || ''           // キャラの追加タグ
+        ].filter(p => p);
+
+        if (parts.length === 0) {
+            console.log('[画像生成] プロンプトが空のためスキップ');
+            return null;
+        }
+
+        const prompt = cleanPrompt(parts.join(', '));
+        const negativePrompt = model?.qualityNegative || '';
+
+        console.log('[画像生成] モデル:', modelId);
+        console.log('[画像生成] 構図:', compositionTag || '(なし)');
+        console.log('[画像生成] プロンプト:', prompt);
+        console.log('[画像生成] ネガティブ:', negativePrompt);
+
+        const result = await generateImage(runwareApiKey, modelId, prompt, {
+            negativePrompt: negativePrompt,
+            steps: model?.steps || 20,
+            cfgScale: model?.cfgScale || 7,
+            scheduler: model?.scheduler || 'Default',
+            width: 1024,
+            height: 1024,
+            character: character
+        });
+
+        return result.imageURL;
+    }
+
+    // ページ1用プロンプト構築
+    function buildPage1Prompt(actionType, userInput, previousPlace, newPlace, charAtLocation) {
+        const narratorPrompt = getPromptTemplate(promptTemplates, 'llm_005')
+            || 'あなたは小説の地の文を書くナレーターです。簡潔に2-3文で状況を描写してください。';
+        let prompt = narratorPrompt + '\n\n';
+
+        const currentPlace = places[userState.placeIndex];
+        prompt += `【現在の場所】${currentPlace?.name || '不明'}\n`;
+
+        if (charAtLocation) {
+            prompt += `【その場にいる人物】${charAtLocation.character.name}\n`;
+        }
+
+        switch (actionType) {
+            case 'move':
+                prompt += `【状況】主人公が「${previousPlace?.name || ''}」から「${newPlace?.name || ''}」に移動した。\n`;
+                break;
+            case 'speech':
+                prompt += `【状況】主人公が「${userInput}」と言った。\n`;
+                break;
+            case 'action':
+                prompt += `【状況】主人公が「${userInput}」という行為をした。\n`;
+                break;
+            case 'action_select':
+                prompt += `【状況】主人公が「${userInput}」を行った。\n`;
+                break;
+            case 'action_with_speech':
+                const actionName = actions[currentState.actionIndex]?.name || '';
+                prompt += `【状況】主人公が「${actionName}」をしながら「${userInput}」と言った。\n`;
+                break;
+            case 'scenario':
+                prompt += `【状況】${userInput}\n`;
+                break;
+        }
+
+        prompt += '\n地の文のみを出力してください。';
+        return prompt;
+    }
+
+    // LLM呼び出し（履歴付き）
+    async function callLLM(apiKey, prompt, role, character = null) {
+        // システムプロンプト（テンプレートから取得、なければデフォルト）
+        const systemPrompt = getPromptTemplate(promptTemplates, 'llm_001')
+            || 'あなたは小説のシーンを描写するアシスタントです。指定された形式で簡潔に出力してください。';
+
+        // メッセージ構築（履歴 + 新しいプロンプト）
+        const messages = [
+            { role: 'system', content: systemPrompt },
+            ...chatHistory,
+            { role: 'user', content: prompt }
+        ];
+
+        console.log('[LLM] 履歴数:', chatHistory.length / 2, '往復');
+
+        // GASにリクエストログを送信（非同期、レスポンスを待たない）
+        const gasUrl = document.getElementById('gasUrl').value.trim();
+        if (gasUrl) {
+            const logData = [];
+            // JSON構造を反映したログ形式（log_key, log_value）
+            logData.push({ log_key: 'model', log_value: 'x-ai/grok-4.1-fast' });
+            messages.forEach((msg, i) => {
+                logData.push({ log_key: `messages[${i}].role`, log_value: msg.role });
+                logData.push({ log_key: `messages[${i}].content`, log_value: msg.content });
+            });
+            // 非同期で送信（await しない）
+            console.log('[GAS Log] 送信データ:', logData);
+            saveGasData(gasUrl, 'llm_req_log', logData)
+                .then(res => console.log('[GAS Log] 送信結果:', res))
+                .catch(e => console.error('[GAS Log Error]', e));
+        }
+
+        try {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'x-ai/grok-4.1-fast',
+                    messages: messages
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('[LLM] エラー:', error);
+                return 'エラーが発生しました';
+            }
+
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content || '応答なし';
+
+            // 履歴に追加（最大10往復 = 20メッセージ）
+            chatHistory.push({ role: 'user', content: prompt });
+            chatHistory.push({ role: 'assistant', content: content });
+
+            // 履歴が多すぎる場合は古いものを削除
+            while (chatHistory.length > 20) {
+                chatHistory.shift();
+                chatHistory.shift();
+            }
+
+            return content;
+        } catch (error) {
+            console.error('[LLM] 通信エラー:', error);
+            return '通信エラーが発生しました';
+        }
     }
 </script>
 
