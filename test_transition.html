@@ -205,7 +205,7 @@
             font-size: 1rem;
             color: #fff;
             background: rgba(0, 0, 0, 0.6);
-            max-height: 60%;
+            max-height: 100%;
             overflow-y: auto;
         }
 
@@ -544,6 +544,7 @@
                 <select class="command-target-select" id="target-select" onchange="onTargetSelect()">
                     <option value="">-- 選択 --</option>
                 </select>
+                <button class="command-type-btn" onclick="toggleMoveMode()" id="move-mode-toggle">一人で</button>
             </div>
             <div class="command-row">
                 <button class="command-type-btn active" onclick="toggleCommandType()" id="cmd-toggle">発言</button>
@@ -628,6 +629,23 @@
     // 画像生成On/Off
     let imageGenEnabled = true;
 
+    // 移動モード（一人で/一緒に）
+    let moveWithCompanion = false;
+
+    // 移動モード切り替え
+    function toggleMoveMode() {
+        moveWithCompanion = !moveWithCompanion;
+        updateMoveModeButton();
+    }
+
+    function updateMoveModeButton() {
+        const btn = document.getElementById('move-mode-toggle');
+        if (btn) {
+            btn.textContent = moveWithCompanion ? '一緒に' : '一人で';
+            btn.classList.toggle('active', moveWithCompanion);
+        }
+    }
+
     // 画像生成On/Off切り替え
     function toggleImageGen() {
         imageGenEnabled = !imageGenEnabled;
@@ -687,12 +705,32 @@
         if (currentTargetType === 'move') {
             // ユーザーの場所変更
             const previousPlace = userState.placeIndex >= 0 ? places[userState.placeIndex] : null;
+
+            // 「一緒に」モードの場合、現在地のキャラクターも一緒に移動
+            let companion = null;
+            if (moveWithCompanion) {
+                console.log('[移動モード] 一緒にモード ON, ユーザー現在地:', userState.placeIndex);
+                const charAtLocation = getCharacterAtUserLocation();
+                console.log('[移動モード] 現在地のキャラ:', charAtLocation);
+                if (charAtLocation) {
+                    companion = charAtLocation;
+                    // characterStatus配列を直接更新
+                    const statusIndex = characterStatus.indexOf(charAtLocation.status);
+                    console.log('[移動モード] statusIndex:', statusIndex, '移動先:', index);
+                    if (statusIndex >= 0) {
+                        characterStatus[statusIndex].placeIndex = index;
+                    }
+                    updateCharacterStatusDisplay();
+                    console.log('[一緒に移動]', charAtLocation.character.name, '→', places[index]?.name);
+                }
+            }
+
             userState.placeIndex = index;
             updateUserStatusDisplay();
             const newPlace = places[index];
 
             // ページ生成
-            await generatePages('move', '', previousPlace, newPlace);
+            await generatePages('move', '', previousPlace, newPlace, companion);
         } else {
             // アクション選択（実行はしない）
             currentState.actionIndex = index;
@@ -948,7 +986,7 @@
     });
 
     function saveCachedData() {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ models, characters, places, actions }));
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ models, characters, places, actions, promptTemplates }));
     }
 
     function loadCachedData() {
@@ -960,6 +998,7 @@
                 characters = data.characters || [];
                 places = data.places || [];
                 actions = data.actions || [];
+                promptTemplates = data.promptTemplates || {};
                 updateAllSelects();
                 updateTargetSelect();
                 if (actions.length > 0) {
@@ -1307,8 +1346,8 @@
 
         // 最後のページがdialogueまたはcharacterタイプなら追記
         if (lastPage && (lastPage.type === 'dialogue' || lastPage.type === 'character')) {
-            // データ更新
-            lastPage.text += `\n\n<strong>${characterName}</strong>\n${text}`;
+            // データ更新（名前「セリフ」形式で1行に）
+            lastPage.text += `\n${characterName}${text}`;
 
             // DOM更新
             const pageView = document.getElementById('page-view');
@@ -1316,18 +1355,18 @@
             if (lastPageDiv) {
                 const textDiv = lastPageDiv.querySelector('.page-text > div');
                 if (textDiv) {
-                    textDiv.innerHTML += `<br><br><strong>${characterName}</strong><br>${text.replace(/\n/g, '<br>')}`;
+                    textDiv.innerHTML += `<br>${characterName}${text.replace(/\n/g, '<br>')}`;
                 }
             }
 
             // 最新ページへ移動
             showPage(pages.length - 1);
         } else {
-            // 新規ページ作成
+            // 新規ページ作成（名前「セリフ」形式）
             addPage({
                 type: 'dialogue',
                 image: null,
-                text: `<strong>${characterName}</strong>\n${text}`,
+                text: `${characterName}${text}`,
                 label: '会話'
             });
             goToLatestPage();
@@ -1335,7 +1374,8 @@
     }
 
     // ページ生成メイン処理
-    async function generatePages(actionType, userInput, previousPlace, newPlace) {
+    // companion: 一緒に移動するキャラクター（移動時のみ使用）
+    async function generatePages(actionType, userInput, previousPlace, newPlace, companion = null) {
         const chatApiKey = document.getElementById('chatApiKey').value.trim();
         if (!chatApiKey) {
             addSystemMessage('OpenRouter API Keyが必要です');
@@ -1343,7 +1383,8 @@
         }
 
         const currentPlace = places[userState.placeIndex];
-        const charAtLocation = getCharacterAtUserLocation();
+        // 移動時に一緒に移動した場合はcompanionを使用、それ以外は現在地のキャラクター
+        const charAtLocation = companion || getCharacterAtUserLocation();
 
         // 発言かつキャラクターがいる場合は会話モード（セリフのみ）
         if (actionType === 'speech' && charAtLocation) {
