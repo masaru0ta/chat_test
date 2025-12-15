@@ -464,6 +464,7 @@
 
 <script src="js/constants.js"></script>
 <script src="js/gas-api.js"></script>
+<script src="js/prompt-utils.js"></script>
 <script src="js/runware-api.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/data-parser.js"></script>
@@ -1246,6 +1247,12 @@
         }
     }
 
+    // 選択中のキャラクターを取得
+    function getSelectedCharacter() {
+        const charIndex = parseInt(document.getElementById('preview-character')?.value);
+        return charIndex >= 0 ? (characters[charIndex] || null) : null;
+    }
+
     // プロンプト指定で画像生成（共通関数を使用）
     async function generateImageWithPrompt(modelId, apiKey, prompt) {
         const model = models[modelId] || {};
@@ -1253,7 +1260,8 @@
             negativePrompt: model.qualityNegative || '',
             steps: model.steps || 20,
             cfgScale: model.cfgScale || 7,
-            scheduler: model.scheduler || 'Default'
+            scheduler: model.scheduler || 'Default',
+            character: getSelectedCharacter()
         });
         return result.imageURL;
     }

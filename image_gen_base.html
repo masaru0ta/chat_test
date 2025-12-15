@@ -223,6 +223,7 @@
 
 <script src="js/constants.js"></script>
 <script src="js/gas-api.js"></script>
+<script src="js/prompt-utils.js"></script>
 <script src="js/runware-api.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/data-parser.js"></script>
@@ -451,6 +452,11 @@
         return '';
     }
 
+    function getSelectedCharacter() {
+        const charIdx = document.getElementById('character').value;
+        return (charIdx !== '' && characters[charIdx]) ? characters[charIdx] : null;
+    }
+
     function buildPrompt() {
         const parts = [
             getSelectedModelData('qualityPositive'),
@@ -470,7 +476,9 @@
     }
 
     function updatePromptPreview() {
-        document.getElementById('promptPreview').textContent = buildPrompt() || '--';
+        // プレビューでは置換後の結果を表示
+        const prompt = replaceCharacterTags(buildPrompt(), getSelectedCharacter());
+        document.getElementById('promptPreview').textContent = prompt || '--';
         document.getElementById('negativePreview').textContent = buildNegativePrompt() || '--';
     }
 
@@ -517,7 +525,8 @@
                 scheduler: scheduler,
                 width: width,
                 height: height,
-                seed: seed
+                seed: seed,
+                character: getSelectedCharacter()
             });
 
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

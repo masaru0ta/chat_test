@@ -15,11 +15,14 @@
  * @param {number} options.width - 幅
  * @param {number} options.height - 高さ
  * @param {number} options.seed - シード値
+ * @param {Object} options.character - キャラクターオブジェクト（タグ置換用）
  * @returns {Promise<Object>} { imageURL, seed }
  */
 async function generateImage(apiKey, modelId, prompt, options = {}) {
     const seed = options.seed || Math.floor(Math.random() * 2147483647);
-    const cleanedPrompt = cleanPrompt(prompt);
+
+    // タグ置換 + 整形（prompt-utils.js）
+    const cleanedPrompt = buildFinalPrompt(prompt, options.character);
 
     // 最終プロンプトをコンソールに出力
     console.log('[Runware] 画像生成リクエスト');
@@ -81,18 +84,4 @@ async function generateImage(apiKey, modelId, prompt, options = {}) {
  */
 function getFirstModelId(models) {
     return Object.keys(models)[0] || null;
-}
-
-/**
- * プロンプトを整形（連続スペース・カンマを修正）
- * @param {string} prompt - プロンプト
- * @returns {string} 整形されたプロンプト
- */
-function cleanPrompt(prompt) {
-    return prompt
-        .replace(/  +/g, ' ')      // 連続スペースを1つに
-        .replace(/,\s*,+/g, ',')   // 連続カンマを1つに
-        .replace(/^,\s*/, '')      // 先頭のカンマを削除
-        .replace(/,\s*$/, '')      // 末尾のカンマを削除
-        .trim();
 }

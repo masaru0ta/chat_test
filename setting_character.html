@@ -204,6 +204,7 @@
 
 <script src="js/constants.js"></script>
 <script src="js/gas-api.js"></script>
+<script src="js/prompt-utils.js"></script>
 <script src="js/runware-api.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/data-parser.js"></script>
@@ -551,7 +552,7 @@
         imageDiv.innerHTML = '<div class="generating">生成中...</div>';
 
         try {
-            const imageUrl = await doGenerateImage(settings.modelId, settings.apiKey, buildCharacterPrompt(charIndex), 1024, 1024);
+            const imageUrl = await doGenerateImage(settings.modelId, settings.apiKey, buildCharacterPrompt(charIndex), 1024, 1024, char);
             characterImages[char.name] = imageUrl;
             saveCachedData();
             imageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="openDetailPage(${charIndex})">`;
@@ -580,7 +581,7 @@
             imageDiv.innerHTML = '<div class="generating">生成中...</div>';
 
             try {
-                const imageUrl = await doGenerateImage(settings.modelId, settings.apiKey, buildCharacterPrompt(i), 1024, 1024);
+                const imageUrl = await doGenerateImage(settings.modelId, settings.apiKey, buildCharacterPrompt(i), 1024, 1024, char);
                 characterImages[char.name] = imageUrl;
                 saveCachedData();
                 imageDiv.innerHTML = `<img src="${imageUrl}" alt="${char.name}" onclick="openDetailPage(${i})">`;
@@ -711,7 +712,7 @@
         detailImageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
 
         try {
-            const imageUrl = await doGenerateImage(settings.modelId, settings.apiKey, buildCharacterPrompt(currentDetailIndex), 1024, 1024);
+            const imageUrl = await doGenerateImage(settings.modelId, settings.apiKey, buildCharacterPrompt(currentDetailIndex), 1024, 1024, char);
             characterImages[char.name] = imageUrl;
             saveCachedData();
 
@@ -749,7 +750,7 @@
 
         try {
             const prompt = buildFullbodyPrompt(currentDetailIndex, type);
-            const imageUrl = await doGenerateImage(settings.modelId, settings.apiKey, prompt, 832, 1216);
+            const imageUrl = await doGenerateImage(settings.modelId, settings.apiKey, prompt, 832, 1216, char);
 
             // 保存
             if (!fullbodyImages[char.name]) {
@@ -794,7 +795,7 @@
     }
 
     // 画像生成ヘルパー
-    async function doGenerateImage(modelId, apiKey, prompt, width, height) {
+    async function doGenerateImage(modelId, apiKey, prompt, width, height, character = null) {
         const model = models[modelId];
         const result = await generateImage(apiKey, modelId, prompt, {
             negativePrompt: model?.qualityNegative || '',
@@ -802,7 +803,8 @@
             cfgScale: model?.cfgScale || 7,
             scheduler: model?.scheduler || 'Default',
             width,
-            height
+            height,
+            character
         });
         return result.imageURL;
     }

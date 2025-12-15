@@ -611,6 +611,7 @@
 
 <script src="js/constants.js"></script>
 <script src="js/gas-api.js"></script>
+<script src="js/prompt-utils.js"></script>
 <script src="js/runware-api.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/data-parser.js"></script>
@@ -885,6 +886,12 @@
         saveLastSelection();
     }
 
+    // 選択中のキャラクターを取得
+    function getSelectedCharacter() {
+        const idx = document.getElementById('character').value;
+        return idx !== '' ? (characters[idx] || null) : null;
+    }
+
     function onPlaceChange() {
         const idx = document.getElementById('place').value;
         const place = idx !== '' ? places[idx] : null;
@@ -1018,7 +1025,8 @@
                 cfgScale: model?.cfgScale || 7,
                 scheduler: model?.scheduler || 'Default',
                 width: 1024,
-                height: 1024
+                height: 1024,
+                character: getSelectedCharacter()
             });
 
             currentSceneUrl = result.imageURL;
@@ -1138,7 +1146,8 @@
                         cfgScale: model?.cfgScale || 7,
                         scheduler: model?.scheduler || 'Default',
                         width: 1024,
-                        height: 1024
+                        height: 1024,
+                        character: char
                     }).then(result => {
                         completedImageCount++;
                         console.log(`[Timing] 画像${completedImageCount}完了: ${Date.now() - startTime}ms`);
