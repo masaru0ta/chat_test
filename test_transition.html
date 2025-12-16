@@ -2442,6 +2442,9 @@
             if (textDiv) {
                 textDiv.innerHTML = newText.replace(/\n/g, '<br>');
             }
+            // 自動スクロール
+            const pageText = pageDiv.querySelector('.page-text');
+            if (pageText) pageText.scrollTop = pageText.scrollHeight;
         }
     }
 
@@ -2548,12 +2551,15 @@
         const currentHtml = textDiv.innerHTML;
         let displayedCount = 0;
         const textToAppend = `\n${appendText}`;
+        const pageText = pageDiv.querySelector('.page-text');
 
         typewriterTimer = setInterval(() => {
             if (displayedCount < textToAppend.length) {
                 displayedCount++;
                 const partialText = textToAppend.substring(0, displayedCount);
                 textDiv.innerHTML = currentHtml + partialText.replace(/\n/g, '<br>');
+                // 自動スクロール
+                if (pageText) pageText.scrollTop = pageText.scrollHeight;
             } else {
                 stopTypewriter();
             }
@@ -2754,6 +2760,9 @@
                             window._streamDisplayStarted = true;
                         }
                         textDiv.innerHTML = appendBaseHtml + (appendBaseHtml ? '<br>' : '') + displayText.replace(/\n/g, '<br>');
+                        // 自動スクロール
+                        const pageText = pageDiv.querySelector('.page-text');
+                        if (pageText) pageText.scrollTop = pageText.scrollHeight;
                     }
                 }
             }
