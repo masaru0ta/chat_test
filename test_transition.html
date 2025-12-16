@@ -442,6 +442,64 @@
             font-size: 1.2rem;
         }
 
+        /* 統合コマンドバー */
+        .unified-command-bar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        .unified-command-bar .cmd-btn {
+            padding: 8px 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .unified-command-bar .cmd-btn:hover {
+            background: #3a3a3a;
+            border-color: #4a9eff;
+        }
+
+        .unified-command-bar .cmd-btn.active {
+            background: #4a9eff;
+            border-color: #4a9eff;
+        }
+
+        .unified-command-bar .menu-btn {
+            font-size: 1.1rem;
+            padding: 8px 12px;
+        }
+
+        .unified-command-bar .cmd-input {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .unified-command-bar .cmd-input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .unified-command-bar .nav-btn {
+            background: #333;
+        }
+
         /* コマンド入力エリア */
         .command-area {
             padding: 12px 20px;
@@ -688,6 +746,29 @@
             #command-input {
                 min-width: 0;
             }
+            /* 統合コマンドバー：モバイル */
+            .unified-command-bar {
+                position: fixed;
+                bottom: 0;
+                bottom: env(safe-area-inset-bottom, 0);
+                left: 0;
+                right: 0;
+                padding: 6px;
+                padding-bottom: calc(6px + env(safe-area-inset-bottom, 0));
+                z-index: 9999;
+                gap: 3px;
+            }
+            .unified-command-bar .cmd-btn {
+                padding: 6px 8px;
+                font-size: 0.8rem;
+            }
+            .unified-command-bar .cmd-input {
+                padding: 6px 8px;
+                font-size: 0.85rem;
+            }
+            .chat-area {
+                padding-bottom: 60px;
+            }
             /* 入力フォーカス時：モバイル */
             .chat-area.input-focused {
                 padding-bottom: 50px;
@@ -775,31 +856,28 @@
 
     <!-- チャットエリア -->
     <div class="chat-area">
-        <div class="chat-header">
-            <div class="page-nav">
-                <span id="page-label-header" class="page-label" style="display:none;"></span>
-                <span id="page-indicator">-- / --</span>
-                <button class="latest-btn" onclick="goToLatestPage()">最新</button>
-            </div>
-        </div>
         <div class="page-area">
             <div id="page-view">
                 <div class="page-status-prev" id="page-status-prev" style="display:none;"></div>
                 <div class="page-status" id="page-status" style="display:none;"></div>
             </div>
         </div>
-        <div class="command-area">
+        <!-- 統合コマンドバー -->
+        <div class="unified-command-bar">
+            <button class="cmd-btn menu-btn" id="menu-toggle">≡</button>
+            <button class="cmd-btn" id="target-toggle">移動</button>
+            <button class="cmd-btn" id="cmd-toggle">行為</button>
+            <input type="text" class="cmd-input" id="command-input" placeholder="発言...">
+            <button class="cmd-btn nav-btn" id="prev-btn">前</button>
+            <button class="cmd-btn nav-btn" id="next-btn">次</button>
+        </div>
+        <!-- 旧コマンドエリア（非表示・互換用） -->
+        <div class="command-area" style="display:none;">
             <div class="command-row" id="command-row-select">
-                <button class="command-type-btn active" onclick="toggleTargetType()" id="target-toggle">移動</button>
                 <select class="command-target-select" id="target-select" onchange="onTargetSelect()">
                     <option value="">-- 選択 --</option>
                 </select>
                 <button class="command-type-btn" onclick="toggleMoveMode()" id="move-mode-toggle">一人で</button>
-            </div>
-            <div class="command-row">
-                <button class="command-type-btn active" onclick="toggleCommandType()" id="cmd-toggle">発言</button>
-                <input type="text" id="command-input" placeholder="発言内容を入力..." onkeydown="if(event.key==='Enter')executeCommand()" onfocus="hideCommandSelect()" onblur="showCommandSelect()">
-                <button class="command-execute-btn" onclick="executeCommand()">実行</button>
             </div>
         </div>
     </div>
