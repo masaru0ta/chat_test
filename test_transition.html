@@ -618,11 +618,16 @@
         }
 
         @media (max-width: 768px) {
+            html, body {
+                height: 100%;
+                height: -webkit-fill-available;
+            }
             .app-container {
                 grid-template-columns: 1fr;
                 grid-template-rows: auto 1fr;
-                height: 100vh;
-                height: 100dvh;
+                height: 100%;
+                height: -webkit-fill-available;
+                min-height: -webkit-fill-available;
             }
             .app-container.sidebar-collapsed {
                 grid-template-columns: 1fr;
@@ -639,10 +644,10 @@
             }
             .chat-area {
                 min-height: 0;
-                height: 100%;
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
+                padding-bottom: 100px;
             }
             .page-area {
                 flex: 1;
@@ -650,8 +655,14 @@
                 overflow: hidden;
             }
             .command-area {
-                flex-shrink: 0;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
                 padding: 8px 10px;
+                background: #1a1a1a;
+                border-top: 1px solid #333;
+                z-index: 1000;
             }
             .command-row {
                 gap: 5px;
@@ -706,12 +717,12 @@
             <button class="btn btn-primary" onclick="loadAllFromGas()" style="width:100%; margin-bottom:15px;">GAS読み込み</button>
             <div class="settings-group">
                 <label>OpenRouter API Key</label>
-                <input type="password" id="chatApiKey" placeholder="OpenRouter API Key">
+                <input type="password" id="chatApiKey" placeholder="OpenRouter API Key" onchange="saveChatApiKey()">
             </div>
             <div class="settings-group">
                 <label>Runware API Key</label>
                 <div class="settings-row">
-                    <input type="password" id="runwareApiKey" placeholder="Runware API Key">
+                    <input type="password" id="runwareApiKey" placeholder="Runware API Key" onchange="saveRunwareApiKey()">
                     <button class="btn" id="imageGenToggle" onclick="toggleImageGen()" style="padding:8px 12px; font-size:0.8rem;">ON</button>
                 </div>
             </div>
@@ -1044,6 +1055,21 @@
         if (btn) {
             btn.textContent = imageGenEnabled ? 'ON' : 'OFF';
             btn.style.background = imageGenEnabled ? '#4a9eff' : '#555';
+        }
+    }
+
+    // APIキー保存
+    function saveChatApiKey() {
+        const key = document.getElementById('chatApiKey').value.trim();
+        if (key) {
+            localStorage.setItem(CHAT_API_KEY, key);
+        }
+    }
+
+    function saveRunwareApiKey() {
+        const key = document.getElementById('runwareApiKey').value.trim();
+        if (key) {
+            localStorage.setItem(RUNWARE_API_KEY, key);
         }
     }
 
