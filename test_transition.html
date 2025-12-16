@@ -11,12 +11,14 @@
             margin: 0;
             overflow: hidden;
             height: 100%;
+            height: 100dvh;
         }
 
         .app-container {
             display: grid;
             grid-template-columns: 300px 1fr;
             height: 100vh;
+            height: 100dvh;
             transition: grid-template-columns 0.3s ease;
         }
 
@@ -619,6 +621,8 @@
             .app-container {
                 grid-template-columns: 1fr;
                 grid-template-rows: auto 1fr;
+                height: 100vh;
+                height: 100dvh;
             }
             .app-container.sidebar-collapsed {
                 grid-template-columns: 1fr;
@@ -627,7 +631,8 @@
             .sidebar {
                 border-right: none;
                 border-bottom: 1px solid #333;
-                max-height: 40vh;
+                max-height: 30vh;
+                overflow-y: auto;
             }
             .sidebar-collapsed .sidebar {
                 display: none;
@@ -635,13 +640,24 @@
             .chat-area {
                 min-height: 0;
                 height: 100%;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
             }
             .page-area {
                 flex: 1;
-                min-height: 100px;
+                min-height: 50px;
+                overflow: hidden;
             }
             .command-area {
                 flex-shrink: 0;
+                padding: 8px 10px;
+            }
+            .command-row {
+                gap: 5px;
+            }
+            #command-input {
+                min-width: 0;
             }
         }
     </style>
@@ -1143,9 +1159,8 @@
                 <div style="display:flex; gap:10px; align-items:flex-start;">
                     <img id="char${i + 1}-image" src="" alt="" style="width:90px; height:90px; object-fit:cover; border-radius:4px; background:#333; display:none;">
                     <div style="flex:1; font-size:0.85rem; line-height:1.4;">
-                        <div id="char${i + 1}-name" style="color:#fff;">未選択</div>
+                        <div><span id="char${i + 1}-name" style="color:#fff;">未選択</span><span id="char${i + 1}-relationship" style="color:#888;">：未設定</span></div>
                         <button class="place-btn" id="char${i + 1}-place" onclick="moveToCharacterLocation(${i})" style="color:#fff; background:#333; border:1px solid #444; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.8rem; margin:4px 0;">未選択</button>
-                        <div id="char${i + 1}-relationship" style="color:#666;">未設定</div>
                         <div class="memo-line" id="char${i + 1}-memo"></div>
                     </div>
                 </div>
@@ -1821,7 +1836,7 @@
             }
             if (nameEl) nameEl.textContent = char ? char.name : '未選択';
             if (placeEl) placeEl.textContent = place ? place.name : '未選択';
-            if (relationshipEl) relationshipEl.textContent = relationship ? relationship.name : '未設定';
+            if (relationshipEl) relationshipEl.textContent = '：' + (relationship ? relationship.name : '未設定');
             if (memoEl) memoEl.textContent = status.memo ? `メモ：${status.memo}` : '';
         }
     }
