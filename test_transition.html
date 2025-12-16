@@ -2749,6 +2749,11 @@
             return;
         }
 
+        // 狭い画面ではサイドバーを閉じる
+        if (window.innerWidth <= 768 && !sidebarCollapsed) {
+            toggleSidebar();
+        }
+
         const targetPlaceIndex = status.placeIndex;
 
         // 既に同じ場所にいる場合は何もしない
