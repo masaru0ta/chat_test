@@ -58,6 +58,7 @@ function parseCharacters(rawData) {
             uniform1: item.uniform1 || '',
             uniform2: item.uniform2 || '',
             additionalTag: item['additional tag'] || '',
+            cast: item.cast || '',
             image: item.image || ''
         };
     });
@@ -95,6 +96,7 @@ function parsePlaces(rawData) {
             command_list: item['command_list'] || '',
             public_flag: item['public_flag'] || '',
             root_place: item['root_place'] || '',
+            default_action: item['default action'] || '',
             image: item.image || ''
         };
     });
@@ -153,4 +155,81 @@ function parseActionsWithCompositions(rawData) {
 
         return action;
     });
+}
+
+/**
+ * LLMプロンプトテンプレートをパース
+ * @param {Array} rawData - GASから取得した生データ
+ * @returns {Object} キーをキーとしたテンプレートオブジェクト
+ */
+function parsePromptTemplates(rawData) {
+    const templates = {};
+    if (!Array.isArray(rawData)) {
+        console.warn('[parsePromptTemplates] データが配列ではありません:', rawData);
+        return templates;
+    }
+    rawData.forEach(item => {
+        const key = item.key;
+        if (key) {
+            templates[key] = {
+                name: item.name || '',
+                prompt: item.prompt || ''
+            };
+        }
+    });
+    return templates;
+}
+
+/**
+ * 関係性データをパース
+ * @param {Array} rawData - GASから取得した生データ
+ * @returns {Array} パース済み関係性配列
+ */
+function parseRelationships(rawData) {
+    // 既存のrel_xxx形式のIDから最大番号を取得
+    let maxNum = 0;
+    rawData.forEach(item => {
+        const id = item['relationship_id'] || '';
+        const match = id.match(/^rel_(\d+)$/);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+        }
+    });
+
+    return rawData.map(item => {
+        let relationshipId = item['relationship_id'] || '';
+        if (!relationshipId) {
+            maxNum++;
+            relationshipId = 'rel_' + String(maxNum).padStart(3, '0');
+        }
+
+        return {
+            relationship_id: relationshipId,
+            name: item.name || '',
+            description: item.description || '',
+            next_relationship_req: item['next_relationship_req'] || ''
+        };
+    });
+}
+
+/**
+ * プロンプトテンプレートを取得し、変数を置換
+ * @param {Object} templates - テンプレートオブジェクト
+ * @param {string} key - テンプレートキー
+ * @param {Object} vars - 置換変数 { name: '鹿目まどか' } など
+ * @returns {string} 置換済みプロンプト
+ */
+function getPromptTemplate(templates, key, vars = {}) {
+    const template = templates[key];
+    if (!template) {
+        console.warn(`[Prompt] テンプレート未定義: ${key}`);
+        return '';
+    }
+    let prompt = template.prompt;
+    // {name} などのプレースホルダーを置換
+    Object.keys(vars).forEach(varKey => {
+        prompt = prompt.replace(new RegExp(`\\{${varKey}\\}`, 'g'), vars[varKey]);
+    });
+    return prompt;
 }

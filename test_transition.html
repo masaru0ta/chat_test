@@ -101,9 +101,12 @@
             color: #fff;
             text-align: right;
             max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        }
+
+        .memo-line {
+            font-size: 0.8rem;
+            color: #aaa;
+            padding: 3px 0;
         }
 
         .sidebar-footer {
@@ -454,21 +457,14 @@
                     <span class="state-value" id="char1-place">未選択</span>
                 </div>
                 <div class="state-item">
-                    <span class="state-label">拒絶</span>
-                    <span class="state-value" id="char1-rejection">0</span>
+                    <span class="state-label">状態</span>
+                    <span class="state-value" id="char1-action">未選択</span>
                 </div>
                 <div class="state-item">
-                    <span class="state-label">服従</span>
-                    <span class="state-value" id="char1-submission">0</span>
+                    <span class="state-label">関係性</span>
+                    <span class="state-value" id="char1-relationship">未設定</span>
                 </div>
-                <div class="state-item">
-                    <span class="state-label">慈愛</span>
-                    <span class="state-value" id="char1-compassion">0</span>
-                </div>
-                <div class="state-item">
-                    <span class="state-label">誘惑</span>
-                    <span class="state-value" id="char1-seduction">0</span>
-                </div>
+                <div class="memo-line" id="char1-memo"></div>
             </div>
 
             <!-- キャラクター2ステータス -->
@@ -483,21 +479,14 @@
                     <span class="state-value" id="char2-place">未選択</span>
                 </div>
                 <div class="state-item">
-                    <span class="state-label">拒絶</span>
-                    <span class="state-value" id="char2-rejection">0</span>
+                    <span class="state-label">状態</span>
+                    <span class="state-value" id="char2-action">未選択</span>
                 </div>
                 <div class="state-item">
-                    <span class="state-label">服従</span>
-                    <span class="state-value" id="char2-submission">0</span>
+                    <span class="state-label">関係性</span>
+                    <span class="state-value" id="char2-relationship">未設定</span>
                 </div>
-                <div class="state-item">
-                    <span class="state-label">慈愛</span>
-                    <span class="state-value" id="char2-compassion">0</span>
-                </div>
-                <div class="state-item">
-                    <span class="state-label">誘惑</span>
-                    <span class="state-value" id="char2-seduction">0</span>
-                </div>
+                <div class="memo-line" id="char2-memo"></div>
             </div>
 
             <!-- ユーザーステータス -->
@@ -519,6 +508,9 @@
                 <input type="password" id="runwareApiKey" placeholder="Runware API Key" style="flex:1; margin-bottom:0;">
                 <button class="btn" id="imageGenToggle" onclick="toggleImageGen()" style="padding:8px 12px; font-size:0.8rem;">ON</button>
             </div>
+            <select id="modelSelect" onchange="onModelSelect()" style="width:100%; padding:8px; border:1px solid #333; border-radius:4px; background:#2a2a2a; color:#fff; font-size:0.85rem; margin-bottom:8px;">
+                <option value="">-- モデル選択 --</option>
+            </select>
             <div id="status"></div>
         </div>
     </div>
@@ -570,6 +562,7 @@
     let characters = [];
     let places = [];
     let actions = [];
+    let relationships = [];  // 関係性データ
     let transitions = [];  // 遷移データ（将来用）
     let promptTemplates = {};  // LLMプロンプトテンプレート
 
@@ -590,18 +583,16 @@
         {
             characterIndex: -1,
             placeIndex: -1,
-            rejection: 0,      // 拒絶フラグ
-            submission: 0,     // 服従フラグ
-            compassion: 0,     // 慈愛フラグ
-            seduction: 0       // 誘惑フラグ
+            actionIndex: -1,   // 現在のアクション
+            relationshipId: 'rel_001',  // 関係性ID
+            memo: ''  // メモ
         },
         {
             characterIndex: -1,
             placeIndex: -1,
-            rejection: 0,
-            submission: 0,
-            compassion: 0,
-            seduction: 0
+            actionIndex: -1,
+            relationshipId: 'rel_001',
+            memo: ''
         }
     ];
 
@@ -628,6 +619,10 @@
 
     // 画像生成On/Off
     let imageGenEnabled = true;
+
+    // 選択中のモデルID
+    let selectedModelId = '';
+    const SELECTED_MODEL_KEY = 'transition_selected_model';
 
     // 移動モード（一人で/一緒に）
     let moveWithCompanion = false;
@@ -659,6 +654,27 @@
             btn.textContent = imageGenEnabled ? 'ON' : 'OFF';
             btn.style.background = imageGenEnabled ? '#4a9eff' : '#555';
         }
+    }
+
+    // モデル選択プルダウン更新
+    function updateModelSelect() {
+        const select = document.getElementById('modelSelect');
+        if (!select) return;
+
+        select.innerHTML = '<option value="">-- モデル選択 --</option>';
+        Object.keys(models).forEach(modelId => {
+            const model = models[modelId];
+            const selected = modelId === selectedModelId ? ' selected' : '';
+            select.innerHTML += `<option value="${modelId}"${selected}>${model.name || modelId}</option>`;
+        });
+    }
+
+    // モデル選択変更時
+    function onModelSelect() {
+        const select = document.getElementById('modelSelect');
+        selectedModelId = select.value;
+        localStorage.setItem(SELECTED_MODEL_KEY, selectedModelId);
+        console.log('[モデル選択]', selectedModelId);
     }
 
     // ターゲットタイプ切り替え（移動/行為）
@@ -719,6 +735,15 @@
                     console.log('[移動モード] statusIndex:', statusIndex, '移動先:', index);
                     if (statusIndex >= 0) {
                         characterStatus[statusIndex].placeIndex = index;
+                        // 移動先のデフォルトアクションに変更
+                        const newPlace = places[index];
+                        if (newPlace && newPlace.default_action) {
+                            const newActionIndex = actions.findIndex(a => a.action_id === newPlace.default_action);
+                            if (newActionIndex >= 0) {
+                                characterStatus[statusIndex].actionIndex = newActionIndex;
+                                console.log('[一緒に移動] アクション変更:', actions[newActionIndex]?.name);
+                            }
+                        }
                     }
                     updateCharacterStatusDisplay();
                     console.log('[一緒に移動]', charAtLocation.character.name, '→', places[index]?.name);
@@ -964,6 +989,10 @@
         imageGenEnabled = savedImageGenEnabled !== 'off';
         updateImageGenButton();
 
+        // モデル選択の復元
+        const savedModelId = localStorage.getItem(SELECTED_MODEL_KEY);
+        if (savedModelId) selectedModelId = savedModelId;
+
         // ターゲットタイプ初期化
         setTargetType('move');
 
@@ -986,7 +1015,7 @@
     });
 
     function saveCachedData() {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ models, characters, places, actions, promptTemplates }));
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ models, characters, places, actions, relationships, promptTemplates }));
     }
 
     function loadCachedData() {
@@ -998,9 +1027,11 @@
                 characters = data.characters || [];
                 places = data.places || [];
                 actions = data.actions || [];
+                relationships = data.relationships || [];
                 promptTemplates = data.promptTemplates || {};
                 updateAllSelects();
                 updateTargetSelect();
+                updateModelSelect();
                 if (actions.length > 0) {
                     addSystemMessage(`キャッシュから復元: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
                 }
@@ -1021,11 +1052,12 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData, promptData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData, promptData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
+                fetchGasData(baseUrl, 'relationship'),
                 fetchGasData(baseUrl, 'llm_prompt_template')
             ]);
 
@@ -1033,11 +1065,13 @@
             characters = parseCharacters(characterData);
             places = parsePlaces(placeData);
             actions = parseActionsWithCompositions(actionData);
+            relationships = parseRelationships(relationshipData);
             promptTemplates = parsePromptTemplates(promptData);
 
             saveCachedData();
             updateAllSelects();
             updateTargetSelect();
+            updateModelSelect();
 
             showStatus(`読込完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
             addSystemMessage(`データ読み込み完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
@@ -1062,13 +1096,24 @@
         // 状態更新
         currentState.actionIndex = actionIndex;
 
+        // 同じ場所にいるキャラクターのアクションも更新
+        const charAtLocation = getCharacterAtUserLocation();
+        if (charAtLocation) {
+            const statusIndex = characterStatus.findIndex(s => s === charAtLocation.status);
+            if (statusIndex >= 0) {
+                characterStatus[statusIndex].actionIndex = actionIndex;
+                console.log('[アクション実行]', charAtLocation.character.name, 'のアクションを更新:', action.name);
+                updateCharacterStatusDisplay();
+            }
+        }
+
         // 履歴に追加
         actionHistory.push({
             timestamp: new Date().toISOString(),
             fromAction: prevAction?.action_id || null,
             toAction: action.action_id,
-            character: currentState.characterIndex >= 0 ? characters[currentState.characterIndex]?.name : null,
-            place: currentState.placeIndex >= 0 ? places[currentState.placeIndex]?.name : null
+            character: charAtLocation?.character?.name || null,
+            place: userState.placeIndex >= 0 ? places[userState.placeIndex]?.name : null
         });
 
         // ページ生成（アクション実行）
@@ -1217,13 +1262,14 @@
             const num = i + 1;
             const char = status.characterIndex >= 0 ? characters[status.characterIndex] : null;
             const place = status.placeIndex >= 0 ? places[status.placeIndex] : null;
+            const action = status.actionIndex >= 0 ? actions[status.actionIndex] : null;
+            const relationship = relationships.find(r => r.relationship_id === status.relationshipId);
 
             document.getElementById(`char${num}-name`).textContent = char ? char.name : '未選択';
             document.getElementById(`char${num}-place`).textContent = place ? place.name : '未選択';
-            document.getElementById(`char${num}-rejection`).textContent = status.rejection;
-            document.getElementById(`char${num}-submission`).textContent = status.submission;
-            document.getElementById(`char${num}-compassion`).textContent = status.compassion;
-            document.getElementById(`char${num}-seduction`).textContent = status.seduction;
+            document.getElementById(`char${num}-action`).textContent = action ? action.name : '未選択';
+            document.getElementById(`char${num}-relationship`).textContent = relationship ? relationship.name : '未設定';
+            document.getElementById(`char${num}-memo`).textContent = status.memo ? `メモ：${status.memo}` : '';
         }
     }
 
@@ -1264,15 +1310,21 @@
             }
         }
 
-        // ステータスを設定
+        // ステータスを設定（デフォルトアクションも設定）
         for (let i = 0; i < 2; i++) {
+            const place = places[placeIndices[i]];
+            // 場所のデフォルトアクションからアクションインデックスを取得
+            let actionIndex = -1;
+            if (place && place.default_action) {
+                actionIndex = actions.findIndex(a => a.action_id === place.default_action);
+            }
+
             characterStatus[i] = {
                 characterIndex: charIndices[i],
                 placeIndex: placeIndices[i],
-                rejection: 0,
-                submission: 0,
-                compassion: 0,
-                seduction: 0
+                actionIndex: actionIndex,
+                relationshipId: 'rel_001',  // 初期値
+                memo: ''  // メモ初期値
             };
         }
 
@@ -1293,10 +1345,12 @@
         const char2 = characters[charIndices[1]];
         const place1 = places[placeIndices[0]];
         const place2 = places[placeIndices[1]];
+        const action1 = characterStatus[0].actionIndex >= 0 ? actions[characterStatus[0].actionIndex] : null;
+        const action2 = characterStatus[1].actionIndex >= 0 ? actions[characterStatus[1].actionIndex] : null;
         const userPlace = userState.placeIndex >= 0 ? places[userState.placeIndex] : null;
         addSystemMessage(`初期設定完了:`);
-        addSystemMessage(`  ${char1.name} → ${place1.name}`);
-        addSystemMessage(`  ${char2.name} → ${place2.name}`);
+        addSystemMessage(`  ${char1.name} → ${place1.name} [${action1?.name || 'なし'}]`);
+        addSystemMessage(`  ${char2.name} → ${place2.name} [${action2?.name || 'なし'}]`);
         addSystemMessage(`  ユーザー → ${userPlace ? userPlace.name : '未設定'}`);
     }
 
@@ -1344,10 +1398,13 @@
     function addDialogue(characterName, text) {
         const lastPage = pages[pages.length - 1];
 
+        // 名前があれば「名前 テキスト」、なければテキストのみ
+        const lineText = characterName ? `${characterName}${text}` : text;
+
         // 最後のページがdialogueまたはcharacterタイプなら追記
         if (lastPage && (lastPage.type === 'dialogue' || lastPage.type === 'character')) {
-            // データ更新（名前「セリフ」形式で1行に）
-            lastPage.text += `\n${characterName}${text}`;
+            // データ更新
+            lastPage.text += `\n${lineText}`;
 
             // DOM更新
             const pageView = document.getElementById('page-view');
@@ -1355,18 +1412,18 @@
             if (lastPageDiv) {
                 const textDiv = lastPageDiv.querySelector('.page-text > div');
                 if (textDiv) {
-                    textDiv.innerHTML += `<br>${characterName}${text.replace(/\n/g, '<br>')}`;
+                    textDiv.innerHTML += `<br>${lineText.replace(/\n/g, '<br>')}`;
                 }
             }
 
             // 最新ページへ移動
             showPage(pages.length - 1);
         } else {
-            // 新規ページ作成（名前「セリフ」形式）
+            // 新規ページ作成
             addPage({
                 type: 'dialogue',
                 image: null,
-                text: `${characterName}${text}`,
+                text: lineText,
                 label: '会話'
             });
             goToLatestPage();
@@ -1386,7 +1443,7 @@
         // 移動時に一緒に移動した場合はcompanionを使用、それ以外は現在地のキャラクター
         const charAtLocation = companion || getCharacterAtUserLocation();
 
-        // 発言かつキャラクターがいる場合は会話モード（セリフのみ）
+        // 発言かつキャラクターがいる場合は会話モード
         if (actionType === 'speech' && charAtLocation) {
             // ユーザーの発言を追加
             addDialogue('あなた', `「${userInput}」`);
@@ -1395,7 +1452,40 @@
             console.log('[会話モード] プロンプト:', prompt);
 
             const response = await callLLM(chatApiKey, prompt, 'character', charAtLocation.character);
-            addDialogue(charAtLocation.character.name, response);
+            console.log('[会話モード] レスポンス:', response);
+
+            // 関係性変化の判定を抽出
+            const { dialogue: parsedDialogue, narrative, newRelationshipName, relationshipMemo } = parseConversationResponse(response, charAtLocation);
+            console.log('[会話モード] セリフ:', parsedDialogue, '/ 地の文:', narrative, '/ 新関係性:', newRelationshipName, '/ メモ:', relationshipMemo);
+
+            // 関係性変化の処理 - 名前から検索して更新
+            const statusIndex = characterStatus.findIndex(s => s === charAtLocation.status);
+            if (statusIndex >= 0) {
+                // 関係性変化がある場合
+                if (newRelationshipName) {
+                    const currentRelationshipId = charAtLocation.status.relationshipId;
+                    const currentRelationship = relationships.find(r => r.relationship_id === currentRelationshipId);
+                    // 名前で関係性を検索
+                    const newRelationship = relationships.find(r => r.name === newRelationshipName);
+                    if (newRelationship && newRelationship.relationship_id !== currentRelationshipId) {
+                        characterStatus[statusIndex].relationshipId = newRelationship.relationship_id;
+                        console.log('[関係性変化]', charAtLocation.character.name, ':', currentRelationship?.name, '→', newRelationship.name);
+                        addSystemMessage(`💫 ${charAtLocation.character.name}との関係性が「${currentRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
+                    }
+                }
+                // メモがあれば保存（関係性変化がなくても）
+                if (relationshipMemo) {
+                    characterStatus[statusIndex].memo = relationshipMemo;
+                    console.log('[メモ更新]', charAtLocation.character.name, ':', relationshipMemo);
+                }
+                updateCharacterStatusDisplay();
+            }
+
+            addDialogue(charAtLocation.character.name, parsedDialogue);
+            // 地の文があれば追加
+            if (narrative) {
+                addDialogue('', narrative);
+            }
             return;
         }
 
@@ -1406,17 +1496,50 @@
         }
 
         // 通常モード：ページ1 + ページ2を1回のLLM呼び出しで取得
-        const combinedPrompt = buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace);
+        const combinedPrompt = buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace, false, companion);
         console.log('[Combined] プロンプト:', combinedPrompt);
 
         const response = await callLLM(chatApiKey, combinedPrompt, 'combined');
         console.log('[LLM] レスポンス:', response);
-        const { narrative, dialogue } = parseCombinedResponse(response, charAtLocation);
-        console.log('[LLM] パース結果 - 地の文:', narrative, '/ セリフ:', dialogue);
+        const { narrative, dialogue, newRelationshipName, relationshipMemo } = parseCombinedResponse(response, charAtLocation);
+        console.log('[LLM] パース結果 - 地の文:', narrative, '/ セリフ:', dialogue, '/ 新関係性:', newRelationshipName, '/ メモ:', relationshipMemo);
 
-        // ページ1表示
+        // 関係性変化の処理 - 名前から検索して更新
+        if (charAtLocation) {
+            const statusIndex = characterStatus.findIndex(s => s === charAtLocation.status);
+            if (statusIndex >= 0) {
+                // 関係性変化がある場合
+                if (newRelationshipName) {
+                    const currentRelationshipId = charAtLocation.status.relationshipId;
+                    const currentRelationship = relationships.find(r => r.relationship_id === currentRelationshipId);
+                    // 名前で関係性を検索
+                    const newRelationship = relationships.find(r => r.name === newRelationshipName);
+                    if (newRelationship && newRelationship.relationship_id !== currentRelationshipId) {
+                        characterStatus[statusIndex].relationshipId = newRelationship.relationship_id;
+                        console.log('[関係性変化]', charAtLocation.character.name, ':', currentRelationship?.name, '→', newRelationship.name);
+                        addSystemMessage(`💫 ${charAtLocation.character.name}との関係性が「${currentRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
+                    }
+                }
+                // メモがあれば保存（関係性変化がなくても）
+                if (relationshipMemo) {
+                    characterStatus[statusIndex].memo = relationshipMemo;
+                    console.log('[メモ更新]', charAtLocation.character.name, ':', relationshipMemo);
+                }
+                updateCharacterStatusDisplay();
+            }
+        }
+
+        // 同じ場所でのアクション（action_select/action_with_speech）は地の文を最後のページに追加
+        const isSameLocationAction = actionType === 'action_select' || actionType === 'action_with_speech';
         const placeImage = currentPlace?.image || null;
-        addPage1(placeImage, narrative);
+
+        if (isSameLocationAction && pages.length > 0) {
+            // 最後のページに地の文を追記
+            addDialogue('', narrative);
+        } else {
+            // 新しいページを作成（移動時など）
+            addPage1(placeImage, narrative);
+        }
 
         // ページ2: キャラクターがいる場合のみ
         if (charAtLocation && dialogue) {
@@ -1427,7 +1550,9 @@
                 if (runwareApiKey) {
                     localStorage.setItem(RUNWARE_API_KEY, runwareApiKey);
                     try {
-                        charImage = await generateCharacterImage(charAtLocation.character, currentPlace, currentState.actionIndex);
+                        // キャラクターのアクションインデックスを使用
+                        const charActionIndex = charAtLocation.status?.actionIndex ?? -1;
+                        charImage = await generateCharacterImage(charAtLocation.character, currentPlace, charActionIndex);
                     } catch (e) {
                         console.error('[画像生成エラー]', e);
                     }
@@ -1440,13 +1565,53 @@
 
     // 統合プロンプト構築
     // dialogueOnly: true の場合はセリフのみ要求（会話モード）
-    function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace, dialogueOnly = false) {
-        // 会話モード：ミニマルプロンプト
+    // companion: 一緒に移動したキャラクター（移動時のみ）
+    function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace, dialogueOnly = false, companion = null) {
+        // 会話モード
         if (dialogueOnly && charAtLocation) {
             const charName = charAtLocation.character.name;
+            const char = charAtLocation.character;
+            let prompt = '';
+
+            // キャラクター情報
+            prompt += `【会話相手】${charName}`;
+            if (char.series) prompt += `（${char.series}）`;
+            if (char.profile) prompt += `\nプロフィール: ${char.profile}`;
+
+            // 関係性情報
+            const relationshipId = charAtLocation.status?.relationshipId;
+            let relationship = null;
+            if (relationshipId) {
+                relationship = relationships.find(r => r.relationship_id === relationshipId);
+                if (relationship) {
+                    prompt += `\n現在の関係性: ${relationship.name}（${relationship.description || ''}）`;
+                    // メモがあれば追加
+                    if (charAtLocation.status?.memo) {
+                        prompt += `\n関係性メモ: ${charAtLocation.status.memo}`;
+                    }
+                    // 進展条件があれば追加
+                    if (relationship.next_relationship_req) {
+                        prompt += `\n関係性進展条件: ${relationship.next_relationship_req}`;
+                    }
+                }
+            }
+
+            prompt += `\n\n主人公「${userInput}」\n`;
+
+            // 出力フォーマット
             const dialogueInstruction = getPromptTemplate(promptTemplates, 'llm_003', { name: charName })
-                || `${charName}のセリフのみを「」付きで1-2文で出力してください。`;
-            return `主人公「${userInput}」\n${dialogueInstruction}`;
+                || `【${charName}のセリフ】「」付きで1-2文で出力`;
+
+            prompt += `\n${dialogueInstruction}`;
+            prompt += `\n【地の文】必要な場合のみ、セリフの後の状況や動作を1行で記載（不要なら省略）`;
+
+            // 関係性進展条件がある場合のみ判定を追加
+            if (relationship && relationship.next_relationship_req) {
+                prompt += `\n【関係性変化】この会話で関係性進展条件を満たした場合、もしくは総合的に関係性変化が起きたと判断される場合は新しい関係性名を記載、満たしていない場合は「維持」と記載`;
+                prompt += `\n【関係性メモ】関係性が変化した場合は必ず記載。変化がなくてもメモ更新が必要な出来事があれば記載。キャラクター視点で50文字以内でどこで何が起きて、なぜその関係性になったのか、今後どうしていきたいか、キャラクターの感情を交えて記載。不要なら省略`;
+            }
+
+            return prompt;
         }
 
         let prompt = '';
@@ -1462,7 +1627,26 @@
         } else if (actionType === 'action' || actionType === 'scenario') {
             situationText = userInput;
         } else if (actionType === 'move') {
-            situationText = `${previousPlace?.name || ''}から${newPlace?.name || ''}に移動`;
+            // 移動時専用テンプレート（llm_006）を使用
+            const moveTemplate = getPromptTemplate(promptTemplates, 'llm_006', {
+                from: previousPlace?.name || '',
+                to: newPlace?.name || ''
+            });
+            console.log('[移動] from:', previousPlace?.name, 'to:', newPlace?.name, 'template:', moveTemplate);
+            situationText = moveTemplate || `${previousPlace?.name || ''}から${newPlace?.name || ''}に移動`;
+
+            // 一緒に移動した場合のみ、関係性をチェック
+            if (companion) {
+                const relId = companion.status?.relationshipId || '';
+                const relNumMatch = relId.match(/^rel_(\d+)$/);
+                if (relNumMatch) {
+                    const relNum = parseInt(relNumMatch[1], 10);
+                    if (relNum < 100) {
+                        situationText += `（${companion.character.name}を無理やり連れて行った）`;
+                        console.log('[移動] 関係性', relId, '< rel_100 → 無理やり連れて行った');
+                    }
+                }
+            }
         } else if (actionType === 'speech') {
             situationText = `主人公の発言「${userInput}」`;
         }
@@ -1475,12 +1659,22 @@
         if (currentPlace?.tag) {
             imageParts.push(currentPlace.tag);
         }
+        // ユーザーのアクション（action_select/action_with_speech時）
         if ((actionType === 'action_select' || actionType === 'action_with_speech') && currentState.actionIndex >= 0) {
             const action = actions[currentState.actionIndex];
             if (action?.prompt) imageParts.push(action.prompt);
             const compositionTag = getCompositionTag(actions, currentState.actionIndex);
-            console.log('[LLMプロンプト] アクション:', action?.name, '構図:', compositionTag || '(なし)', 'compositions数:', action?.compositions?.length || 0);
+            console.log('[LLMプロンプト] ユーザーアクション:', action?.name, '構図:', compositionTag || '(なし)');
             if (compositionTag) imageParts.push(compositionTag);
+        }
+        // キャラクターのアクション（移動時など）
+        const charActionIndex = charAtLocation?.status?.actionIndex ?? -1;
+        if (charActionIndex >= 0 && actions[charActionIndex]) {
+            const charAction = actions[charActionIndex];
+            if (charAction?.prompt) imageParts.push(charAction.prompt);
+            const charCompositionTag = getCompositionTag(actions, charActionIndex);
+            console.log('[LLMプロンプト] キャラアクション:', charAction?.name, '構図:', charCompositionTag || '(なし)');
+            if (charCompositionTag) imageParts.push(charCompositionTag);
         }
         if (currentPlace?.additionalTag) {
             imageParts.push(currentPlace.additionalTag);
@@ -1497,13 +1691,47 @@
             prompt += `\n【その場にいる人物】${char.name}`;
             if (char.series) prompt += `（${char.series}）`;
             if (char.profile) prompt += `\nプロフィール: ${char.profile}`;
+            // 関係性情報を追加
+            const relationshipId = charAtLocation.status?.relationshipId;
+            if (relationshipId) {
+                const relationship = relationships.find(r => r.relationship_id === relationshipId);
+                if (relationship) {
+                    prompt += `\n現在の関係性: ${relationship.name}（${relationship.description || ''}）`;
+                    // メモがあれば追加
+                    if (charAtLocation.status?.memo) {
+                        prompt += `\n関係性メモ: ${charAtLocation.status.memo}`;
+                    }
+                    // 進展条件があれば追加
+                    if (relationship.next_relationship_req) {
+                        prompt += `\n関係性進展条件: ${relationship.next_relationship_req}`;
+                    }
+                }
+            }
+            // キャラクターのアクション情報を追加
+            const charActionIndex = charAtLocation.status?.actionIndex ?? -1;
+            if (charActionIndex >= 0 && actions[charActionIndex]) {
+                const charAction = actions[charActionIndex];
+                prompt += `\n現在の行動: ${charAction.name}`;
+                if (charAction.prompt) prompt += `（${charAction.prompt}）`;
+            }
             prompt += '\n';
         }
 
-        // 通常モード：地の文 + セリフ（テンプレートから取得）
+        // 通常モード：地の文 + セリフ + 関係性変化（テンプレートから取得）
         const charName = charAtLocation?.character?.name || '';
-        const formatPrompt = getPromptTemplate(promptTemplates, 'llm_004', { name: charName })
+        let formatPrompt = getPromptTemplate(promptTemplates, 'llm_004', { name: charName })
             || `以下の形式で出力してください：\n【地の文】（2-3文で状況を描写）\n${charName ? `【${charName}のセリフ】（「」付きで1-2文）` : ''}`;
+
+        // 関係性進展条件がある場合のみ判定を追加
+        if (charAtLocation) {
+            const relationshipId = charAtLocation.status?.relationshipId;
+            const relationship = relationships.find(r => r.relationship_id === relationshipId);
+            if (relationship && relationship.next_relationship_req) {
+                formatPrompt += `\n【関係性変化】このシーンで関係性進展条件を満たした場合、もしくは総合的に関係性変化が起きたと判断される場合は新しい関係性名を記載、満たしていない場合は「維持」と記載`;
+                formatPrompt += `\n【関係性メモ】関係性が変化した場合は必ず記載。変化がなくてもメモ更新が必要な出来事があれば記載。キャラクター視点で50文字以内でどこで何が起きて、なぜその関係性になったのか、今後どうしていきたいか、キャラクターの感情を交えて記載。不要なら省略`;
+            }
+        }
+
         prompt += `\n${formatPrompt}`;
 
         return prompt;
@@ -1513,6 +1741,8 @@
     function parseCombinedResponse(response, charAtLocation) {
         let narrative = '';
         let dialogue = '';
+        let newRelationshipName = null;
+        let relationshipMemo = null;
 
         // 【地の文】セクションを抽出
         const narrativeMatch = response.match(/【地の文】\s*([\s\S]*?)(?=【|$)/);
@@ -1533,7 +1763,74 @@
             }
         }
 
-        return { narrative, dialogue };
+        // 【関係性変化】セクションを抽出 - 関係性名を取得
+        const relationshipMatch = response.match(/【関係性変化】\s*([\s\S]*?)(?=【|$)/);
+        if (relationshipMatch) {
+            const result = relationshipMatch[1].trim();
+            // 「維持」以外の場合は関係性名として扱う
+            if (!result.includes('維持')) {
+                newRelationshipName = result;
+            }
+        }
+
+        // 【関係性メモ】セクションを抽出
+        const memoMatch = response.match(/【関係性メモ】\s*([\s\S]*?)(?=【|$)/);
+        if (memoMatch) {
+            // 「（〇〇文字）」などの余計なテキストを除去
+            relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
+        }
+
+        return { narrative, dialogue, newRelationshipName, relationshipMemo };
+    }
+
+    // 会話モードレスポンスをパース
+    function parseConversationResponse(response, charAtLocation) {
+        let dialogue = '';
+        let narrative = '';
+        let newRelationshipName = null;
+        let relationshipMemo = null;
+
+        // 【キャラ名のセリフ】セクションを抽出
+        if (charAtLocation) {
+            const charName = charAtLocation.character.name;
+            const dialogueRegex = new RegExp(`【${charName}のセリフ】\\s*([\\s\\S]*?)(?=【|$)`);
+            const dialogueMatch = response.match(dialogueRegex);
+            if (dialogueMatch) {
+                dialogue = dialogueMatch[1].trim();
+            } else {
+                // フォーマットが異なる場合、【地の文】または【関係性変化】より前の部分をセリフとして扱う
+                const beforeNarrative = response.split(/【地の文】|【関係性変化】/)[0].trim();
+                dialogue = beforeNarrative;
+            }
+            // セリフから【地の文】以降を除去
+            dialogue = dialogue.split(/【地の文】|【関係性変化】|【関係性メモ】/)[0].trim();
+        }
+
+        // 【地の文】セクションを抽出（最初の1行のみ）
+        const narrativeMatch = response.match(/【地の文】\s*([\s\S]*?)(?=【|$)/);
+        if (narrativeMatch) {
+            const lines = narrativeMatch[1].trim().split('\n').filter(l => l.trim());
+            narrative = lines[0] || '';
+        }
+
+        // 【関係性変化】セクションを抽出 - 関係性名を取得
+        const relationshipMatch = response.match(/【関係性変化】\s*([\s\S]*?)(?=【|$)/);
+        if (relationshipMatch) {
+            const result = relationshipMatch[1].trim();
+            // 「維持」以外の場合は関係性名として扱う
+            if (!result.includes('維持')) {
+                newRelationshipName = result;
+            }
+        }
+
+        // 【関係性メモ】セクションを抽出
+        const memoMatch = response.match(/【関係性メモ】\s*([\s\S]*?)(?=【|$)/);
+        if (memoMatch) {
+            // 「（〇〇文字）」などの余計なテキストを除去
+            relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
+        }
+
+        return { dialogue, narrative, newRelationshipName, relationshipMemo };
     }
 
     // 構図タグ取得（共通関数を使用）
@@ -1544,9 +1841,9 @@
         const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
         if (!runwareApiKey) return null;
 
-        // モデル取得
-        const modelId = getFirstModelId(models);
-        if (!modelId) {
+        // モデル取得（選択されたモデルを優先、なければ最初のモデル）
+        const modelId = selectedModelId || getFirstModelId(models);
+        if (!modelId || !models[modelId]) {
             console.log('[画像生成] モデルが未設定');
             return null;
         }
@@ -1602,7 +1899,18 @@
         prompt += `【現在の場所】${currentPlace?.name || '不明'}\n`;
 
         if (charAtLocation) {
-            prompt += `【その場にいる人物】${charAtLocation.character.name}\n`;
+            prompt += `【その場にいる人物】${charAtLocation.character.name}`;
+            // 関係性情報を追加
+            const relationshipId = charAtLocation.status?.relationshipId;
+            if (relationshipId) {
+                const relationship = relationships.find(r => r.relationship_id === relationshipId);
+                if (relationship) {
+                    prompt += `（関係性: ${relationship.name}`;
+                    if (relationship.description) prompt += ` - ${relationship.description}`;
+                    prompt += `）`;
+                }
+            }
+            prompt += '\n';
         }
 
         switch (actionType) {
