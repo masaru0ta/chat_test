@@ -191,6 +191,7 @@
             overflow: hidden;
             min-height: 0;
             flex: 1;
+            position: relative;
         }
 
         /* 入力フォーカス時のスタイル */
@@ -455,11 +456,11 @@
 
         /* 移動メニュー */
         .move-menu {
-            position: fixed;
-            bottom: 60px;
+            position: absolute;
+            bottom: 52px;
             left: 10px;
             right: 10px;
-            max-height: 60vh;
+            max-height: 50vh;
             background: #1a1a1a;
             border: 1px solid #444;
             border-radius: 8px;
@@ -553,11 +554,11 @@
 
         /* 行為メニュー */
         .action-menu {
-            position: fixed;
-            bottom: 60px;
+            position: absolute;
+            bottom: 52px;
             left: 10px;
             right: 10px;
-            max-height: 60vh;
+            max-height: 50vh;
             background: #1a1a1a;
             border: 1px solid #444;
             border-radius: 8px;
@@ -838,7 +839,6 @@
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
-                padding-bottom: 60px;
             }
             .page-area {
                 flex: 1;
@@ -865,15 +865,10 @@
             }
             /* 統合コマンドバー：モバイル */
             .unified-command-bar {
-                position: fixed;
-                bottom: 0;
-                bottom: env(safe-area-inset-bottom, 0);
-                left: 0;
-                right: 0;
                 padding: 6px;
                 padding-bottom: calc(6px + env(safe-area-inset-bottom, 0));
-                z-index: 9999;
                 gap: 3px;
+                flex-shrink: 0;
             }
             .unified-command-bar .cmd-btn {
                 padding: 6px 8px;
@@ -883,13 +878,10 @@
                 padding: 6px 8px;
                 font-size: 0.85rem;
             }
-            /* 入力フォーカス時：モバイル */
-            .chat-area.input-focused {
-                padding-bottom: 50px;
-            }
-            .chat-area.input-focused .command-area {
-                padding-top: 5px;
-                gap: 0;
+            .move-menu, .action-menu {
+                bottom: calc(42px + env(safe-area-inset-bottom, 0));
+                left: 5px;
+                right: 5px;
             }
         }
     </style>
