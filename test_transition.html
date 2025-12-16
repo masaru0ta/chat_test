@@ -908,7 +908,7 @@
             <button class="cmd-btn menu-btn" id="menu-toggle" onclick="toggleSidebar()">≡</button>
             <button class="cmd-btn" id="target-toggle" onclick="openMoveMenu()">移動</button>
             <button class="cmd-btn" id="cmd-toggle">行為</button>
-            <input type="text" class="cmd-input" id="command-input" placeholder="発言...">
+            <input type="text" class="cmd-input" id="command-input" placeholder="発言..." onkeydown="if(event.key==='Enter')executeCommand()">
             <button class="cmd-btn nav-btn" id="prev-btn" onclick="prevPage()">前へ</button>
             <button class="cmd-btn nav-btn" id="next-btn" onclick="nextPage()">次へ</button>
         </div>
