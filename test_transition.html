@@ -1027,15 +1027,14 @@
 
         /* LLM思考中パルスドット */
         .llm-thinking-dots {
-            display: inline-flex;
-            gap: 4px;
-            margin-left: 8px;
-            vertical-align: middle;
+            display: flex;
+            gap: 5px;
+            padding: 10px 0;
         }
 
         .llm-thinking-dots span {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
             background: #4a9eff;
             border-radius: 50%;
             animation: llmPulse 1.4s ease-in-out infinite;
@@ -1045,7 +1044,7 @@
         .llm-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
 
         @keyframes llmPulse {
-            0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+            0%, 80%, 100% { opacity: 0.4; transform: scale(0.8); }
             40% { opacity: 1; transform: scale(1.2); }
         }
 
@@ -1342,17 +1341,17 @@
 
     // ステータスインジケーター
     function showStatusLLM() {
-        // 現在のページのテキスト末尾にパルスドットを追加
+        // 現在のページの.page-textにパルスドットを追加
         const pageView = document.getElementById('page-view');
         if (pageView) {
             const currentPage = pageView.querySelector(`.page-content[data-page-index="${currentPageIndex}"]`);
             if (currentPage) {
-                const textDiv = currentPage.querySelector('.page-text > div');
-                if (textDiv && !textDiv.querySelector('.llm-thinking-dots')) {
-                    const dots = document.createElement('span');
+                const pageText = currentPage.querySelector('.page-text');
+                if (pageText && !pageText.querySelector('.llm-thinking-dots')) {
+                    const dots = document.createElement('div');
                     dots.className = 'llm-thinking-dots';
                     dots.innerHTML = '<span></span><span></span><span></span>';
-                    textDiv.appendChild(dots);
+                    pageText.appendChild(dots);
                 }
             }
         }
