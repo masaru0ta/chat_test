@@ -235,6 +235,10 @@
                                 <label>ルート場所:</label>
                                 <select id="detail-root-place" onchange="updatePlaceField('root_place', this.value)"></select>
                             </div>
+                            <div class="field-row">
+                                <label>デフォルト行為:</label>
+                                <select id="detail-default-action" onchange="updatePlaceField('default_action', this.value)"></select>
+                            </div>
                             <div class="field-label">場所タグ</div>
                             <textarea class="field-textarea" id="detail-tag" onchange="updatePlaceField('tag', this.value)"></textarea>
                             <div class="field-label">追加タグ</div>
@@ -283,6 +287,7 @@
     let characters = [];
     let places = [];
     let actions = [];
+    let relationships = [];
     let placeImages = {};
     let originalGasImages = {};
     let currentDetailIndex = -1;
@@ -315,7 +320,7 @@
     });
 
     function saveCachedData() {
-        const data = { models, characters, places, actions };
+        const data = { models, characters, places, actions, relationships };
         localStorage.setItem(GAS_DATA_KEY, JSON.stringify(data));
         localStorage.setItem(PLACE_IMAGES_KEY, JSON.stringify(placeImages));
     }
@@ -329,6 +334,7 @@
                 characters = data.characters || [];
                 places = data.places || [];
                 actions = data.actions || [];
+                relationships = data.relationships || [];
             }
             const cachedImages = localStorage.getItem(PLACE_IMAGES_KEY);
             if (cachedImages) placeImages = JSON.parse(cachedImages);
@@ -434,16 +440,18 @@
         showStatusWithDetail('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
-                fetchGasData(baseUrl, 'action')
+                fetchGasData(baseUrl, 'action'),
+                fetchGasData(baseUrl, 'relationship')
             ]);
 
             models = parseModels(modelData);
             characters = parseCharacters(characterData);
             actions = parseActionsWithCompositions(actionData);
+            relationships = parseRelationships(relationshipData);
 
             // 場所設定（画像URL処理があるため個別）
             originalGasImages = {};
@@ -534,6 +542,7 @@
                 'command_list': place.command_list || '',
                 'public_flag': place.public_flag || '',
                 'root_place': place.root_place || '',
+                'default action': place.default_action || '',
                 'image': placeImages[place.place_id] || ''
             }));
 
@@ -667,21 +676,7 @@
         return Object.keys(models)[0] || null;
     }
 
-    // BEST → GOOD → 未評価 の優先順位で構図を選択
-    function selectBestComposition(action) {
-        if (!action || !action.compositions) return null;
-
-        const best = action.compositions.find(c => c.quality === 'best');
-        if (best) return best;
-
-        const good = action.compositions.find(c => c.quality === 'good');
-        if (good) return good;
-
-        const none = action.compositions.find(c => c.quality === '未評価');
-        if (none) return none;
-
-        return action.compositions[0] || null;
-    }
+    // selectBestComposition は js/prompt-utils.js で定義
 
     function validateGenerateSettings() {
         const apiKey = document.getElementById('apiKey').value.trim();
@@ -709,7 +704,7 @@
         const action = actions[actionIndex] || actions[0] || {};
 
         // アクションに応じたBEST構図を選択
-        const selectedComp = selectBestComposition(action);
+        const selectedComp = selectBestComposition(action.compositions);
         const compositionTag = selectedComp ? (selectedComp.tag || selectedComp.name) : 'front view';
 
         return [
@@ -806,6 +801,7 @@
         document.getElementById('detail-command-list').value = place.command_list || '';
         document.getElementById('detail-public-flag').value = place.public_flag || '';
         updateRootPlaceSelect(place.root_place);
+        updateDefaultActionSelect(place.default_action);
         document.getElementById('detail-tag').value = place.tag || '';
         document.getElementById('detail-additional').value = place.additionalTag || '';
 
@@ -870,6 +866,18 @@
             const selected = place.place_id === currentValue ? 'selected' : '';
             const displayName = place.name || place.place_id;
             options += `<option value="${place.place_id}" ${selected}>${displayName}</option>`;
+        });
+        select.innerHTML = options;
+    }
+
+    function updateDefaultActionSelect(currentValue) {
+        const select = document.getElementById('detail-default-action');
+
+        let options = '<option value="">（なし）</option>';
+        actions.forEach(action => {
+            const selected = action.action_id === currentValue ? 'selected' : '';
+            const displayName = action.name || action.action_id;
+            options += `<option value="${action.action_id}" ${selected}>${displayName}</option>`;
         });
         select.innerHTML = options;
     }

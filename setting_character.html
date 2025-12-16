@@ -172,6 +172,8 @@
                 <input type="text" class="field-input" id="detail-uniform2" onchange="updateCharacterField('uniform2', this.value)">
                 <div class="field-label">Additional Tag</div>
                 <input type="text" class="field-input" id="detail-additionalTag" onchange="updateCharacterField('additionalTag', this.value)">
+                <div class="field-label">Cast</div>
+                <input type="text" class="field-input" id="detail-cast" onchange="updateCharacterField('cast', this.value)">
             </div>
         </div>
         <!-- 全身画像エリア -->
@@ -219,6 +221,7 @@
     let characters = [];
     let places = [];
     let actions = [];
+    let relationships = [];
     let characterImages = {};
     let originalGasImages = {};
     let fullbodyImages = {};
@@ -243,7 +246,7 @@
     });
 
     function saveCachedData() {
-        const data = { models, characters, places, actions };
+        const data = { models, characters, places, actions, relationships };
         localStorage.setItem(GAS_DATA_KEY, JSON.stringify(data));
         localStorage.setItem(CHAR_IMAGES_KEY, JSON.stringify(characterImages));
         localStorage.setItem(FULLBODY_IMAGES_KEY, JSON.stringify(fullbodyImages));
@@ -258,6 +261,7 @@
                 characters = data.characters || [];
                 places = data.places || [];
                 actions = data.actions || [];
+                relationships = data.relationships || [];
             }
             const cachedImages = localStorage.getItem(CHAR_IMAGES_KEY);
             if (cachedImages) characterImages = JSON.parse(cachedImages);
@@ -292,16 +296,18 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
-                fetchGasData(baseUrl, 'action')
+                fetchGasData(baseUrl, 'action'),
+                fetchGasData(baseUrl, 'relationship')
             ]);
 
             models = parseModels(modelData);
             places = parsePlaces(placeData);
             actions = parseActionsWithCompositions(actionData);
+            relationships = parseRelationships(relationshipData);
 
             // キャラクター設定（画像URL処理があるため個別）
             originalGasImages = {};
@@ -452,6 +458,7 @@
                 uniform1: char.uniform1 || '',
                 uniform2: char.uniform2 || '',
                 'additional tag': char.additionalTag || '',
+                cast: char.cast || '',
                 image: characterImages[char.name] || ''
             }));
 
@@ -624,6 +631,7 @@
         document.getElementById('detail-uniform1').value = char.uniform1 || '';
         document.getElementById('detail-uniform2').value = char.uniform2 || '';
         document.getElementById('detail-additionalTag').value = char.additionalTag || '';
+        document.getElementById('detail-cast').value = char.cast || '';
 
         // 画像を設定
         const imageDiv = document.getElementById('detail-image');

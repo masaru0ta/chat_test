@@ -628,6 +628,7 @@
     let characters = [];
     let places = [];
     let actions = [];
+    let relationships = [];
     let chatHistory = [];
     let currentSceneUrl = '';
     let generatedImages = [];
@@ -795,7 +796,7 @@
     }
 
     function saveCachedData() {
-        localStorage.setItem(GAME_DATA_KEY, JSON.stringify({ models, characters, places, actions }));
+        localStorage.setItem(GAME_DATA_KEY, JSON.stringify({ models, characters, places, actions, relationships }));
     }
 
     function loadCachedData() {
@@ -807,6 +808,7 @@
                 characters = data.characters || [];
                 places = data.places || [];
                 actions = data.actions || [];
+                relationships = data.relationships || [];
                 updateAllSelects();
             }
         } catch (e) {
@@ -825,17 +827,19 @@
         showSettingsStatus('読み込み中...', false);
 
         try {
-            const [modelData, characterData, placeData, actionData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
-                fetchGasData(baseUrl, 'action')
+                fetchGasData(baseUrl, 'action'),
+                fetchGasData(baseUrl, 'relationship')
             ]);
 
             models = parseModels(modelData);
             characters = parseCharacters(characterData);
             places = parsePlaces(placeData);
             actions = parseActionsWithCompositions(actionData);
+            relationships = parseRelationships(relationshipData);
 
             saveCachedData();
             updateAllSelects();
@@ -919,14 +923,7 @@
         return Object.keys(models)[0] || null;
     }
 
-    function selectBestComposition(compositions) {
-        if (!compositions || compositions.length === 0) return null;
-        const best = compositions.find(c => c.quality === 'BEST' || c.quality === 'best');
-        if (best) return best;
-        const good = compositions.find(c => c.quality === 'Good' || c.quality === 'good');
-        if (good) return good;
-        return compositions[0];
-    }
+    // selectBestComposition は js/prompt-utils.js で定義
 
     function selectTopCompositions(compositions, count = 3) {
         if (!compositions || compositions.length === 0) return [];

@@ -18,6 +18,43 @@ function cleanPrompt(prompt) {
 }
 
 /**
+ * BEST構図を選択
+ * @param {Array} compositions - 構図配列 [{name, tag, quality}, ...]
+ * @returns {Object|null} 選択された構図オブジェクト
+ */
+function selectBestComposition(compositions) {
+    if (!compositions || compositions.length === 0) return null;
+
+    // BESTのものを探す（大文字小文字を区別しない）
+    const bestComps = compositions.filter(c => c.quality && c.quality.toUpperCase() === 'BEST');
+    if (bestComps.length > 0) {
+        return bestComps[Math.floor(Math.random() * bestComps.length)];
+    }
+
+    // BESTがなければGoodからランダム（大文字小文字を区別しない）
+    const goodComps = compositions.filter(c => c.quality && c.quality.toUpperCase() === 'GOOD');
+    if (goodComps.length > 0) {
+        return goodComps[Math.floor(Math.random() * goodComps.length)];
+    }
+
+    // それもなければ全体からランダム
+    return compositions[Math.floor(Math.random() * compositions.length)];
+}
+
+/**
+ * アクションから構図タグを取得
+ * @param {Array} actions - アクション配列
+ * @param {number} actionIndex - アクションのインデックス
+ * @returns {string} 構図タグ（tagがなければnameをフォールバック）
+ */
+function getCompositionTag(actions, actionIndex) {
+    if (actionIndex < 0 || !actions || !actions[actionIndex]) return '';
+    const compositions = actions[actionIndex].compositions;
+    const selected = selectBestComposition(compositions);
+    return selected?.tag || selected?.name || '';
+}
+
+/**
  * プロンプト内のキャラクタータグを置換
  * [uniform1], [uniform2] をキャラクターの対応する値に置換
  * @param {string} prompt - 置換前のプロンプト

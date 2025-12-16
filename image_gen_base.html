@@ -238,6 +238,7 @@
     let characters = [];
     let places = [];
     let actions = [];
+    let relationships = [];
 
     // 初期化
     document.addEventListener('DOMContentLoaded', () => {
@@ -272,12 +273,13 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            // モデル、キャラクター、場所、アクションを並列で読み込み
-            const [modelData, characterData, placeData, actionData] = await Promise.all([
+            // モデル、キャラクター、場所、アクション、関係性を並列で読み込み
+            const [modelData, characterData, placeData, actionData, relationshipData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
-                fetchGasData(baseUrl, 'action')
+                fetchGasData(baseUrl, 'action'),
+                fetchGasData(baseUrl, 'relationship')
             ]);
 
             models = parseModels(modelData);
@@ -291,6 +293,8 @@
 
             actions = parseActionsWithCompositions(actionData);
             updateActionSelect();
+
+            relationships = parseRelationships(relationshipData);
 
             showStatus(`読み込み完了: モデル${Object.keys(models).length}件, キャラ${characters.length}件, 場所${places.length}件, アクション${actions.length}件`);
 
@@ -407,25 +411,7 @@
         }
     }
 
-    // BEST選択時に適切な構図をランダムに選ぶ
-    function selectBestComposition(compositions) {
-        if (!compositions || compositions.length === 0) return null;
-
-        // BESTのものを探す
-        const bestComps = compositions.filter(c => c.quality === 'BEST');
-        if (bestComps.length > 0) {
-            return bestComps[Math.floor(Math.random() * bestComps.length)];
-        }
-
-        // BESTがなければGoodからランダム
-        const goodComps = compositions.filter(c => c.quality === 'Good');
-        if (goodComps.length > 0) {
-            return goodComps[Math.floor(Math.random() * goodComps.length)];
-        }
-
-        // どちらもなければ全体からランダム
-        return compositions[Math.floor(Math.random() * compositions.length)];
-    }
+    // selectBestComposition は js/prompt-utils.js で定義
 
     function getSelectedCompositionTag() {
         const actionIndex = document.getElementById('action').value;

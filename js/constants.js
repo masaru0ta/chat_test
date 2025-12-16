@@ -11,6 +11,7 @@ const API_CONFIG = {
 const STORAGE_KEYS = {
     GAS_URL: 'gas_api_url',
     API_KEY: 'runware_api_key',
+    OPENROUTER_API_KEY: 'openrouter_api_key',
     IMAGE_UPLOAD_URL: 'image_upload_gas_url'
 };
 
