@@ -442,6 +442,11 @@
             background: #333;
         }
 
+        .unified-command-bar .nav-btn.ready {
+            background: #4a9eff;
+            border-color: #4a9eff;
+        }
+
         /* コマンド入力エリア */
         .command-area {
             padding: 12px 20px;
@@ -990,9 +995,28 @@
         });
     }
 
-    // ページステータス更新（統合バーに移動したため空実装）
+    // ナビボタン状態更新
     function updatePageStatus() {
-        // 旧ボタンは削除済み
+        const nextBtn = document.getElementById('next-btn');
+        const prevBtn = document.getElementById('prev-btn');
+
+        // 次へボタン：未読ページがあり読み込み中でなければready
+        if (nextBtn) {
+            if (!isLoading && currentPageIndex < pages.length - 1) {
+                nextBtn.classList.add('ready');
+            } else {
+                nextBtn.classList.remove('ready');
+            }
+        }
+
+        // 前へボタン：前ページがあればready
+        if (prevBtn) {
+            if (currentPageIndex > 0) {
+                prevBtn.classList.add('ready');
+            } else {
+                prevBtn.classList.remove('ready');
+            }
+        }
     }
 
     // 移動モード切り替え
