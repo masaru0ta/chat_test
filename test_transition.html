@@ -979,9 +979,141 @@
         .lock-numpad-btn.backspace {
             font-size: 1.2rem;
         }
+
+        /* ステータスインジケーター */
+        .status-indicator {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 9000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #333;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.3s ease;
+        }
+
+        .status-item.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .status-item.llm {
+            border-color: #4a9eff;
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+        }
+
+        .status-item.image {
+            border-color: #9b59b6;
+            box-shadow: 0 0 20px rgba(155, 89, 182, 0.3);
+        }
+
+        .status-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .status-item.llm .status-spinner {
+            border-top-color: #4a9eff;
+            border-right-color: #4a9eff;
+        }
+
+        .status-item.image .status-spinner {
+            border-top-color: #9b59b6;
+            border-right-color: #9b59b6;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .status-item.llm .status-text {
+            color: #4a9eff;
+        }
+
+        .status-item.image .status-text {
+            color: #9b59b6;
+        }
+
+        .status-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .status-dots span {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+
+        .status-item.llm .status-dots span {
+            background: #4a9eff;
+        }
+
+        .status-item.image .status-dots span {
+            background: #9b59b6;
+        }
+
+        .status-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .status-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes pulse {
+            0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+            40% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @media (max-width: 768px) {
+            .status-indicator {
+                top: 10px;
+                right: 10px;
+            }
+            .status-item {
+                padding: 8px 12px;
+            }
+            .status-text {
+                font-size: 0.75rem;
+            }
+        }
     </style>
 </head>
 <body>
+
+<!-- ステータスインジケーター -->
+<div class="status-indicator" id="statusIndicator">
+    <div class="status-item llm" id="statusLLM">
+        <div class="status-spinner"></div>
+        <span class="status-text">Thinking</span>
+        <div class="status-dots"><span></span><span></span><span></span></div>
+    </div>
+    <div class="status-item image" id="statusImage">
+        <div class="status-spinner"></div>
+        <span class="status-text">Generating</span>
+        <div class="status-dots"><span></span><span></span><span></span></div>
+    </div>
+</div>
 
 <!-- ロック画面 -->
 <div class="lock-screen hidden" id="lockScreen">
@@ -1255,6 +1387,23 @@
     function hideLoading() {
         isLoading = false;
         updatePageStatus();
+    }
+
+    // ステータスインジケーター
+    function showStatusLLM() {
+        document.getElementById('statusLLM')?.classList.add('active');
+    }
+
+    function hideStatusLLM() {
+        document.getElementById('statusLLM')?.classList.remove('active');
+    }
+
+    function showStatusImage() {
+        document.getElementById('statusImage')?.classList.add('active');
+    }
+
+    function hideStatusImage() {
+        document.getElementById('statusImage')?.classList.remove('active');
     }
 
     // タイプライター開始
@@ -2840,7 +2989,9 @@
             console.log('[会話モード] 完全版プロンプト:', fullPrompt);
             console.log('[会話モード] シンプル版:', simplePrompt);
 
+            showStatusLLM();
             const response = await callLLM(chatApiKey, fullPrompt, 'character', charAtLocation.character, null, simplePrompt);
+            hideStatusLLM();
             console.log('[会話モード] レスポンス:', response);
 
             // 関係性変化の判定を抽出
@@ -3018,7 +3169,9 @@
         };
 
         // LLMの応答を待つ（ストリーム対応）
+        showStatusLLM();
         const response = await callLLM(chatApiKey, combinedPrompt, 'combined', null, onStreamChunk, combinedSimplePrompt);
+        hideStatusLLM();
 
         console.log('[LLM] レスポンス:', response);
         const { narrative, dialogue, newRelationshipName, relationshipMemo } = parseCombinedResponse(response, charAtLocation);
@@ -3411,6 +3564,7 @@
         console.log('[画像生成] プロンプト:', prompt);
         console.log('[画像生成] ネガティブ:', negativePrompt);
 
+        showStatusImage();
         const result = await generateImage(runwareApiKey, modelId, prompt, {
             negativePrompt: negativePrompt,
             steps: model?.steps || 20,
@@ -3420,6 +3574,7 @@
             height: 1024,
             character: character
         });
+        hideStatusImage();
 
         return result.imageURL;
     }
