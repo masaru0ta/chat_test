@@ -1043,20 +1043,6 @@
             to { transform: rotate(360deg); }
         }
 
-        .status-text {
-            font-size: 0.85rem;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-        }
-
-        .status-item.llm .status-text {
-            color: #4a9eff;
-        }
-
-        .status-item.image .status-text {
-            color: #9b59b6;
-        }
-
         @media (max-width: 768px) {
             .status-indicator {
                 top: 10px;
@@ -1064,9 +1050,6 @@
             }
             .status-item {
                 padding: 8px 12px;
-            }
-            .status-text {
-                font-size: 0.75rem;
             }
         }
     </style>
@@ -1077,11 +1060,9 @@
 <div class="status-indicator" id="statusIndicator">
     <div class="status-item llm" id="statusLLM">
         <div class="status-spinner"></div>
-        <span class="status-text">Thinking</span>
     </div>
     <div class="status-item image" id="statusImage">
         <div class="status-spinner"></div>
-        <span class="status-text">Generating</span>
     </div>
 </div>
 
