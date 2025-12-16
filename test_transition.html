@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Transition Test</title>
     <link rel="stylesheet" href="css/common.css">
     <style>
@@ -657,12 +657,14 @@
             .command-area {
                 position: fixed;
                 bottom: 0;
+                bottom: env(safe-area-inset-bottom, 0);
                 left: 0;
                 right: 0;
                 padding: 8px 10px;
+                padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
                 background: #1a1a1a;
                 border-top: 1px solid #333;
-                z-index: 1000;
+                z-index: 9999;
             }
             .command-row {
                 gap: 5px;
