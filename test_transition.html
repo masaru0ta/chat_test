@@ -12,6 +12,7 @@
             overflow: hidden;
             height: 100%;
             height: 100dvh;
+            height: var(--visual-viewport-height, 100dvh);
         }
 
         .app-container {
@@ -19,6 +20,7 @@
             grid-template-columns: 300px 1fr;
             height: 100vh;
             height: 100dvh;
+            height: var(--visual-viewport-height, 100dvh);
             transition: grid-template-columns 0.3s ease;
         }
 
@@ -187,6 +189,8 @@
             flex-direction: column;
             background: #000;
             overflow: hidden;
+            min-height: 0;
+            flex: 1;
         }
 
         /* 入力フォーカス時のスタイル */
@@ -221,6 +225,7 @@
 
         #page-view {
             flex: 1;
+            min-height: 0;
             display: flex;
             flex-direction: column;
             background: #000;
@@ -230,6 +235,7 @@
 
         .page-content {
             flex: 1;
+            min-height: 0;
             position: relative;
             overflow: hidden;
         }
@@ -609,12 +615,6 @@
 
         .action-menu-item .action-name {
             font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .action-menu-item .action-info {
-            font-size: 0.8rem;
-            color: #888;
         }
 
         /* コマンド入力エリア */
@@ -838,11 +838,11 @@
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
-                padding-bottom: 100px;
+                padding-bottom: 60px;
             }
             .page-area {
                 flex: 1;
-                min-height: 50px;
+                min-height: 0;
                 overflow: hidden;
             }
             .command-area {
@@ -882,9 +882,6 @@
             .unified-command-bar .cmd-input {
                 padding: 6px 8px;
                 font-size: 0.85rem;
-            }
-            .chat-area {
-                padding-bottom: 60px;
             }
             /* 入力フォーカス時：モバイル */
             .chat-area.input-focused {
@@ -1338,10 +1335,7 @@
             const item = document.createElement('div');
             item.className = 'action-menu-item';
 
-            item.innerHTML = `
-                <div class="action-name">${action.name}</div>
-                ${action.prompt ? `<div class="action-info">${action.prompt.substring(0, 50)}${action.prompt.length > 50 ? '...' : ''}</div>` : ''}
-            `;
+            item.innerHTML = `<div class="action-name">${action.name}</div>`;
 
             item.onclick = () => selectAction(index);
             listEl.appendChild(item);
@@ -1897,6 +1891,19 @@
     document.addEventListener('DOMContentLoaded', () => {
         // サイドバー状態復元
         initSidebarState();
+
+        // Visual Viewport対応（モバイルキーボード表示時）
+        function updateVisualViewport() {
+            if (window.visualViewport) {
+                const vh = window.visualViewport.height;
+                document.documentElement.style.setProperty('--visual-viewport-height', vh + 'px');
+            }
+        }
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', updateVisualViewport);
+            window.visualViewport.addEventListener('scroll', updateVisualViewport);
+            updateVisualViewport();
+        }
 
         const settings = loadSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY);
         if (settings.gasUrl) document.getElementById('gasUrl').value = settings.gasUrl;
