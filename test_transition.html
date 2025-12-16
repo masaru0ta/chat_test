@@ -447,6 +447,104 @@
             border-color: #4a9eff;
         }
 
+        /* 移動メニュー */
+        .move-menu {
+            position: fixed;
+            bottom: 60px;
+            left: 10px;
+            right: 10px;
+            max-height: 60vh;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .move-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: #222;
+            border-bottom: 1px solid #444;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .move-menu-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .move-menu-close:hover {
+            color: #fff;
+        }
+
+        .move-menu-options {
+            display: flex;
+            gap: 15px;
+            padding: 10px 15px;
+            background: #222;
+            border-bottom: 1px solid #333;
+        }
+
+        .move-mode-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #ccc;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .move-mode-option input {
+            cursor: pointer;
+        }
+
+        .move-menu-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .move-menu-item {
+            padding: 12px 15px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            color: #fff;
+            transition: all 0.2s;
+        }
+
+        .move-menu-item:hover {
+            background: #3a3a3a;
+            border-color: #4a9eff;
+        }
+
+        .move-menu-item.current {
+            border-color: #4a9eff;
+            background: #2a3a4a;
+        }
+
+        .move-menu-item .place-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .move-menu-item .place-info {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
         /* コマンド入力エリア */
         .command-area {
             padding: 12px 20px;
@@ -734,9 +832,6 @@
     <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="サイドバー開閉" style="display:none;">☰</button>
     <!-- サイドバー -->
     <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>Transition Test</h2>
-        </div>
         <div class="sidebar-content">
             <!-- キャラクターステータス（動的生成） -->
             <div id="characters-container"></div>
@@ -811,11 +906,29 @@
         <!-- 統合コマンドバー -->
         <div class="unified-command-bar">
             <button class="cmd-btn menu-btn" id="menu-toggle" onclick="toggleSidebar()">≡</button>
-            <button class="cmd-btn" id="target-toggle">移動</button>
+            <button class="cmd-btn" id="target-toggle" onclick="openMoveMenu()">移動</button>
             <button class="cmd-btn" id="cmd-toggle">行為</button>
             <input type="text" class="cmd-input" id="command-input" placeholder="発言...">
             <button class="cmd-btn nav-btn" id="prev-btn" onclick="prevPage()">前へ</button>
             <button class="cmd-btn nav-btn" id="next-btn" onclick="nextPage()">次へ</button>
+        </div>
+        <!-- 移動メニュー -->
+        <div class="move-menu" id="moveMenu" style="display:none;">
+            <div class="move-menu-header">
+                <span>移動先を選択</span>
+                <button class="move-menu-close" onclick="closeMoveMenu()">×</button>
+            </div>
+            <div class="move-menu-options">
+                <label class="move-mode-option">
+                    <input type="radio" name="moveMode" value="alone" checked> 1人で移動
+                </label>
+                <label class="move-mode-option">
+                    <input type="radio" name="moveMode" value="together"> 2人で移動
+                </label>
+            </div>
+            <div class="move-menu-list" id="moveMenuList">
+                <!-- 移動先リストがここに動的生成 -->
+            </div>
         </div>
         <!-- 旧コマンドエリア（非表示・互換用） -->
         <div class="command-area" style="display:none;">
@@ -998,7 +1111,6 @@
     // ナビボタン状態更新
     function updatePageStatus() {
         const nextBtn = document.getElementById('next-btn');
-        const prevBtn = document.getElementById('prev-btn');
 
         // 次へボタン：未読ページがあり読み込み中でなければready
         if (nextBtn) {
@@ -1008,15 +1120,103 @@
                 nextBtn.classList.remove('ready');
             }
         }
+    }
 
-        // 前へボタン：前ページがあればready
-        if (prevBtn) {
-            if (currentPageIndex > 0) {
-                prevBtn.classList.add('ready');
-            } else {
-                prevBtn.classList.remove('ready');
+    // 移動メニュー
+    function openMoveMenu() {
+        const menu = document.getElementById('moveMenu');
+        if (!menu) return;
+
+        // 移動先リストを生成
+        const listEl = document.getElementById('moveMenuList');
+        listEl.innerHTML = '';
+
+        places.forEach((place, index) => {
+            const item = document.createElement('div');
+            item.className = 'move-menu-item';
+            if (index === userState.placeIndex) {
+                item.classList.add('current');
+            }
+
+            // その場所にいるキャラクター情報
+            const charsHere = [];
+            characterStatus.forEach((status, i) => {
+                if (status.placeIndex === index && status.characterIndex >= 0) {
+                    const char = characters[status.characterIndex];
+                    if (char) charsHere.push(char.name);
+                }
+            });
+
+            item.innerHTML = `
+                <div class="place-name">${place.name}${index === userState.placeIndex ? ' (現在地)' : ''}</div>
+                ${charsHere.length > 0 ? `<div class="place-info">${charsHere.join(', ')} がいる</div>` : ''}
+            `;
+
+            item.onclick = () => selectMoveDestination(index);
+            listEl.appendChild(item);
+        });
+
+        // 現在の移動モードをラジオボタンに反映
+        const aloneRadio = menu.querySelector('input[value="alone"]');
+        const togetherRadio = menu.querySelector('input[value="together"]');
+        if (aloneRadio && togetherRadio) {
+            aloneRadio.checked = !moveWithCompanion;
+            togetherRadio.checked = moveWithCompanion;
+        }
+
+        menu.style.display = 'flex';
+    }
+
+    function closeMoveMenu() {
+        const menu = document.getElementById('moveMenu');
+        if (menu) menu.style.display = 'none';
+    }
+
+    function selectMoveDestination(placeIndex) {
+        // 移動モードを取得
+        const togetherRadio = document.querySelector('#moveMenu input[value="together"]');
+        moveWithCompanion = togetherRadio ? togetherRadio.checked : false;
+
+        closeMoveMenu();
+
+        // 移動実行
+        if (placeIndex !== userState.placeIndex) {
+            executeMove(placeIndex);
+        }
+    }
+
+    // 移動実行
+    async function executeMove(placeIndex) {
+        const previousPlace = userState.placeIndex >= 0 ? places[userState.placeIndex] : null;
+
+        // 「一緒に」モードの場合、現在地のキャラクターも一緒に移動
+        let companion = null;
+        if (moveWithCompanion) {
+            const charAtLocation = getCharacterAtUserLocation();
+            if (charAtLocation) {
+                companion = charAtLocation;
+                const statusIndex = characterStatus.indexOf(charAtLocation.status);
+                if (statusIndex >= 0) {
+                    characterStatus[statusIndex].placeIndex = placeIndex;
+                    // 移動先のデフォルトアクションに変更
+                    const newPlace = places[placeIndex];
+                    if (newPlace && newPlace.default_action) {
+                        const newActionIndex = actions.findIndex(a => a.action_id === newPlace.default_action);
+                        if (newActionIndex >= 0) {
+                            characterStatus[statusIndex].actionIndex = newActionIndex;
+                        }
+                    }
+                }
+                updateCharacterStatusDisplay();
             }
         }
+
+        userState.placeIndex = placeIndex;
+        updateUserStatusDisplay();
+        const newPlace = places[placeIndex];
+
+        // ページ生成
+        await generatePages('move', '', previousPlace, newPlace, companion);
     }
 
     // 移動モード切り替え
