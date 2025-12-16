@@ -812,14 +812,13 @@
         @media (max-width: 768px) {
             html, body {
                 height: 100%;
-                height: -webkit-fill-available;
+                height: var(--visual-viewport-height, 100dvh);
             }
             .app-container {
                 grid-template-columns: 1fr;
                 grid-template-rows: auto 1fr;
                 height: 100%;
-                height: -webkit-fill-available;
-                min-height: -webkit-fill-available;
+                height: var(--visual-viewport-height, 100dvh);
             }
             .app-container.sidebar-collapsed {
                 grid-template-columns: 1fr;
@@ -2247,9 +2246,35 @@
         initLockScreen();
 
         // Visual Viewport対応（モバイルキーボード表示時・折り畳みスマホ対応）
+        let lastViewportWidth = window.innerWidth;
+        let lastViewportHeight = window.innerHeight;
+
         function updateVisualViewport() {
             const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
             document.documentElement.style.setProperty('--visual-viewport-height', vh + 'px');
+        }
+
+        // 折り畳みスマホ検出用：画面サイズが大きく変わったら複数回更新
+        function handleScreenSizeChange() {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+            const widthDiff = Math.abs(newWidth - lastViewportWidth);
+            const heightDiff = Math.abs(newHeight - lastViewportHeight);
+
+            // 大きなサイズ変化を検出（折り畳みスマホの開閉など）
+            if (widthDiff > 100 || heightDiff > 100) {
+                console.log('[Viewport] 大きなサイズ変化検出:', lastViewportWidth, 'x', lastViewportHeight, '->', newWidth, 'x', newHeight);
+                // 遅延を置いて複数回更新（ブラウザの再計算を待つ）
+                updateVisualViewport();
+                setTimeout(updateVisualViewport, 50);
+                setTimeout(updateVisualViewport, 150);
+                setTimeout(updateVisualViewport, 300);
+            } else {
+                updateVisualViewport();
+            }
+
+            lastViewportWidth = newWidth;
+            lastViewportHeight = newHeight;
         }
 
         // visualViewportイベント
@@ -2259,9 +2284,10 @@
         }
 
         // 画面サイズ変更（折り畳みスマホ対応）
-        window.addEventListener('resize', updateVisualViewport);
+        window.addEventListener('resize', handleScreenSizeChange);
         window.addEventListener('orientationchange', () => {
-            setTimeout(updateVisualViewport, 100);
+            setTimeout(handleScreenSizeChange, 100);
+            setTimeout(handleScreenSizeChange, 300);
         });
 
         // 初回実行
