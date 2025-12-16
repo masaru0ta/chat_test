@@ -656,49 +656,8 @@
             <h2>Transition Test</h2>
         </div>
         <div class="sidebar-content">
-            <!-- キャラクター1ステータス -->
-            <div class="current-state">
-                <h3>キャラクター1</h3>
-                <div class="state-item">
-                    <span class="state-label">名前</span>
-                    <span class="state-value" id="char1-name">未選択</span>
-                </div>
-                <div class="state-item">
-                    <span class="state-label">現在地</span>
-                    <button class="state-value place-btn" id="char1-place" onclick="moveToCharacterLocation(0)">未選択</button>
-                </div>
-                <div class="state-item">
-                    <span class="state-label">状態</span>
-                    <span class="state-value" id="char1-action">未選択</span>
-                </div>
-                <div class="state-item">
-                    <span class="state-label">関係性</span>
-                    <span class="state-value" id="char1-relationship">未設定</span>
-                </div>
-                <div class="memo-line" id="char1-memo"></div>
-            </div>
-
-            <!-- キャラクター2ステータス -->
-            <div class="current-state">
-                <h3>キャラクター2</h3>
-                <div class="state-item">
-                    <span class="state-label">名前</span>
-                    <span class="state-value" id="char2-name">未選択</span>
-                </div>
-                <div class="state-item">
-                    <span class="state-label">現在地</span>
-                    <button class="state-value place-btn" id="char2-place" onclick="moveToCharacterLocation(1)">未選択</button>
-                </div>
-                <div class="state-item">
-                    <span class="state-label">状態</span>
-                    <span class="state-value" id="char2-action">未選択</span>
-                </div>
-                <div class="state-item">
-                    <span class="state-label">関係性</span>
-                    <span class="state-value" id="char2-relationship">未設定</span>
-                </div>
-                <div class="memo-line" id="char2-memo"></div>
-            </div>
+            <!-- キャラクターステータス（動的生成） -->
+            <div id="characters-container"></div>
 
             <!-- ユーザーステータス -->
             <div class="current-state">
@@ -752,6 +711,10 @@
                 <select id="modelSelect" onchange="onModelSelect()">
                     <option value="">-- 画像モデル選択 --</option>
                 </select>
+            </div>
+            <div class="settings-group">
+                <label>登場人数</label>
+                <input type="number" id="characterCountInput" min="1" max="10" value="2" onchange="onCharacterCountChange()" style="width:80px;">
             </div>
             <div id="status"></div>
         </div>
@@ -854,6 +817,10 @@
     // ページ履歴（ページ単位表示用）
     let pages = [];
     let currentPageIndex = -1;
+
+    // 登場人数
+    let characterCount = 2;
+    const CHARACTER_COUNT_KEY = 'transition_character_count';
 
     // ストレージキー
     const CHAT_API_KEY = 'transition_chat_api_key';
@@ -1117,6 +1084,73 @@
         const select = document.getElementById('llmModelSelect');
         if (select) {
             select.value = selectedLLMModelId;
+        }
+    }
+
+    // 登場人数変更時
+    function onCharacterCountChange() {
+        const input = document.getElementById('characterCountInput');
+        let value = parseInt(input.value);
+        if (isNaN(value) || value < 1) value = 1;
+        if (value > 10) value = 10;
+        input.value = value;
+        characterCount = value;
+        localStorage.setItem(CHARACTER_COUNT_KEY, characterCount);
+        updateCharacterStatusArray();
+        renderCharacterSections();
+        updateCharacterStatusDisplay();
+        console.log('[登場人数]', characterCount);
+    }
+
+    // 登場人数の初期化
+    function initCharacterCount() {
+        const savedCount = localStorage.getItem(CHARACTER_COUNT_KEY);
+        if (savedCount) {
+            characterCount = parseInt(savedCount);
+        }
+        const input = document.getElementById('characterCountInput');
+        if (input) {
+            input.value = characterCount;
+        }
+        updateCharacterStatusArray();
+        renderCharacterSections();
+    }
+
+    // characterStatus配列を登場人数に合わせて調整
+    function updateCharacterStatusArray() {
+        while (characterStatus.length < characterCount) {
+            characterStatus.push({
+                characterIndex: -1,
+                placeIndex: -1,
+                actionIndex: -1,
+                relationshipId: 'rel_001',
+                memo: ''
+            });
+        }
+    }
+
+    // キャラクターセクションを動的生成
+    function renderCharacterSections() {
+        const container = document.getElementById('characters-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+        for (let i = 0; i < characterCount; i++) {
+            const section = document.createElement('div');
+            section.className = 'current-state';
+            section.id = `char${i + 1}-section`;
+            section.innerHTML = `
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                    <img id="char${i + 1}-image" src="" alt="" style="width:90px; height:90px; object-fit:cover; border-radius:4px; background:#333; display:none;">
+                    <div style="flex:1; font-size:0.85rem; line-height:1.4;">
+                        <div id="char${i + 1}-name" style="color:#fff;">未選択</div>
+                        <button class="place-btn" id="char${i + 1}-place" onclick="moveToCharacterLocation(${i})" style="color:#fff; background:#333; border:1px solid #444; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.8rem; margin:4px 0;">未選択</button>
+                        <div id="char${i + 1}-relationship" style="color:#666;">未設定</div>
+                        <div class="memo-line" id="char${i + 1}-memo"></div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(section);
         }
     }
 
@@ -1447,6 +1481,9 @@
         // LLMモデル選択の初期化
         initLLMModelSelect();
 
+        // 登場人数の初期化
+        initCharacterCount();
+
         // ターゲットタイプ初期化
         setTargetType('move');
 
@@ -1758,19 +1795,34 @@
 
     // キャラクターステータス表示更新
     function updateCharacterStatusDisplay() {
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < characterCount; i++) {
             const status = characterStatus[i];
+            if (!status) continue;
             const num = i + 1;
             const char = status.characterIndex >= 0 ? characters[status.characterIndex] : null;
             const place = status.placeIndex >= 0 ? places[status.placeIndex] : null;
             const action = status.actionIndex >= 0 ? actions[status.actionIndex] : null;
             const relationship = relationships.find(r => r.relationship_id === status.relationshipId);
 
-            document.getElementById(`char${num}-name`).textContent = char ? char.name : '未選択';
-            document.getElementById(`char${num}-place`).textContent = place ? place.name : '未選択';
-            document.getElementById(`char${num}-action`).textContent = action ? action.name : '未選択';
-            document.getElementById(`char${num}-relationship`).textContent = relationship ? relationship.name : '未設定';
-            document.getElementById(`char${num}-memo`).textContent = status.memo ? `メモ：${status.memo}` : '';
+            const imageEl = document.getElementById(`char${num}-image`);
+            const nameEl = document.getElementById(`char${num}-name`);
+            const placeEl = document.getElementById(`char${num}-place`);
+            const relationshipEl = document.getElementById(`char${num}-relationship`);
+            const memoEl = document.getElementById(`char${num}-memo`);
+
+            if (imageEl) {
+                if (char && char.image) {
+                    imageEl.src = char.image;
+                    imageEl.style.display = 'block';
+                } else {
+                    imageEl.src = '';
+                    imageEl.style.display = 'none';
+                }
+            }
+            if (nameEl) nameEl.textContent = char ? char.name : '未選択';
+            if (placeEl) placeEl.textContent = place ? place.name : '未選択';
+            if (relationshipEl) relationshipEl.textContent = relationship ? relationship.name : '未設定';
+            if (memoEl) memoEl.textContent = status.memo ? `メモ：${status.memo}` : '';
         }
     }
 
@@ -1781,8 +1833,8 @@
             .map((char, index) => ({ char, index }))
             .filter(item => item.char.cast === 'on');
 
-        if (castCharacters.length < 2) {
-            addSystemMessage('cast=onのキャラクターが2人以上必要です。GASから読み込んでください。');
+        if (castCharacters.length < characterCount) {
+            addSystemMessage(`cast=onのキャラクターが${characterCount}人以上必要です。GASから読み込んでください。`);
             return;
         }
 
@@ -1791,20 +1843,21 @@
             .map((place, index) => ({ place, index }))
             .filter(item => item.place.public_flag === 'public');
 
-        if (publicPlaces.length < 2) {
-            addSystemMessage('publicな場所が2つ以上必要です。');
+        if (publicPlaces.length < characterCount) {
+            addSystemMessage(`publicな場所が${characterCount}つ以上必要です。`);
             return;
         }
 
-        // 2人のキャラクターをランダム選択（cast=onから、重複なし）
+        // キャラクターをランダム選択（cast=onから、重複なし）
         const charIndices = [];
         const shuffledCast = [...castCharacters].sort(() => Math.random() - 0.5);
-        charIndices.push(shuffledCast[0].index);
-        charIndices.push(shuffledCast[1].index);
+        for (let i = 0; i < characterCount; i++) {
+            charIndices.push(shuffledCast[i].index);
+        }
 
-        // 2つの場所をランダム選択（重複なし）
+        // 場所をランダム選択（重複なし）
         const placeIndices = [];
-        while (placeIndices.length < 2) {
+        while (placeIndices.length < characterCount) {
             const randItem = publicPlaces[Math.floor(Math.random() * publicPlaces.length)];
             if (!placeIndices.includes(randItem.index)) {
                 placeIndices.push(randItem.index);
@@ -1812,7 +1865,7 @@
         }
 
         // ステータスを設定（デフォルトアクションも設定）
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < characterCount; i++) {
             const place = places[placeIndices[i]];
             // 場所のデフォルトアクションからアクションインデックスを取得
             let actionIndex = -1;
@@ -1842,16 +1895,15 @@
         updateUserStatusDisplay();
         updateTargetSelect();
 
-        const char1 = characters[charIndices[0]];
-        const char2 = characters[charIndices[1]];
-        const place1 = places[placeIndices[0]];
-        const place2 = places[placeIndices[1]];
-        const action1 = characterStatus[0].actionIndex >= 0 ? actions[characterStatus[0].actionIndex] : null;
-        const action2 = characterStatus[1].actionIndex >= 0 ? actions[characterStatus[1].actionIndex] : null;
+        // 設定結果をメッセージで表示
         const userPlace = userState.placeIndex >= 0 ? places[userState.placeIndex] : null;
         addSystemMessage(`初期設定完了:`);
-        addSystemMessage(`  ${char1.name} → ${place1.name} [${action1?.name || 'なし'}]`);
-        addSystemMessage(`  ${char2.name} → ${place2.name} [${action2?.name || 'なし'}]`);
+        for (let i = 0; i < characterCount; i++) {
+            const char = characters[charIndices[i]];
+            const place = places[placeIndices[i]];
+            const action = characterStatus[i].actionIndex >= 0 ? actions[characterStatus[i].actionIndex] : null;
+            addSystemMessage(`  ${char.name} → ${place.name} [${action?.name || 'なし'}]`);
+        }
         addSystemMessage(`  ユーザー → ${userPlace ? userPlace.name : '未設定'}`);
     }
 
