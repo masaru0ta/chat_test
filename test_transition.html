@@ -1127,11 +1127,20 @@
         const menu = document.getElementById('moveMenu');
         if (!menu) return;
 
+        // 既に開いていたら閉じる
+        if (menu.style.display === 'flex') {
+            closeMoveMenu();
+            return;
+        }
+
         // 移動先リストを生成
         const listEl = document.getElementById('moveMenuList');
         listEl.innerHTML = '';
 
         places.forEach((place, index) => {
+            // command_listが'use'のものだけ表示
+            if (place.command_list !== 'use') return;
+
             const item = document.createElement('div');
             item.className = 'move-menu-item';
             if (index === userState.placeIndex) {
