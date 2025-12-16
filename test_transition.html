@@ -2246,18 +2246,26 @@
         // ロック画面初期化
         initLockScreen();
 
-        // Visual Viewport対応（モバイルキーボード表示時）
+        // Visual Viewport対応（モバイルキーボード表示時・折り畳みスマホ対応）
         function updateVisualViewport() {
-            if (window.visualViewport) {
-                const vh = window.visualViewport.height;
-                document.documentElement.style.setProperty('--visual-viewport-height', vh + 'px');
-            }
+            const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            document.documentElement.style.setProperty('--visual-viewport-height', vh + 'px');
         }
+
+        // visualViewportイベント
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', updateVisualViewport);
             window.visualViewport.addEventListener('scroll', updateVisualViewport);
-            updateVisualViewport();
         }
+
+        // 画面サイズ変更（折り畳みスマホ対応）
+        window.addEventListener('resize', updateVisualViewport);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(updateVisualViewport, 100);
+        });
+
+        // 初回実行
+        updateVisualViewport();
 
         const settings = loadSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY);
         if (settings.gasUrl) document.getElementById('gasUrl').value = settings.gasUrl;
