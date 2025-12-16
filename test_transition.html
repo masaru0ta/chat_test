@@ -1016,11 +1016,6 @@
             animation: spin 1s linear infinite;
         }
 
-        .status-item.llm .status-spinner {
-            border-top-color: #4a9eff;
-            border-right-color: #4a9eff;
-        }
-
         .status-item.image .status-spinner {
             border-top-color: #9b59b6;
             border-right-color: #9b59b6;
@@ -1028,6 +1023,30 @@
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        /* LLM思考中パルスドット */
+        .llm-thinking-dots {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .llm-thinking-dots span {
+            width: 6px;
+            height: 6px;
+            background: #4a9eff;
+            border-radius: 50%;
+            animation: llmPulse 1.4s ease-in-out infinite;
+        }
+
+        .llm-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .llm-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes llmPulse {
+            0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+            40% { opacity: 1; transform: scale(1.2); }
         }
 
         @media (max-width: 768px) {
@@ -1040,11 +1059,8 @@
 </head>
 <body>
 
-<!-- ステータスインジケーター -->
+<!-- ステータスインジケーター（画像生成用） -->
 <div class="status-indicator" id="statusIndicator">
-    <div class="status-item llm" id="statusLLM">
-        <div class="status-spinner"></div>
-    </div>
     <div class="status-item image" id="statusImage">
         <div class="status-spinner"></div>
     </div>
@@ -1326,11 +1342,25 @@
 
     // ステータスインジケーター
     function showStatusLLM() {
-        document.getElementById('statusLLM')?.classList.add('active');
+        // 現在のページのテキスト末尾にパルスドットを追加
+        const pageView = document.getElementById('page-view');
+        if (pageView) {
+            const currentPage = pageView.querySelector(`.page-content[data-page-index="${currentPageIndex}"]`);
+            if (currentPage) {
+                const textDiv = currentPage.querySelector('.page-text > div');
+                if (textDiv && !textDiv.querySelector('.llm-thinking-dots')) {
+                    const dots = document.createElement('span');
+                    dots.className = 'llm-thinking-dots';
+                    dots.innerHTML = '<span></span><span></span><span></span>';
+                    textDiv.appendChild(dots);
+                }
+            }
+        }
     }
 
     function hideStatusLLM() {
-        document.getElementById('statusLLM')?.classList.remove('active');
+        // パルスドットを削除
+        document.querySelectorAll('.llm-thinking-dots').forEach(el => el.remove());
     }
 
     function showStatusImage() {
