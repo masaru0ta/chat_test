@@ -783,7 +783,8 @@
 <body>
 
 <div class="app-container" id="appContainer">
-    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="サイドバー開閉">☰</button>
+    <!-- 旧サイドバートグル（統合バーに移動） -->
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="サイドバー開閉" style="display:none;">☰</button>
     <!-- サイドバー -->
     <div class="sidebar">
         <div class="sidebar-header">
@@ -864,12 +865,12 @@
         </div>
         <!-- 統合コマンドバー -->
         <div class="unified-command-bar">
-            <button class="cmd-btn menu-btn" id="menu-toggle">≡</button>
+            <button class="cmd-btn menu-btn" id="menu-toggle" onclick="toggleSidebar()">≡</button>
             <button class="cmd-btn" id="target-toggle">移動</button>
             <button class="cmd-btn" id="cmd-toggle">行為</button>
             <input type="text" class="cmd-input" id="command-input" placeholder="発言...">
-            <button class="cmd-btn nav-btn" id="prev-btn">前へ</button>
-            <button class="cmd-btn nav-btn" id="next-btn">次へ</button>
+            <button class="cmd-btn nav-btn" id="prev-btn" onclick="prevPage()">前へ</button>
+            <button class="cmd-btn nav-btn" id="next-btn" onclick="nextPage()">次へ</button>
         </div>
         <!-- 旧コマンドエリア（非表示・互換用） -->
         <div class="command-area" style="display:none;">
