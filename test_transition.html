@@ -1604,12 +1604,33 @@
             });
         }
 
-        // タブ切り替え検知
+        // タブ切り替え・アプリ切り替え検知
+        let isFirstLoad = true;
+
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
+            if (document.visibilityState === 'visible' && !isFirstLoad) {
                 showLockScreen();
             }
         });
+
+        // モバイル：アプリ切り替えからの復帰
+        window.addEventListener('pageshow', (e) => {
+            if (e.persisted && !isFirstLoad) {
+                showLockScreen();
+            }
+        });
+
+        // モバイル：ウィンドウフォーカス時
+        window.addEventListener('focus', () => {
+            if (!isFirstLoad) {
+                showLockScreen();
+            }
+        });
+
+        // 初回ロードフラグを解除（少し遅延させる）
+        setTimeout(() => {
+            isFirstLoad = false;
+        }, 1000);
 
         // 設定画面のパスワード欄に現在値を表示
         const lockPasswordInput = document.getElementById('lockPasswordInput');
