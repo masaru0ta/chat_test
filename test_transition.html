@@ -2283,6 +2283,34 @@
         }
     }
 
+    // キャラクター関係性更新（共通処理）
+    function updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo) {
+        if (!charAtLocation) return;
+
+        const statusIndex = characterStatus.findIndex(s => s === charAtLocation.status);
+        if (statusIndex < 0) return;
+
+        // 関係性変化がある場合
+        if (newRelationshipName) {
+            const currentRelationshipId = charAtLocation.status.relationshipId;
+            const currentRelationship = relationships.find(r => r.relationship_id === currentRelationshipId);
+            const newRelationship = relationships.find(r => r.name === newRelationshipName);
+            if (newRelationship && newRelationship.relationship_id !== currentRelationshipId) {
+                characterStatus[statusIndex].relationshipId = newRelationship.relationship_id;
+                console.log('[関係性変化]', charAtLocation.character.name, ':', currentRelationship?.name, '→', newRelationship.name);
+                addSystemMessage(`💫 ${charAtLocation.character.name}との関係性が「${currentRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
+            }
+        }
+
+        // メモがあれば保存（関係性変化がなくても）
+        if (relationshipMemo) {
+            characterStatus[statusIndex].memo = relationshipMemo;
+            console.log('[メモ更新]', charAtLocation.character.name, ':', relationshipMemo);
+        }
+
+        updateCharacterStatusDisplay();
+    }
+
     // 初期設定開始
     function startInitialSetup() {
         // cast='on' のキャラクターを取得
@@ -2602,28 +2630,8 @@
             const { dialogue: parsedDialogue, narrative, newRelationshipName, relationshipMemo } = parseConversationResponse(response, charAtLocation);
             console.log('[会話モード] セリフ:', parsedDialogue, '/ 地の文:', narrative, '/ 新関係性:', newRelationshipName, '/ メモ:', relationshipMemo);
 
-            // 関係性変化の処理 - 名前から検索して更新
-            const statusIndex = characterStatus.findIndex(s => s === charAtLocation.status);
-            if (statusIndex >= 0) {
-                // 関係性変化がある場合
-                if (newRelationshipName) {
-                    const currentRelationshipId = charAtLocation.status.relationshipId;
-                    const currentRelationship = relationships.find(r => r.relationship_id === currentRelationshipId);
-                    // 名前で関係性を検索
-                    const newRelationship = relationships.find(r => r.name === newRelationshipName);
-                    if (newRelationship && newRelationship.relationship_id !== currentRelationshipId) {
-                        characterStatus[statusIndex].relationshipId = newRelationship.relationship_id;
-                        console.log('[関係性変化]', charAtLocation.character.name, ':', currentRelationship?.name, '→', newRelationship.name);
-                        addSystemMessage(`💫 ${charAtLocation.character.name}との関係性が「${currentRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
-                    }
-                }
-                // メモがあれば保存（関係性変化がなくても）
-                if (relationshipMemo) {
-                    characterStatus[statusIndex].memo = relationshipMemo;
-                    console.log('[メモ更新]', charAtLocation.character.name, ':', relationshipMemo);
-                }
-                updateCharacterStatusDisplay();
-            }
+            // 関係性変化の処理
+            updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo);
 
             console.log('[会話モード] addDialogue呼び出し前 - キャラ:', charAtLocation.character.name, '/ セリフ:', parsedDialogue);
             if (parsedDialogue) {
@@ -2799,27 +2807,8 @@
             lastPage.fullText = lastPage.text;
         }
 
-        // 関係性変化の処理 - 名前から検索して更新
-        if (charAtLocation) {
-            const statusIndex = characterStatus.findIndex(s => s === charAtLocation.status);
-            if (statusIndex >= 0) {
-                if (newRelationshipName) {
-                    const currentRelationshipId = charAtLocation.status.relationshipId;
-                    const currentRelationship = relationships.find(r => r.relationship_id === currentRelationshipId);
-                    const newRelationship = relationships.find(r => r.name === newRelationshipName);
-                    if (newRelationship && newRelationship.relationship_id !== currentRelationshipId) {
-                        characterStatus[statusIndex].relationshipId = newRelationship.relationship_id;
-                        console.log('[関係性変化]', charAtLocation.character.name, ':', currentRelationship?.name, '→', newRelationship.name);
-                        addSystemMessage(`💫 ${charAtLocation.character.name}との関係性が「${currentRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
-                    }
-                }
-                if (relationshipMemo) {
-                    characterStatus[statusIndex].memo = relationshipMemo;
-                    console.log('[メモ更新]', charAtLocation.character.name, ':', relationshipMemo);
-                }
-                updateCharacterStatusDisplay();
-            }
-        }
+        // 関係性変化の処理
+        updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo);
 
         // 地の文表示完了
         console.log('[地の文表示完了]');
