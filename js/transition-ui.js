@@ -9,6 +9,65 @@ let sidebarCollapsed = false;
 
 // ========== 移動メニュー ==========
 
+/**
+ * 関係性に基づいて場所への移動が許可されているか判定
+ * @param {Object} relationship - 関係性オブジェクト
+ * @param {string} placeType - 場所タイプ (public/semi_private/private)
+ * @returns {boolean} 移動可能かどうか
+ */
+function canMoveTogether(relationship, placeType) {
+    if (!placeType) return false;
+    if (placeType === 'public') return true;
+    if (placeType === 'semi_private' && relationship?.semi_private === 'ok') return true;
+    if (placeType === 'private' && relationship?.private === 'ok') return true;
+    return false;
+}
+
+/**
+ * 現在地にいるキャラクターの情報を取得
+ * @returns {Object|null} { character, status, relationship } または null
+ */
+function getCompanionAtCurrentLocation() {
+    if (userState.placeIndex < 0) return null;
+    for (const status of characterStatus) {
+        if (status.placeIndex === userState.placeIndex && status.characterIndex >= 0) {
+            const character = characters[status.characterIndex];
+            const relationship = relationships.find(r => r.relationship_id === status.relationshipId);
+            return { character, status, relationship };
+        }
+    }
+    return null;
+}
+
+/**
+ * キャラクターがいる場所のリストを取得（現在地以外）
+ * @returns {Array} { place, placeIndex, characters }の配列
+ */
+function getPlacesWithCharacters() {
+    const result = [];
+    places.forEach((place, placeIndex) => {
+        // 現在地はスキップ
+        if (placeIndex === userState.placeIndex) return;
+        // place_typeが空の場所はスキップ
+        if (!place.place_type) return;
+
+        // この場所にいるキャラクター
+        const charsHere = [];
+        characterStatus.forEach((status) => {
+            if (status.placeIndex === placeIndex && status.characterIndex >= 0) {
+                const char = characters[status.characterIndex];
+                if (char) charsHere.push(char.name);
+            }
+        });
+
+        // キャラクターがいる場所のみ追加
+        if (charsHere.length > 0) {
+            result.push({ place, placeIndex, characters: charsHere });
+        }
+    });
+    return result;
+}
+
 function openMoveMenu() {
     const menu = document.getElementById('moveMenu');
     if (!menu) return;
@@ -26,40 +85,72 @@ function openMoveMenu() {
     const listEl = document.getElementById('moveMenuList');
     listEl.innerHTML = '';
 
-    places.forEach((place, index) => {
-        // command_listが'use'のものだけ表示
-        if (place.command_list !== 'use') return;
+    // 現在地にいるキャラクター（二人で移動用）
+    const companion = getCompanionAtCurrentLocation();
 
-        const item = document.createElement('div');
-        item.className = 'move-menu-item';
-        if (index === userState.placeIndex) {
-            item.classList.add('current');
-        }
+    // ========== 二人で移動セクション ==========
+    if (companion) {
+        const sectionHeader = document.createElement('div');
+        sectionHeader.className = 'move-menu-section-header';
+        sectionHeader.textContent = `■ ${companion.character.name}と二人で移動`;
+        listEl.appendChild(sectionHeader);
 
-        // その場所にいるキャラクター情報
-        const charsHere = [];
-        characterStatus.forEach((status, i) => {
-            if (status.placeIndex === index && status.characterIndex >= 0) {
-                const char = characters[status.characterIndex];
-                if (char) charsHere.push(char.name);
-            }
+        let hasTogetherDestination = false;
+        places.forEach((place, index) => {
+            // 現在地はスキップ
+            if (index === userState.placeIndex) return;
+            // place_typeが空の場所はスキップ
+            if (!place.place_type) return;
+            // 関係性に基づいて移動可能か判定
+            if (!canMoveTogether(companion.relationship, place.place_type)) return;
+            // 他のキャラクターがいる場所はスキップ
+            const hasOtherCharacter = characterStatus.some(status =>
+                status.placeIndex === index &&
+                status.characterIndex >= 0 &&
+                status.characterIndex !== companion.status.characterIndex
+            );
+            if (hasOtherCharacter) return;
+
+            hasTogetherDestination = true;
+            const item = document.createElement('div');
+            item.className = 'move-menu-item move-menu-subitem';
+            item.innerHTML = `<div class="place-name">${place.name}</div>`;
+            item.onclick = () => selectMoveDestination(index, true);
+            listEl.appendChild(item);
         });
 
-        item.innerHTML = `
-            <div class="place-name">${place.name}${index === userState.placeIndex ? ' (現在地)' : ''}</div>
-            ${charsHere.length > 0 ? `<div class="place-info">${charsHere.join(', ')} がいる</div>` : ''}
-        `;
+        if (!hasTogetherDestination) {
+            const noItem = document.createElement('div');
+            noItem.className = 'move-menu-item move-menu-subitem disabled';
+            noItem.innerHTML = '<div class="place-name">（移動可能な場所がありません）</div>';
+            listEl.appendChild(noItem);
+        }
+    }
 
-        item.onclick = () => selectMoveDestination(index);
-        listEl.appendChild(item);
-    });
+    // ========== 一人で移動セクション ==========
+    const aloneHeader = document.createElement('div');
+    aloneHeader.className = 'move-menu-section-header';
+    aloneHeader.textContent = '■ 一人で移動';
+    listEl.appendChild(aloneHeader);
 
-    // 現在の移動モードをラジオボタンに反映
-    const aloneRadio = menu.querySelector('input[value="alone"]');
-    const togetherRadio = menu.querySelector('input[value="together"]');
-    if (aloneRadio && togetherRadio) {
-        aloneRadio.checked = !moveWithCompanion;
-        togetherRadio.checked = moveWithCompanion;
+    const placesWithChars = getPlacesWithCharacters();
+    if (placesWithChars.length > 0) {
+        placesWithChars.forEach(({ place, placeIndex, characters: charsHere }) => {
+            const item = document.createElement('div');
+            item.className = 'move-menu-item move-menu-subitem';
+            const charNames = charsHere.map(name => `<span class="char-name">${name}</span>`).join(', ');
+            item.innerHTML = `
+                <div class="place-name">${place.name}</div>
+                <div class="place-info">${charNames} がいる</div>
+            `;
+            item.onclick = () => selectMoveDestination(placeIndex, false);
+            listEl.appendChild(item);
+        });
+    } else {
+        const noItem = document.createElement('div');
+        noItem.className = 'move-menu-item move-menu-subitem disabled';
+        noItem.innerHTML = '<div class="place-name">（キャラクターがいる場所がありません）</div>';
+        listEl.appendChild(noItem);
     }
 
     menu.style.display = 'flex';
@@ -70,11 +161,8 @@ function closeMoveMenu() {
     if (menu) menu.style.display = 'none';
 }
 
-function selectMoveDestination(placeIndex) {
-    // 移動モードを取得
-    const togetherRadio = document.querySelector('#moveMenu input[value="together"]');
-    moveWithCompanion = togetherRadio ? togetherRadio.checked : false;
-
+function selectMoveDestination(placeIndex, withCompanion = false) {
+    moveWithCompanion = withCompanion;
     closeMoveMenu();
 
     // 移動実行
@@ -84,6 +172,20 @@ function selectMoveDestination(placeIndex) {
 }
 
 // ========== 行為メニュー ==========
+
+/**
+ * 関係性に基づいてアクションが実行可能か判定
+ * @param {Object} relationship - 関係性オブジェクト
+ * @param {string} actionType - アクションタイプ (public/semi_private/private)
+ * @returns {boolean} 実行可能かどうか
+ */
+function canPerformAction(relationship, actionType) {
+    if (!actionType) return false;
+    if (actionType === 'public') return true;
+    if (actionType === 'semi_private' && relationship?.semi_private === 'ok') return true;
+    if (actionType === 'private' && relationship?.private === 'ok') return true;
+    return false;
+}
 
 function openActionMenu() {
     const menu = document.getElementById('actionMenu');
@@ -102,9 +204,13 @@ function openActionMenu() {
     const listEl = document.getElementById('actionMenuList');
     listEl.innerHTML = '';
 
+    // 現在地にいるキャラクターの関係性を取得
+    const companion = getCompanionAtCurrentLocation();
+    const relationship = companion?.relationship;
+
     actions.forEach((action, index) => {
-        // command_listが'use'のものだけ表示
-        if (action.command_list !== 'use') return;
+        // 関係性に基づいてアクションが実行可能か判定
+        if (!canPerformAction(relationship, action.action_type)) return;
 
         const item = document.createElement('div');
         item.className = 'action-menu-item';

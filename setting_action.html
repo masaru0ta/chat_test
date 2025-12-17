@@ -523,8 +523,8 @@
                     <div class="field-label">アクション名</div>
                     <input type="text" class="field-value editable" id="detail-name" onchange="updateActionName(this.value)" style="min-height: auto;">
                     <div class="field-row">
-                        <label>コマンドリスト:</label>
-                        <input type="text" id="detail-command-list" onchange="updateActionField('command_list', this.value)">
+                        <label>アクションタイプ:</label>
+                        <input type="text" id="detail-action-type" onchange="updateActionField('action_type', this.value)">
                     </div>
                     <div class="field-row">
                         <label>前提アクション:</label>
@@ -721,7 +721,7 @@
                     action_id: actionId,
                     name: item['action name'] || '',
                     prompt: item.prompt || '',
-                    command_list: item['command_list'] || '',
+                    action_type: item['action_type'] || '',
                     pre_action: item['pre-action'] || '',
                     public_action: item['public-action'] || '',
                     next_action: item['next-action'] || '',
@@ -1029,7 +1029,7 @@
         document.getElementById('detail-action-id').textContent = action.action_id || '(未設定)';
         document.getElementById('detail-name').value = action.name || '';
         document.getElementById('detail-prompt').value = action.prompt || '';
-        document.getElementById('detail-command-list').value = action.command_list || '';
+        document.getElementById('detail-action-type').value = action.action_type || '';
 
         // アクション選択プルダウンを更新
         updateActionSelectOptions('detail-pre-action', action.pre_action);
@@ -1382,7 +1382,7 @@
                     'action_id': action.action_id,
                     'action name': action.name,
                     'prompt': action.prompt,
-                    'command_list': action.command_list,
+                    'action_type': action.action_type,
                     'pre-action': action.pre_action,
                     'public-action': action.public_action,
                     'next-action': action.next_action

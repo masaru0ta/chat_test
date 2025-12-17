@@ -224,12 +224,8 @@
                             <div class="field-label">場所名</div>
                             <input type="text" class="field-input" id="detail-name" onchange="updatePlaceName(this.value)">
                             <div class="field-row">
-                                <label>コマンドリスト:</label>
-                                <input type="text" id="detail-command-list" onchange="updatePlaceField('command_list', this.value)">
-                            </div>
-                            <div class="field-row">
-                                <label>公開フラグ:</label>
-                                <input type="text" id="detail-public-flag" onchange="updatePlaceField('public_flag', this.value)">
+                                <label>場所タイプ:</label>
+                                <input type="text" id="detail-place-type" onchange="updatePlaceField('place_type', this.value)">
                             </div>
                             <div class="field-row">
                                 <label>ルート場所:</label>
@@ -539,8 +535,7 @@
                 'name': place.name,
                 'tag': place.tag,
                 'additional tag': place.additionalTag,
-                'command_list': place.command_list || '',
-                'public_flag': place.public_flag || '',
+                'place_type': place.place_type || '',
                 'root_place': place.root_place || '',
                 'default action': place.default_action || '',
                 'image': placeImages[place.place_id] || ''
@@ -798,8 +793,7 @@
 
         document.getElementById('detail-place-id').textContent = place.place_id || '(未設定)';
         document.getElementById('detail-name').value = place.name || '';
-        document.getElementById('detail-command-list').value = place.command_list || '';
-        document.getElementById('detail-public-flag').value = place.public_flag || '';
+        document.getElementById('detail-place-type').value = place.place_type || '';
         updateRootPlaceSelect(place.root_place);
         updateDefaultActionSelect(place.default_action);
         document.getElementById('detail-tag').value = place.tag || '';

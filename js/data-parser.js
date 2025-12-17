@@ -93,8 +93,7 @@ function parsePlaces(rawData) {
             name: item.name || '',
             tag: item.tag || '',
             additionalTag: item['additional tag'] || '',
-            command_list: item['command_list'] || '',
-            public_flag: item['public_flag'] || '',
+            place_type: item['place_type'] || '',
             root_place: item['root_place'] || '',
             default_action: item['default action'] || '',
             image: item.image || ''
@@ -130,7 +129,7 @@ function parseActionsWithCompositions(rawData) {
             action_id: actionId,
             name: item['action name'] || '',
             prompt: item.prompt || '',
-            command_list: item['command_list'] || '',
+            action_type: item['action_type'] || '',
             pre_action: item['pre-action'] || '',
             public_action: item['public-action'] || '',
             next_action: item['next-action'] || '',
@@ -208,7 +207,9 @@ function parseRelationships(rawData) {
             relationship_id: relationshipId,
             name: item.name || '',
             description: item.description || '',
-            next_relationship_req: item['next_relationship_req'] || ''
+            next_relationship_req: item['next_relationship_req'] || '',
+            private: item['private'] || '',
+            semi_private: item['semi_private'] || ''
         };
     });
 }

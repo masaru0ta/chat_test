@@ -137,14 +137,6 @@
                 <span>移動先を選択</span>
                 <button class="move-menu-close" onclick="closeMoveMenu()">×</button>
             </div>
-            <div class="move-menu-options">
-                <label class="move-mode-option">
-                    <input type="radio" name="moveMode" value="alone" checked> 1人で移動
-                </label>
-                <label class="move-mode-option">
-                    <input type="radio" name="moveMode" value="together"> 2人で移動
-                </label>
-            </div>
             <div class="move-menu-list" id="moveMenuList">
                 <!-- 移動先リストがここに動的生成 -->
             </div>
@@ -641,7 +633,7 @@
         // publicな場所を取得
         const publicPlaces = places
             .map((place, index) => ({ place, index }))
-            .filter(item => item.place.public_flag === 'public');
+            .filter(item => item.place.place_type === 'public');
 
         if (publicPlaces.length < characterCount) {
             addSystemMessage(`publicな場所が${characterCount}つ以上必要です。`);
