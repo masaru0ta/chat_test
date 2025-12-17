@@ -287,6 +287,17 @@ html, body {
     background: #000;
 }
 
+/* テキスト非表示モード */
+#page-view.text-hidden .page-text:not(.system-text) {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+#page-view .page-text {
+    transition: opacity 0.2s ease;
+}
+
 /* 画像なしのページ（dialogue等）*/
 .page-content:not(:has(.page-image)) .page-text {
     position: static;

@@ -7,6 +7,37 @@
 // サイドバー状態
 let sidebarCollapsed = false;
 
+// テキスト表示状態
+let textHidden = false;
+
+// ========== テキスト表示トグル ==========
+
+/**
+ * ページビューのクリックでテキスト表示をトグル
+ */
+function initTextToggle() {
+    const pageView = document.getElementById('page-view');
+    if (pageView) {
+        pageView.addEventListener('click', (e) => {
+            // ボタンやリンクのクリックは無視
+            if (e.target.closest('button, a, input, .action-menu, .move-menu')) return;
+            toggleTextDisplay();
+        });
+    }
+}
+
+function toggleTextDisplay() {
+    const pageView = document.getElementById('page-view');
+    if (!pageView) return;
+
+    textHidden = !textHidden;
+    if (textHidden) {
+        pageView.classList.add('text-hidden');
+    } else {
+        pageView.classList.remove('text-hidden');
+    }
+}
+
 // ========== 移動メニュー ==========
 
 /**
