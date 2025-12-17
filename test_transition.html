@@ -1145,15 +1145,27 @@
 <script src="js/prompt-utils.js"></script>
 <script src="js/runware-api.js"></script>
 <script>
-    const CACHE_KEY = 'transition_test_cache';
+    // ストレージキーのエイリアス（constants.jsから参照）
+    const CACHE_KEY = STORAGE_KEYS.TRANSITION_CACHE;
+    const CHARACTER_COUNT_KEY = STORAGE_KEYS.TRANSITION_CHARACTER_COUNT;
+    const CHAT_API_KEY = STORAGE_KEYS.TRANSITION_CHAT_API_KEY;
+    const RUNWARE_API_KEY = STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY;
+    const IMAGE_GEN_ENABLED_KEY = STORAGE_KEYS.TRANSITION_IMAGE_GEN_ENABLED;
+    const LOCK_PASSWORD_KEY = STORAGE_KEYS.TRANSITION_LOCK_PASSWORD;
+    const LLM_LOG_ENABLED_KEY = STORAGE_KEYS.TRANSITION_LLM_LOG_ENABLED;
+    const SELECTED_MODEL_KEY = STORAGE_KEYS.TRANSITION_SELECTED_MODEL;
+    const SELECTED_LLM_MODEL_KEY = STORAGE_KEYS.TRANSITION_SELECTED_LLM_MODEL;
+    const SIDEBAR_COLLAPSED_KEY = STORAGE_KEYS.TRANSITION_SIDEBAR_COLLAPSED;
+    const DEFAULT_LOCK_PASSWORD = DEFAULTS.LOCK_PASSWORD;
+    const TYPEWRITER_SPEED = DEFAULTS.TYPEWRITER_SPEED;
 
     // データストア
     let models = {};
     let characters = [];
     let places = [];
     let actions = [];
-    let relationships = [];  // 関係性データ
-    let promptTemplates = {};  // LLMプロンプトテンプレート
+    let relationships = [];
+    let promptTemplates = {};
 
     // 現在の状態（後方互換用）
     let currentState = {
@@ -1169,77 +1181,29 @@
 
     // キャラクターステータス（2人分）
     let characterStatus = [
-        {
-            characterIndex: -1,
-            placeIndex: -1,
-            actionIndex: -1,   // 現在のアクション
-            relationshipId: 'rel_001',  // 関係性ID
-            memo: ''  // メモ
-        },
-        {
-            characterIndex: -1,
-            placeIndex: -1,
-            actionIndex: -1,
-            relationshipId: 'rel_001',
-            memo: ''
-        }
+        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_001', memo: '' },
+        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_001', memo: '' }
     ];
 
-    // コマンドタイプ
+    // 状態変数
     let currentCommandType = 'speech';
-
-    // チャット履歴
     let chatHistory = [];
-
-    // 履歴
     let actionHistory = [];
-
-    // ページ履歴（ページ単位表示用）
     let pages = [];
     let currentPageIndex = -1;
-
-    // 登場人数
     let characterCount = 2;
-    const CHARACTER_COUNT_KEY = 'transition_character_count';
-
-    // ストレージキー
-    const CHAT_API_KEY = 'transition_chat_api_key';
-    const RUNWARE_API_KEY = 'transition_runware_api_key';
-    const IMAGE_GEN_ENABLED_KEY = 'transition_image_gen_enabled';
-    const LOCK_PASSWORD_KEY = 'transition_lock_password';
-    const DEFAULT_LOCK_PASSWORD = '8823';
-
-    // 画像生成On/Off
     let imageGenEnabled = true;
-
-    // LLMログ保存On/Off
     let llmLogEnabled = false;
-    const LLM_LOG_ENABLED_KEY = 'transition_llm_log_enabled';
-
-    // 選択中のモデルID（画像生成用）
     let selectedModelId = '';
-    const SELECTED_MODEL_KEY = 'transition_selected_model';
-
-    // LLMモデル選択
-    const LLM_MODELS = {
-        'x-ai/grok-4.1-fast': { name: 'Grok 4.1 Fast' },
-        'x-ai/grok-4-fast': { name: 'Grok 4 Fast' }
-    };
     let selectedLLMModelId = 'x-ai/grok-4.1-fast';
-    const SELECTED_LLM_MODEL_KEY = 'transition_selected_llm_model';
-
-    // 移動モード（一人で/一緒に）
     let moveWithCompanion = false;
-
-    // 読み込み状態
     let isLoading = false;
 
     // タイプライター表示用
-    let typewriterBuffer = '';      // 表示待ちテキスト
-    let typewriterDisplayed = '';   // 表示済みテキスト
-    let typewriterTimer = null;     // タイマーID
-    let typewriterPageIndex = -1;   // 表示先ページ
-    const TYPEWRITER_SPEED = 45;    // 1文字あたりのミリ秒
+    let typewriterBuffer = '';
+    let typewriterDisplayed = '';
+    let typewriterTimer = null;
+    let typewriterPageIndex = -1;
 
     // 読み込み中表示
     function showLoading() {
@@ -1517,7 +1481,6 @@
     }
 
     // サイドバー開閉
-    const SIDEBAR_COLLAPSED_KEY = 'transition_sidebar_collapsed';
     let sidebarCollapsed = false;
 
     function toggleSidebar() {
@@ -1882,15 +1845,8 @@
         });
     }
 
-    // 初期化
-    document.addEventListener('DOMContentLoaded', () => {
-        // サイドバー状態復元
-        initSidebarState();
-
-        // ロック画面初期化
-        initLockScreen();
-
-        // Visual Viewport対応（モバイルキーボード表示時・折り畳みスマホ対応）
+    // Visual Viewport対応（モバイルキーボード表示時・折り畳みスマホ対応）
+    function initVisualViewport() {
         let lastViewportWidth = window.innerWidth;
         let lastViewportHeight = window.innerHeight;
 
@@ -1899,17 +1855,14 @@
             document.documentElement.style.setProperty('--visual-viewport-height', vh + 'px');
         }
 
-        // 折り畳みスマホ検出用：画面サイズが大きく変わったら複数回更新
         function handleScreenSizeChange() {
             const newWidth = window.innerWidth;
             const newHeight = window.innerHeight;
             const widthDiff = Math.abs(newWidth - lastViewportWidth);
             const heightDiff = Math.abs(newHeight - lastViewportHeight);
 
-            // 大きなサイズ変化を検出（折り畳みスマホの開閉など）
             if (widthDiff > 100 || heightDiff > 100) {
                 console.log('[Viewport] 大きなサイズ変化検出:', lastViewportWidth, 'x', lastViewportHeight, '->', newWidth, 'x', newHeight);
-                // 遅延を置いて複数回更新（ブラウザの再計算を待つ）
                 updateVisualViewport();
                 setTimeout(updateVisualViewport, 50);
                 setTimeout(updateVisualViewport, 150);
@@ -1917,65 +1870,48 @@
             } else {
                 updateVisualViewport();
             }
-
             lastViewportWidth = newWidth;
             lastViewportHeight = newHeight;
         }
 
-        // visualViewportイベント
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', updateVisualViewport);
             window.visualViewport.addEventListener('scroll', updateVisualViewport);
         }
-
-        // 画面サイズ変更（折り畳みスマホ対応）
         window.addEventListener('resize', handleScreenSizeChange);
         window.addEventListener('orientationchange', () => {
             setTimeout(handleScreenSizeChange, 100);
             setTimeout(handleScreenSizeChange, 300);
         });
-
-        // 初回実行
         updateVisualViewport();
+    }
 
+    // 設定値の復元
+    function restoreSettings() {
         const settings = loadSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY);
         if (settings.gasUrl) document.getElementById('gasUrl').value = settings.gasUrl;
 
-        // API Key 復元
         const savedApiKey = localStorage.getItem(CHAT_API_KEY);
         if (savedApiKey) document.getElementById('chatApiKey').value = savedApiKey;
 
         const savedRunwareKey = localStorage.getItem(RUNWARE_API_KEY);
         if (savedRunwareKey) document.getElementById('runwareApiKey').value = savedRunwareKey;
 
-        // 画像生成On/Off状態を復元
         const savedImageGenEnabled = localStorage.getItem(IMAGE_GEN_ENABLED_KEY);
         imageGenEnabled = savedImageGenEnabled !== 'off';
         updateImageGenButton();
 
-        // LLMログOn/Off状態を復元
         const savedLLMLogEnabled = localStorage.getItem(LLM_LOG_ENABLED_KEY);
         llmLogEnabled = savedLLMLogEnabled === 'on';
         updateLLMLogButton();
 
-        // モデル選択の復元
         const savedModelId = localStorage.getItem(SELECTED_MODEL_KEY);
         if (savedModelId) selectedModelId = savedModelId;
+    }
 
-        // LLMモデル選択の初期化
-        initLLMModelSelect();
-
-        // 登場人数の初期化
-        initCharacterCount();
-
-        loadCachedData();
-
-        // 初期設定を自動実行
-        startInitialSetup();
-
-        // キーボードナビゲーション
+    // キーボードナビゲーション初期化
+    function initKeyboardNavigation() {
         document.addEventListener('keydown', (e) => {
-            // 入力フィールドにフォーカスがある場合は無視
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
                 return;
             }
@@ -1987,6 +1923,19 @@
                 prevPage();
             }
         });
+    }
+
+    // 初期化
+    document.addEventListener('DOMContentLoaded', () => {
+        initSidebarState();
+        initLockScreen();
+        initVisualViewport();
+        restoreSettings();
+        initLLMModelSelect();
+        initCharacterCount();
+        loadCachedData();
+        startInitialSetup();
+        initKeyboardNavigation();
     });
 
     function saveCachedData() {
@@ -2844,6 +2793,26 @@
         hideLoading();
     }
 
+    // 関係性情報のプロンプトテキストを構築
+    function buildRelationshipInfoPrompt(charAtLocation) {
+        if (!charAtLocation) return { text: '', relationship: null };
+
+        const relationshipId = charAtLocation.status?.relationshipId;
+        if (!relationshipId) return { text: '', relationship: null };
+
+        const relationship = relationships.find(r => r.relationship_id === relationshipId);
+        if (!relationship) return { text: '', relationship: null };
+
+        let text = `\n現在の関係性: ${relationship.name}（${relationship.description || ''}）`;
+        if (charAtLocation.status?.memo) {
+            text += `\n関係性メモ: ${charAtLocation.status.memo}`;
+        }
+        if (relationship.next_relationship_req) {
+            text += `\n関係性進展条件: ${relationship.next_relationship_req}`;
+        }
+        return { text, relationship };
+    }
+
     // 統合プロンプト構築
     // dialogueOnly: true の場合はセリフのみ要求（会話モード）
     // companion: 一緒に移動したキャラクター（移動時のみ）
@@ -2860,22 +2829,8 @@
             if (char.profile) prompt += `\nプロフィール: ${char.profile}`;
 
             // 関係性情報
-            const relationshipId = charAtLocation.status?.relationshipId;
-            let relationship = null;
-            if (relationshipId) {
-                relationship = relationships.find(r => r.relationship_id === relationshipId);
-                if (relationship) {
-                    prompt += `\n現在の関係性: ${relationship.name}（${relationship.description || ''}）`;
-                    // メモがあれば追加
-                    if (charAtLocation.status?.memo) {
-                        prompt += `\n関係性メモ: ${charAtLocation.status.memo}`;
-                    }
-                    // 進展条件があれば追加
-                    if (relationship.next_relationship_req) {
-                        prompt += `\n関係性進展条件: ${relationship.next_relationship_req}`;
-                    }
-                }
-            }
+            const { text: relationshipText, relationship } = buildRelationshipInfoPrompt(charAtLocation);
+            prompt += relationshipText;
 
             prompt += `\n\n主人公「${userInput}」\n`;
 
@@ -2971,27 +2926,14 @@
         prompt += `状況：${situationText}\n`;
         prompt += `画像プロンプト：${imageParts.filter(p => p).join(', ')}\n`;
 
+        // キャラクター情報と関係性（通常モード）
+        const { text: relationshipText, relationship } = buildRelationshipInfoPrompt(charAtLocation);
         if (charAtLocation) {
             const char = charAtLocation.character;
             prompt += `\n【その場にいる人物】${char.name}`;
             if (char.series) prompt += `（${char.series}）`;
             if (char.profile) prompt += `\nプロフィール: ${char.profile}`;
-            // 関係性情報を追加
-            const relationshipId = charAtLocation.status?.relationshipId;
-            if (relationshipId) {
-                const relationship = relationships.find(r => r.relationship_id === relationshipId);
-                if (relationship) {
-                    prompt += `\n現在の関係性: ${relationship.name}（${relationship.description || ''}）`;
-                    // メモがあれば追加
-                    if (charAtLocation.status?.memo) {
-                        prompt += `\n関係性メモ: ${charAtLocation.status.memo}`;
-                    }
-                    // 進展条件があれば追加
-                    if (relationship.next_relationship_req) {
-                        prompt += `\n関係性進展条件: ${relationship.next_relationship_req}`;
-                    }
-                }
-            }
+            prompt += relationshipText;
             // キャラクターのアクション情報を追加
             const charActionIndex = charAtLocation.status?.actionIndex ?? -1;
             if (charActionIndex >= 0 && actions[charActionIndex]) {
@@ -3008,13 +2950,9 @@
             || `以下の形式で出力してください：\n【地の文】（2-3文で状況を描写）\n${charName ? `【${charName}のセリフ】（「」付きで1-2文）` : ''}`;
 
         // 関係性進展条件がある場合のみ判定を追加
-        if (charAtLocation) {
-            const relationshipId = charAtLocation.status?.relationshipId;
-            const relationship = relationships.find(r => r.relationship_id === relationshipId);
-            if (relationship && relationship.next_relationship_req) {
-                formatPrompt += `\n【関係性変化】このシーンで関係性進展条件を満たした場合、もしくは総合的に関係性変化が起きたと判断される場合は新しい関係性名を記載、満たしていない場合は「維持」と記載`;
-                formatPrompt += `\n【関係性メモ】関係性が変化した場合は必ず記載。変化がなくてもメモ更新が必要な出来事があれば記載。キャラクター視点で50文字以内でどこで何が起きて、なぜその関係性になったのか、今後どうしていきたいか、キャラクターの感情を交えて記載。不要なら省略`;
-            }
+        if (relationship && relationship.next_relationship_req) {
+            formatPrompt += `\n【関係性変化】このシーンで関係性進展条件を満たした場合、もしくは総合的に関係性変化が起きたと判断される場合は新しい関係性名を記載、満たしていない場合は「維持」と記載`;
+            formatPrompt += `\n【関係性メモ】関係性が変化した場合は必ず記載。変化がなくてもメモ更新が必要な出来事があれば記載。キャラクター視点で50文字以内でどこで何が起きて、なぜその関係性になったのか、今後どうしていきたいか、キャラクターの感情を交えて記載。不要なら省略`;
         }
 
         prompt += `\n${formatPrompt}`;
