@@ -222,6 +222,7 @@
     let places = [];
     let actions = [];
     let relationships = [];
+    let costumes = [];
     let characterImages = {};
     let originalGasImages = {};
     let fullbodyImages = {};
@@ -296,18 +297,20 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData, relationshipData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData, costumeData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
-                fetchGasData(baseUrl, 'relationship')
+                fetchGasData(baseUrl, 'relationship'),
+                fetchGasData(baseUrl, 'costume')
             ]);
 
             models = parseModels(modelData);
             places = parsePlaces(placeData);
             actions = parseActionsWithCompositions(actionData);
             relationships = parseRelationships(relationshipData);
+            costumes = parseCostumes(costumeData);
 
             // キャラクター設定（画像URL処理があるため個別）
             originalGasImages = {};

@@ -449,6 +449,7 @@ function renderCharacterSections() {
                 <img id="char${i + 1}-image" src="" alt="" style="width:90px; height:90px; object-fit:cover; border-radius:4px; background:#333; display:none;">
                 <div style="flex:1; font-size:0.85rem; line-height:1.4;">
                     <div><span id="char${i + 1}-name" style="color:#fff;">未選択</span><span id="char${i + 1}-relationship" style="color:#888;">：未設定</span></div>
+                    <div id="char${i + 1}-costume" style="color:#888; font-size:0.8rem;"></div>
                     <button class="place-btn" id="char${i + 1}-place" onclick="moveToCharacterLocation(${i})" style="color:#fff; background:#333; border:1px solid #444; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.8rem; margin:4px 0;">未選択</button>
                     <div class="memo-line" id="char${i + 1}-memo"></div>
                 </div>
@@ -469,11 +470,13 @@ function updateCharacterStatusDisplay() {
         const place = status.placeIndex >= 0 ? places[status.placeIndex] : null;
         const action = status.actionIndex >= 0 ? actions[status.actionIndex] : null;
         const relationship = relationships.find(r => r.relationship_id === status.relationshipId);
+        const costume = costumes.find(c => c.costume_id === status.costumeId);
 
         const imageEl = document.getElementById(`char${num}-image`);
         const nameEl = document.getElementById(`char${num}-name`);
         const placeEl = document.getElementById(`char${num}-place`);
         const relationshipEl = document.getElementById(`char${num}-relationship`);
+        const costumeEl = document.getElementById(`char${num}-costume`);
         const memoEl = document.getElementById(`char${num}-memo`);
 
         if (imageEl) {
@@ -488,6 +491,7 @@ function updateCharacterStatusDisplay() {
         if (nameEl) nameEl.textContent = char ? char.name : '未選択';
         if (placeEl) placeEl.textContent = place ? place.name : '未選択';
         if (relationshipEl) relationshipEl.textContent = '：' + (relationship ? relationship.name : '未設定');
+        if (costumeEl) costumeEl.textContent = costume ? `服装：${costume.name}` : '';
         if (memoEl) memoEl.textContent = status.memo ? `メモ：${status.memo}` : '';
     }
 }

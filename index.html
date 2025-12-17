@@ -629,6 +629,7 @@
     let places = [];
     let actions = [];
     let relationships = [];
+    let costumes = [];
     let chatHistory = [];
     let currentSceneUrl = '';
     let generatedImages = [];
@@ -796,7 +797,7 @@
     }
 
     function saveCachedData() {
-        localStorage.setItem(GAME_DATA_KEY, JSON.stringify({ models, characters, places, actions, relationships }));
+        localStorage.setItem(GAME_DATA_KEY, JSON.stringify({ models, characters, places, actions, relationships, costumes }));
     }
 
     function loadCachedData() {
@@ -809,6 +810,7 @@
                 places = data.places || [];
                 actions = data.actions || [];
                 relationships = data.relationships || [];
+                costumes = data.costumes || [];
                 updateAllSelects();
             }
         } catch (e) {
@@ -827,12 +829,13 @@
         showSettingsStatus('読み込み中...', false);
 
         try {
-            const [modelData, characterData, placeData, actionData, relationshipData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData, costumeData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
-                fetchGasData(baseUrl, 'relationship')
+                fetchGasData(baseUrl, 'relationship'),
+                fetchGasData(baseUrl, 'costume')
             ]);
 
             models = parseModels(modelData);
@@ -840,6 +843,7 @@
             places = parsePlaces(placeData);
             actions = parseActionsWithCompositions(actionData);
             relationships = parseRelationships(relationshipData);
+            costumes = parseCostumes(costumeData);
 
             saveCachedData();
             updateAllSelects();

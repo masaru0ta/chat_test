@@ -538,6 +538,10 @@
                         <label>次アクション:</label>
                         <select id="detail-next-action" onchange="updateActionField('next_action', this.value)"></select>
                     </div>
+                    <div class="field-row">
+                        <label>エフェクト:</label>
+                        <input type="text" id="detail-effect" onchange="updateActionField('effect', this.value)">
+                    </div>
                     <div class="field-label">プロンプト</div>
                     <textarea class="field-value editable" id="detail-prompt" onchange="updateActionPrompt(this.value)"></textarea>
                 </div>
@@ -586,6 +590,7 @@
     let places = [];
     let actions = [];
     let relationships = [];
+    let costumes = [];
     let actionImages = {}; // アクション名 -> 画像URL
     let compositionImages = {}; // アクション名 -> { composition名: url }
 
@@ -684,12 +689,13 @@
         showStatusWithDetail('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData, relationshipData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData, costumeData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
-                fetchGasData(baseUrl, 'relationship')
+                fetchGasData(baseUrl, 'relationship'),
+                fetchGasData(baseUrl, 'costume')
             ]);
 
             // 共通パーサーを使用
@@ -697,6 +703,7 @@
             characters = parseCharacters(characterData);
             places = parsePlaces(placeData);
             relationships = parseRelationships(relationshipData);
+            costumes = parseCostumes(costumeData);
 
             // 既存のact_xxx形式のIDから最大番号を取得
             let maxNum = 0;
@@ -725,6 +732,7 @@
                     pre_action: item['pre-action'] || '',
                     public_action: item['public-action'] || '',
                     next_action: item['next-action'] || '',
+                    effect: item['effect'] || '',
                     compositions: []
                 };
                 COMPOSITION_KEYS.forEach(key => {
@@ -1030,6 +1038,7 @@
         document.getElementById('detail-name').value = action.name || '';
         document.getElementById('detail-prompt').value = action.prompt || '';
         document.getElementById('detail-action-type').value = action.action_type || '';
+        document.getElementById('detail-effect').value = action.effect || '';
 
         // アクション選択プルダウンを更新
         updateActionSelectOptions('detail-pre-action', action.pre_action);
@@ -1385,7 +1394,8 @@
                     'action_type': action.action_type,
                     'pre-action': action.pre_action,
                     'public-action': action.public_action,
-                    'next-action': action.next_action
+                    'next-action': action.next_action,
+                    'effect': action.effect
                 };
 
                 // 各構図のquality/tagを追加

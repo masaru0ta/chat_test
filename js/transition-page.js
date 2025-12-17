@@ -376,6 +376,14 @@ function startAppendTypewriter(pageIndex, appendText) {
 
 function addSystemMessage(text) {
     console.log('[System]', text);
+    // 現在のページにシステムメッセージを追加
+    if (pages.length > 0) {
+        const pageIndex = pages.length - 1;
+        const lastPage = pages[pageIndex];
+        const newText = lastPage.text + (lastPage.text ? '\n' : '') + text;
+        lastPage.fullText = newText;
+        updatePageText(pageIndex, newText);
+    }
 }
 
 function addStateChangeMessage(text) {

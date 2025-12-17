@@ -133,6 +133,7 @@ function parseActionsWithCompositions(rawData) {
             pre_action: item['pre-action'] || '',
             public_action: item['public-action'] || '',
             next_action: item['next-action'] || '',
+            effect: item['effect'] || '',
             compositions: []
         };
 
@@ -209,7 +210,40 @@ function parseRelationships(rawData) {
             description: item.description || '',
             next_relationship_req: item['next_relationship_req'] || '',
             private: item['private'] || '',
-            semi_private: item['semi_private'] || ''
+            semi_private: item['semi_private'] || '',
+            expression: item['expression'] || ''
+        };
+    });
+}
+
+/**
+ * 衣装データをパース
+ * @param {Array} rawData - GASから取得した生データ
+ * @returns {Array} パース済み衣装配列
+ */
+function parseCostumes(rawData) {
+    // 既存のcos_xxx形式のIDから最大番号を取得
+    let maxNum = 0;
+    rawData.forEach(item => {
+        const id = item['costume_id'] || '';
+        const match = id.match(/^cos_(\d+)$/);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+        }
+    });
+
+    return rawData.map(item => {
+        let costumeId = item['costume_id'] || '';
+        if (!costumeId) {
+            maxNum++;
+            costumeId = 'cos_' + String(maxNum).padStart(3, '0');
+        }
+
+        return {
+            costume_id: costumeId,
+            name: item.name || '',
+            tag: item.tag || ''
         };
     });
 }

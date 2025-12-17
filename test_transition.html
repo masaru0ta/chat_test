@@ -172,6 +172,7 @@
     let places = [];
     let actions = [];
     let relationships = [];
+    let costumes = [];
     let promptTemplates = {};
 
     // 現在の状態（後方互換用）
@@ -188,8 +189,8 @@
 
     // キャラクターステータス（2人分初期値）
     let characterStatus = [
-        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_001', memo: '' },
-        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_001', memo: '' }
+        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_001', costumeId: 'cos_001', memo: '' },
+        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_001', costumeId: 'cos_001', memo: '' }
     ];
 
     // 状態変数
@@ -220,6 +221,7 @@
                 placeIndex: -1,
                 actionIndex: -1,
                 relationshipId: 'rel_001',
+                costumeId: 'cos_001',
                 memo: ''
             });
         }
@@ -228,7 +230,7 @@
     // キャッシュデータを保存
     function saveCachedData() {
         localStorage.setItem(CACHE_KEY, JSON.stringify({
-            models, characters, places, actions, relationships, promptTemplates
+            models, characters, places, actions, relationships, costumes, promptTemplates
         }));
     }
 
@@ -243,6 +245,7 @@
                 places = data.places || [];
                 actions = data.actions || [];
                 relationships = data.relationships || [];
+                costumes = data.costumes || [];
                 promptTemplates = data.promptTemplates || {};
                 updateAllSelects();
                 updateModelSelect();
@@ -451,12 +454,13 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData, relationshipData, promptData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData, costumeData, promptData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
                 fetchGasData(baseUrl, 'relationship'),
+                fetchGasData(baseUrl, 'costume'),
                 fetchGasData(baseUrl, 'llm_prompt_template')
             ]);
 
@@ -465,6 +469,7 @@
             places = parsePlaces(placeData);
             actions = parseActionsWithCompositions(actionData);
             relationships = parseRelationships(relationshipData);
+            costumes = parseCostumes(costumeData);
             promptTemplates = parsePromptTemplates(promptData);
 
             saveCachedData();
@@ -495,11 +500,18 @@
 
         // 同じ場所にいるキャラクターのアクションも更新
         const charAtLocation = getCharacterAtUserLocation();
+        let effectStatusIndex = -1;
+        let effectMessages = []; // メッセージを後で表示するために保存
         if (charAtLocation) {
             const statusIndex = characterStatus.findIndex(s => s === charAtLocation.status);
             if (statusIndex >= 0) {
                 characterStatus[statusIndex].actionIndex = actionIndex;
                 console.log('[アクション実行]', charAtLocation.character.name, 'のアクションを更新:', action.name);
+                effectStatusIndex = statusIndex;
+
+                // アクションのeffectを適用（状態変更のみ、メッセージは後で）
+                effectMessages = applyActionEffect(action, charAtLocation, statusIndex);
+
                 updateCharacterStatusDisplay();
             }
         }
@@ -515,6 +527,80 @@
 
         // ページ生成（アクション実行）
         await generatePages('action_select', action.name, null, null);
+
+        // effectメッセージを表示（ページ生成後）
+        if (effectMessages && effectMessages.length > 0) {
+            effectMessages.forEach(msg => addSystemMessage(msg));
+        }
+    }
+
+    // アクションのeffectを適用（状態変更を行い、メッセージ配列を返す）
+    function applyActionEffect(action, charAtLocation, statusIndex) {
+        const messages = [];
+        if (!action.effect || !charAtLocation) return messages;
+
+        const effectStr = action.effect.trim();
+        if (!effectStr) return messages;
+
+        console.log('[Effect] 効果を解析:', effectStr);
+
+        // effectをパース（形式: relationship_id=rel_002,costume_id=cos_002 または rel_002,cos_002）
+        const effects = parseEffectString(effectStr);
+
+        // 関係性変更
+        if (effects.relationship_id) {
+            const newRelationship = relationships.find(r => r.relationship_id === effects.relationship_id);
+            if (newRelationship) {
+                const oldRelationshipId = characterStatus[statusIndex].relationshipId;
+                const oldRelationship = relationships.find(r => r.relationship_id === oldRelationshipId);
+                characterStatus[statusIndex].relationshipId = effects.relationship_id;
+                console.log('[Effect] 関係性変更:', oldRelationship?.name, '→', newRelationship.name);
+                messages.push(`🎭 ${charAtLocation.character.name}との関係性が「${oldRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
+            }
+        }
+
+        // 服装変更
+        if (effects.costume_id) {
+            const newCostume = costumes.find(c => c.costume_id === effects.costume_id);
+            if (newCostume) {
+                const oldCostumeId = characterStatus[statusIndex].costumeId;
+                const oldCostume = costumes.find(c => c.costume_id === oldCostumeId);
+                characterStatus[statusIndex].costumeId = effects.costume_id;
+                console.log('[Effect] 服装変更:', oldCostume?.name, '→', newCostume.name);
+                messages.push(`👗 ${charAtLocation.character.name}の服装が「${oldCostume?.name || '不明'}」から「${newCostume.name}」に変わりました`);
+            }
+        }
+
+        return messages;
+    }
+
+    // effect文字列をパース
+    function parseEffectString(effectStr) {
+        const result = { relationship_id: null, costume_id: null };
+
+        // カンマで分割
+        const parts = effectStr.split(',').map(p => p.trim()).filter(p => p);
+
+        parts.forEach(part => {
+            // key=value形式
+            if (part.includes('=')) {
+                const [key, value] = part.split('=').map(s => s.trim());
+                if (key === 'relationship_id' || key === 'rel') {
+                    result.relationship_id = value;
+                } else if (key === 'costume_id' || key === 'cos') {
+                    result.costume_id = value;
+                }
+            } else {
+                // IDのみの形式（プレフィックスで判定）
+                if (part.startsWith('rel_')) {
+                    result.relationship_id = part;
+                } else if (part.startsWith('cos_')) {
+                    result.costume_id = part;
+                }
+            }
+        });
+
+        return result;
     }
 
     function clearChat() {
@@ -605,11 +691,14 @@
         }
         localStorage.setItem(RUNWARE_API_KEY, runwareApiKey);
         const charActionIndex = charAtLocation.status?.actionIndex ?? -1;
+        const charCostumeId = charAtLocation.status?.costumeId ?? null;
+        const charRelationshipId = charAtLocation.status?.relationshipId ?? null;
         console.log('[並列実行] LLM + 画像生成を開始');
+        console.log('[並列実行] costumeId:', charCostumeId, '/ relationshipId:', charRelationshipId);
         return new Promise(resolve => {
             setTimeout(async () => {
                 try {
-                    const image = await generateCharacterImage(charAtLocation.character, currentPlace, charActionIndex);
+                    const image = await generateCharacterImage(charAtLocation.character, currentPlace, charActionIndex, charCostumeId, charRelationshipId);
                     resolve(image);
                 } catch (e) {
                     console.error('[画像生成エラー]', e);
@@ -671,6 +760,7 @@
                 placeIndex: placeIndices[i],
                 actionIndex: actionIndex,
                 relationshipId: 'rel_001',  // 初期値
+                costumeId: 'cos_001',  // 服装初期値
                 memo: ''  // メモ初期値
             };
         }
@@ -884,7 +974,7 @@
     }
 
     // キャラクター画像生成（image_gen_base.htmlと同じ方式）
-    async function generateCharacterImage(character, place, actionIndex) {
+    async function generateCharacterImage(character, place, actionIndex, costumeId = null, relationshipId = null) {
         const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
         if (!runwareApiKey) return null;
 
@@ -918,6 +1008,31 @@
         const prompt = cleanPrompt(parts.join(', '));
         const negativePrompt = model?.qualityNegative || '';
 
+        // costumeIdから服装タグを取得
+        let clothesTag = '';
+        if (costumeId) {
+            const costume = costumes.find(c => c.costume_id === costumeId);
+            if (costume) {
+                clothesTag = costume.tag || '';
+                console.log('[画像生成] 服装:', costume.name, '/ タグ:', clothesTag);
+            }
+        }
+
+        // relationshipIdから表情タグを取得
+        let expressionTag = '';
+        if (relationshipId) {
+            const relationship = relationships.find(r => r.relationship_id === relationshipId);
+            if (relationship) {
+                expressionTag = relationship.expression || '';
+                console.log('[画像生成] 関係性:', relationship.name, '/ 表情:', expressionTag);
+            }
+        }
+
+        // キャラクターオブジェクトにclothes, expression追加
+        const characterWithExtras = character
+            ? { ...character, clothes: clothesTag, expression: expressionTag }
+            : { clothes: clothesTag, expression: expressionTag };
+
         console.log('[画像生成] モデル:', modelId);
         console.log('[画像生成] 構図:', compositionTag || '(なし)');
         console.log('[画像生成] プロンプト:', prompt);
@@ -931,7 +1046,7 @@
             scheduler: model?.scheduler || 'Default',
             width: 1024,
             height: 1024,
-            character: character
+            character: characterWithExtras
         });
         hideStatusImage();
 

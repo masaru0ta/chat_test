@@ -239,6 +239,7 @@
     let places = [];
     let actions = [];
     let relationships = [];
+    let costumes = [];
 
     // 初期化
     document.addEventListener('DOMContentLoaded', () => {
@@ -273,13 +274,14 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            // モデル、キャラクター、場所、アクション、関係性を並列で読み込み
-            const [modelData, characterData, placeData, actionData, relationshipData] = await Promise.all([
+            // モデル、キャラクター、場所、アクション、関係性、衣装を並列で読み込み
+            const [modelData, characterData, placeData, actionData, relationshipData, costumeData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
-                fetchGasData(baseUrl, 'relationship')
+                fetchGasData(baseUrl, 'relationship'),
+                fetchGasData(baseUrl, 'costume')
             ]);
 
             models = parseModels(modelData);
@@ -295,6 +297,7 @@
             updateActionSelect();
 
             relationships = parseRelationships(relationshipData);
+            costumes = parseCostumes(costumeData);
 
             showStatus(`読み込み完了: モデル${Object.keys(models).length}件, キャラ${characters.length}件, 場所${places.length}件, アクション${actions.length}件`);
 
