@@ -1008,13 +1008,15 @@
         const prompt = cleanPrompt(parts.join(', '));
         const negativePrompt = model?.qualityNegative || '';
 
-        // costumeIdから服装タグを取得
+        // costumeIdから服装タグ・camelタグを取得
         let clothesTag = '';
+        let camelTag = '';
         if (costumeId) {
             const costume = costumes.find(c => c.costume_id === costumeId);
             if (costume) {
                 clothesTag = costume.tag || '';
-                console.log('[画像生成] 服装:', costume.name, '/ タグ:', clothesTag);
+                camelTag = costume.camel_tag || '';
+                console.log('[画像生成] 服装:', costume.name, '/ タグ:', clothesTag, '/ camel:', camelTag);
             }
         }
 
@@ -1028,10 +1030,10 @@
             }
         }
 
-        // キャラクターオブジェクトにclothes, expression追加
+        // キャラクターオブジェクトにclothes, camel, expression追加
         const characterWithExtras = character
-            ? { ...character, clothes: clothesTag, expression: expressionTag }
-            : { clothes: clothesTag, expression: expressionTag };
+            ? { ...character, clothes: clothesTag, camel: camelTag, expression: expressionTag }
+            : { clothes: clothesTag, camel: camelTag, expression: expressionTag };
 
         console.log('[画像生成] モデル:', modelId);
         console.log('[画像生成] 構図:', compositionTag || '(なし)');

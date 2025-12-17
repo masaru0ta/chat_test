@@ -56,10 +56,10 @@ function getCompositionTag(actions, actionIndex) {
 
 /**
  * プロンプト内のキャラクタータグを置換（2段階置換）
- * 1段階目: {clothes}, {expression} → costume.tag, relationship.expression
+ * 1段階目: {clothes}, {camel}, {expression} → costume.tag, costume.camel_tag, relationship.expression
  * 2段階目: {uniform1}, {uniform2} → character.uniform1, uniform2
  * @param {string} prompt - 置換前のプロンプト
- * @param {Object} character - キャラクターオブジェクト（uniform1, uniform2, clothes, expressionを含む）
+ * @param {Object} character - キャラクターオブジェクト（uniform1, uniform2, clothes, camel, expressionを含む）
  * @returns {string} 置換後のプロンプト
  */
 function replaceCharacterTags(prompt, character) {
@@ -67,11 +67,13 @@ function replaceCharacterTags(prompt, character) {
     const uniform1 = (character && character.uniform1) || '';
     const uniform2 = (character && character.uniform2) || '';
     const clothes = (character && character.clothes) || '';
+    const camel = (character && character.camel) || '';
     const expression = (character && character.expression) || '';
 
-    // 1段階目: {clothes}, {expression} → 実際のタグ
+    // 1段階目: {clothes}, {camel}, {expression} → 実際のタグ
     let result = prompt
         .replace(/\{clothes\}/gi, clothes)
+        .replace(/\{camel\}/gi, camel)
         .replace(/\{expression\}/gi, expression);
 
     // 2段階目: {uniform1}, {uniform2} → 実際のタグ

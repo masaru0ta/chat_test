@@ -504,6 +504,10 @@
                 <select id="preview-character"></select>
                 <label>場所:</label>
                 <select id="preview-place"></select>
+                <label>服装:</label>
+                <select id="preview-costume"></select>
+                <label>表情:</label>
+                <select id="preview-expression"></select>
             </div>
             <button class="btn btn-save" onclick="saveToGas()">GASに保存</button>
             <div id="detail-status"></div>
@@ -1071,9 +1075,13 @@
     function updatePreviewSelects() {
         const charSelect = document.getElementById('preview-character');
         const placeSelect = document.getElementById('preview-place');
+        const costumeSelect = document.getElementById('preview-costume');
+        const expressionSelect = document.getElementById('preview-expression');
 
         const charValue = charSelect.value;
         const placeValue = placeSelect.value;
+        const costumeValue = costumeSelect?.value;
+        const expressionValue = expressionSelect?.value;
 
         charSelect.innerHTML = '<option value="-1">無し</option>' + characters.map((char, index) =>
             `<option value="${index}">${char.name || '(名前なし)'}</option>`
@@ -1083,8 +1091,26 @@
             `<option value="${index}">${place.name || '(名前なし)'}</option>`
         ).join('');
 
+        if (costumeSelect) {
+            costumeSelect.innerHTML = '<option value="">無し</option>' + costumes.map(costume =>
+                `<option value="${costume.costume_id}">${costume.name || costume.costume_id}</option>`
+            ).join('');
+        }
+
+        if (expressionSelect) {
+            // relationshipsからユニークなexpressionタグを抽出
+            const uniqueExpressions = [...new Set(
+                relationships.map(r => r.expression).filter(e => e && e.trim())
+            )];
+            expressionSelect.innerHTML = '<option value="">無し</option>' + uniqueExpressions.map(expr =>
+                `<option value="${expr}">${expr}</option>`
+            ).join('');
+        }
+
         if (charValue !== '' && parseInt(charValue) >= -1 && parseInt(charValue) < characters.length) charSelect.value = charValue;
         if (placeValue !== '' && parseInt(placeValue) >= -1 && parseInt(placeValue) < places.length) placeSelect.value = placeValue;
+        if (costumeValue && costumeSelect) costumeSelect.value = costumeValue;
+        if (expressionValue && expressionSelect) expressionSelect.value = expressionValue;
     }
 
     function updateCompositionGrid() {
@@ -1349,10 +1375,29 @@
         }
     }
 
-    // 選択中のキャラクターを取得
+    // 選択中のキャラクターを取得（costume/expression情報付き）
     function getSelectedCharacter() {
         const charIndex = parseInt(document.getElementById('preview-character')?.value);
-        return charIndex >= 0 ? (characters[charIndex] || null) : null;
+        const char = charIndex >= 0 ? (characters[charIndex] || null) : null;
+        if (!char) return null;
+
+        // 選択されたcostumeからclothesタグ・camelタグを取得
+        const costumeId = document.getElementById('preview-costume')?.value;
+        let clothesTag = '';
+        let camelTag = '';
+        if (costumeId) {
+            const costume = costumes.find(c => c.costume_id === costumeId);
+            if (costume) {
+                clothesTag = costume.tag || '';
+                camelTag = costume.camel_tag || '';
+            }
+        }
+
+        // 選択されたexpressionタグを直接取得
+        const expressionTag = document.getElementById('preview-expression')?.value || '';
+
+        // キャラクターオブジェクトにclothes, camel, expression追加
+        return { ...char, clothes: clothesTag, camel: camelTag, expression: expressionTag };
     }
 
     // プロンプト指定で画像生成（共通関数を使用）

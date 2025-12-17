@@ -243,7 +243,8 @@ function parseCostumes(rawData) {
         return {
             costume_id: costumeId,
             name: item.name || '',
-            tag: item.tag || ''
+            tag: item.tag || '',
+            camel_tag: item['camel_tag'] || ''
         };
     });
 }
