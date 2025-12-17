@@ -55,6 +55,37 @@ function getCompositionTag(actions, actionIndex) {
 }
 
 /**
+ * 複数ページ用の構図タグ配列を取得
+ * BESTとGOODからページ数分選択（異なる構図を優先、不足時は再利用）
+ * @param {Array} actions - アクション配列
+ * @param {number} actionIndex - アクションのインデックス
+ * @param {number} count - 必要なページ数
+ * @returns {Array<string>} 構図タグの配列
+ */
+function getCompositionTagsForMultiplePages(actions, actionIndex, count) {
+    if (actionIndex < 0 || !actions || !actions[actionIndex] || count <= 0) return [];
+    const compositions = actions[actionIndex].compositions;
+    if (!compositions || compositions.length === 0) return Array(count).fill('');
+
+    // BEST + GOODの構図を収集
+    const bestComps = compositions.filter(c => c.quality && c.quality.toUpperCase() === 'BEST');
+    const goodComps = compositions.filter(c => c.quality && c.quality.toUpperCase() === 'GOOD');
+    const availableComps = [...bestComps, ...goodComps];
+
+    // BEST/GOODがなければ全体から
+    const pool = availableComps.length > 0 ? availableComps : compositions;
+
+    // シャッフルしてcount個選択（不足時は繰り返し使用）
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    const result = [];
+    for (let i = 0; i < count; i++) {
+        const comp = shuffled[i % shuffled.length];
+        result.push(comp?.tag || comp?.name || '');
+    }
+    return result;
+}
+
+/**
  * プロンプト内のキャラクタータグを置換（2段階置換）
  * 1段階目: {clothes}, {camel}, {expression} → costume.tag, costume.camel_tag, relationship.expression
  * 2段階目: {uniform1}, {uniform2} → character.uniform1, uniform2

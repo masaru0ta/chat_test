@@ -543,6 +543,10 @@
                         <select id="detail-next-action" onchange="updateActionField('next_action', this.value)"></select>
                     </div>
                     <div class="field-row">
+                        <label>キャラページ数:</label>
+                        <input type="number" id="detail-char-page-count" min="0" onchange="updateActionField('char_page_count', this.value)">
+                    </div>
+                    <div class="field-row">
                         <label>エフェクト:</label>
                         <input type="text" id="detail-effect" onchange="updateActionField('effect', this.value)">
                     </div>
@@ -736,6 +740,7 @@
                     pre_action: item['pre-action'] || '',
                     public_action: item['public-action'] || '',
                     next_action: item['next-action'] || '',
+                    char_page_count: item['char_page_count'] || '',
                     effect: item['effect'] || '',
                     compositions: []
                 };
@@ -1043,6 +1048,7 @@
         document.getElementById('detail-prompt').value = action.prompt || '';
         document.getElementById('detail-action-type').value = action.action_type || '';
         document.getElementById('detail-effect').value = action.effect || '';
+        document.getElementById('detail-char-page-count').value = action.char_page_count || '';
 
         // アクション選択プルダウンを更新
         updateActionSelectOptions('detail-pre-action', action.pre_action);
@@ -1440,6 +1446,7 @@
                     'pre-action': action.pre_action,
                     'public-action': action.public_action,
                     'next-action': action.next_action,
+                    'char_page_count': action.char_page_count,
                     'effect': action.effect
                 };
 

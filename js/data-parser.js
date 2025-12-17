@@ -133,6 +133,7 @@ function parseActionsWithCompositions(rawData) {
             pre_action: item['pre-action'] || '',
             public_action: item['public-action'] || '',
             next_action: item['next-action'] || '',
+            char_page_count: item['char_page_count'] || '',
             effect: item['effect'] || '',
             compositions: []
         };

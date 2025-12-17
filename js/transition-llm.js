@@ -302,6 +302,76 @@ function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, cha
     };
 }
 
+/**
+ * 複数セリフ用のプロンプトを構築（llm_014テンプレート使用）
+ * @param {string} actionType - アクションタイプ
+ * @param {string} userInput - ユーザー入力
+ * @param {Object} charAtLocation - キャラクター情報
+ * @param {Object} currentPlace - 現在地
+ * @param {number} dialogueCount - 生成するセリフの数
+ * @returns {Object} { fullPrompt, simplePrompt }
+ */
+function buildMultiDialoguePrompt(actionType, userInput, charAtLocation, currentPlace, dialogueCount) {
+    let situationText = '';
+    if (actionType === 'action_select' && currentState.actionIndex >= 0) {
+        const action = actions[currentState.actionIndex];
+        situationText = requirePromptTemplate('llm_009', { action: action?.name || '' });
+    } else if (actionType === 'action_with_speech' && currentState.actionIndex >= 0) {
+        const action = actions[currentState.actionIndex];
+        situationText = requirePromptTemplate('llm_010', { action: action?.name || '', speech: userInput });
+    }
+
+    // 画像プロンプト構築
+    const actionPrompt = (currentState.actionIndex >= 0 && actions[currentState.actionIndex])
+        ? actions[currentState.actionIndex].prompt : '';
+    const placeTag = currentPlace?.tag || '';
+    const imagePromptText = [actionPrompt, placeTag].filter(p => p).join(', ') || '(なし)';
+
+    // キャラクター情報
+    let characterInfo = '';
+    let charName = '';
+    let relationship = null;
+    if (charAtLocation) {
+        const char = charAtLocation.character;
+        charName = char.name;
+        const seriesPart = char.series ? `（${char.series}）` : '';
+        const profile = char.profile || '';
+        const { relationshipText, relationshipMemo, nextRelationshipReq, relationship: rel } = buildRelationshipInfoPrompt(charAtLocation);
+        relationship = rel;
+
+        characterInfo = requirePromptTemplate('llm_007', {
+            name: charName,
+            series: seriesPart,
+            profile: profile,
+            relationshipText: relationshipText || '',
+            relationshipMemo: relationshipMemo || '',
+            nextRelationshipReq: nextRelationshipReq || ''
+        });
+    }
+
+    // 関係性進展条件
+    let nextRelationshipInstruction = '';
+    if (relationship && relationship.next_relationship_req) {
+        nextRelationshipInstruction = requirePromptTemplate('llm_008', {});
+    }
+
+    // llm_014 テンプレートで複数セリフ用プロンプトを構築
+    const prompt = requirePromptTemplate('llm_014', {
+        situation: situationText,
+        imagePrompt: imagePromptText,
+        characterInfo: characterInfo,
+        name: charName,
+        count: dialogueCount,
+        next_relationship_instruction: nextRelationshipInstruction
+    });
+
+    const simplePrompt = requirePromptTemplate('llm_012', { situation: situationText.split('\n')[0].trim() });
+    return {
+        fullPrompt: prompt,
+        simplePrompt: simplePrompt
+    };
+}
+
 // ========== レスポンス解析 ==========
 
 /**
@@ -359,6 +429,54 @@ function parseCombinedResponse(response, charAtLocation) {
     }
 
     return { narrative, dialogue, newRelationshipName, relationshipMemo };
+}
+
+/**
+ * 複数セリフレスポンスをパース（llm_014用）
+ * 【セリフ1】【セリフ2】...形式から配列に変換
+ */
+function parseMultipleDialogues(response, charAtLocation, expectedCount) {
+    let narrative = '';
+    const dialogues = [];
+    let newRelationshipName = null;
+    let relationshipMemo = null;
+
+    // 【地の文】セクションを抽出
+    const narrativeMatch = response.match(/【地の文】\s*([\s\S]*?)(?=【|$)/);
+    if (narrativeMatch) {
+        narrative = cleanNarrative(narrativeMatch[1].trim());
+    }
+
+    // 【セリフN】形式でセリフを抽出
+    for (let i = 1; i <= expectedCount; i++) {
+        const dialogueRegex = new RegExp(`【セリフ${i}】\\s*([\\s\\S]*?)(?=【|$)`);
+        const dialogueMatch = response.match(dialogueRegex);
+        if (dialogueMatch) {
+            dialogues.push(dialogueMatch[1].trim());
+        }
+    }
+
+    // 期待数に満たない場合、最後のセリフを繰り返し
+    while (dialogues.length < expectedCount && dialogues.length > 0) {
+        dialogues.push(dialogues[dialogues.length - 1]);
+    }
+
+    // 【関係性変化】セクションを抽出
+    const relationshipMatch = response.match(/【関係性変化】\s*([\s\S]*?)(?=【|$)/);
+    if (relationshipMatch) {
+        const result = relationshipMatch[1].trim();
+        if (!result.includes('維持')) {
+            newRelationshipName = result;
+        }
+    }
+
+    // 【関係性メモ】セクションを抽出
+    const memoMatch = response.match(/【関係性メモ】\s*([\s\S]*?)(?=【|$)/);
+    if (memoMatch) {
+        relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
+    }
+
+    return { narrative, dialogues, newRelationshipName, relationshipMemo };
 }
 
 /**

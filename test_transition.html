@@ -492,6 +492,9 @@
         const action = actions[actionIndex];
         if (!action) return;
 
+        // 既存の次アクションボタンを削除
+        document.querySelectorAll('.next-action-button-container').forEach(el => el.remove());
+
         const prevActionIndex = currentState.actionIndex;
         const prevAction = prevActionIndex >= 0 ? actions[prevActionIndex] : null;
 
@@ -554,18 +557,18 @@
     function addNextActionButton(nextAction) {
         if (pages.length === 0) return;
 
-        const pageIndex = pages.length - 1;
-        const page = pages[pageIndex];
+        const lastPageIndex = pages.length - 1;
+        const page = pages[lastPageIndex];
 
         // タイプライター完了後にボタンを追加
         if (page && !page.typewriterCompleted) {
-            // タイプライター完了を待つ
-            setTypewriterCompleteCallback((completedPageIndex) => {
-                appendNextActionButtonToPage(completedPageIndex, nextAction);
+            // タイプライター完了を待つ（最後のページに固定）
+            setTypewriterCompleteCallback(() => {
+                appendNextActionButtonToPage(lastPageIndex, nextAction);
             });
         } else {
             // すでに完了している場合は即座に追加
-            appendNextActionButtonToPage(pageIndex, nextAction);
+            appendNextActionButtonToPage(lastPageIndex, nextAction);
         }
     }
 
@@ -941,13 +944,29 @@
             goToLatestPage();
         }
 
+        // char_page_count を取得（アクション実行時のみ）
+        const currentAction = (actionType === 'action_select' || actionType === 'action_with_speech') && currentState.actionIndex >= 0
+            ? actions[currentState.actionIndex] : null;
+        const charPageCount = parseInt(currentAction?.char_page_count) || 1;
+
         // 通常モード：LLMと画像生成を並列実行
-        const { fullPrompt: combinedPrompt, simplePrompt: combinedSimplePrompt } = buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace, false, companion);
+        let combinedPrompt, combinedSimplePrompt;
+        if (charPageCount >= 2 && charAtLocation) {
+            // 複数セリフ用プロンプト
+            const result = buildMultiDialoguePrompt(actionType, userInput, charAtLocation, currentPlace, charPageCount);
+            combinedPrompt = result.fullPrompt;
+            combinedSimplePrompt = result.simplePrompt;
+        } else {
+            // 通常プロンプト
+            const result = buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace, false, companion);
+            combinedPrompt = result.fullPrompt;
+            combinedSimplePrompt = result.simplePrompt;
+        }
         console.log('[Combined] 完全版プロンプト:', combinedPrompt);
         console.log('[Combined] シンプル版:', combinedSimplePrompt);
 
-        // 画像生成を非同期に開始
-        const imagePromise = startImageGenerationAsync(charAtLocation, currentPlace);
+        // 画像生成を非同期に開始（複数ページの場合は後で個別に生成）
+        const imagePromise = charPageCount >= 2 ? null : startImageGenerationAsync(charAtLocation, currentPlace);
 
         // ストリーム用のページを先に作成
         const placeImage = currentPlace?.image || null;
@@ -988,13 +1007,37 @@
         // ストリーム受信時のコールバック生成
         const onStreamChunk = createStreamChunkHandler(streamPageIndex, useAddDialogueMode, appendBaseHtml);
 
-        // LLMの応答を待つ（ストリーム対応）
+        // 複数ページモードの場合、画像生成を先に開始（LLMと並列実行）
+        let imagePromises = [];
+        if (charPageCount >= 2 && charAtLocation) {
+            const compositionTags = getCompositionTagsForMultiplePages(actions, currentState.actionIndex, charPageCount);
+            imagePromises = compositionTags.map(tag =>
+                generateCharacterImageWithComposition(charAtLocation, currentPlace, currentState.actionIndex, tag)
+            );
+        }
+
+        // LLMの応答を待つ（ストリーム対応）- 画像生成と並列
         showStatusLLM();
         const response = await callLLM(chatApiKey, combinedPrompt, 'combined', null, onStreamChunk, combinedSimplePrompt);
         hideStatusLLM();
 
         console.log('[LLM] レスポンス:', response);
-        const { narrative, dialogue, newRelationshipName, relationshipMemo } = parseCombinedResponse(response, charAtLocation);
+
+        // 複数ページモードかどうかでパース方法を分岐
+        let narrative, dialogue, dialogues, newRelationshipName, relationshipMemo;
+        if (charPageCount >= 2 && charAtLocation) {
+            const parsed = parseMultipleDialogues(response, charAtLocation, charPageCount);
+            narrative = parsed.narrative;
+            dialogues = parsed.dialogues;
+            newRelationshipName = parsed.newRelationshipName;
+            relationshipMemo = parsed.relationshipMemo;
+        } else {
+            const parsed = parseCombinedResponse(response, charAtLocation);
+            narrative = parsed.narrative;
+            dialogue = parsed.dialogue;
+            newRelationshipName = parsed.newRelationshipName;
+            relationshipMemo = parsed.relationshipMemo;
+        }
 
         // 最終的な地の文を表示
         if (streamPageIndex >= 0) {
@@ -1017,16 +1060,30 @@
         // 関係性変化の処理
         updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo);
 
-        // 画像生成がなければ読み込み完了
-        if (!imagePromise) {
+        // 画像生成がなければ読み込み完了（通常モード）
+        if (!imagePromise && charPageCount < 2) {
             hideLoading();
         }
 
-        // ページ2: キャラクターがいてセリフがある場合のみ
-        if (charAtLocation && dialogue) {
-            const charImage = imagePromise ? await imagePromise : null;
-            addPage2(charAtLocation.character.name, charImage, dialogue);
-            updatePageStatus(); // 「次へ」ボタンを表示
+        // キャラクターページ生成
+        if (charAtLocation) {
+            if (charPageCount >= 2 && dialogues && dialogues.length > 0) {
+                // 複数ページモード：並列生成した画像を順次取得してページ作成
+                for (let i = 0; i < dialogues.length; i++) {
+                    const charImage = await imagePromises[i];
+                    addPage2(charAtLocation.character.name, charImage, dialogues[i]);
+                    // 各ページ生成後に次へボタンを有効化（isLoading中でも強制的に）
+                    const nextBtn = document.getElementById('next-btn');
+                    if (nextBtn && currentPageIndex < pages.length - 1) {
+                        nextBtn.classList.add('ready');
+                    }
+                }
+            } else if (dialogue) {
+                // 通常モード：1ページのみ
+                const charImage = imagePromise ? await imagePromise : null;
+                addPage2(charAtLocation.character.name, charImage, dialogue);
+                updatePageStatus();
+            }
         }
 
         // 読み込み完了
@@ -1094,6 +1151,69 @@
             : { clothes: clothesTag, camel: camelTag, expression: expressionTag };
         console.log('[画像生成] プロンプト:', prompt);
         console.log('[画像生成] ネガティブ:', negativePrompt);
+
+        showStatusImage();
+        const result = await generateImage(runwareApiKey, modelId, prompt, {
+            negativePrompt: negativePrompt,
+            steps: model?.steps || 20,
+            cfgScale: model?.cfgScale || 7,
+            scheduler: model?.scheduler || 'Default',
+            width: 1024,
+            height: 1024,
+            character: characterWithExtras
+        });
+        hideStatusImage();
+
+        return result.imageURL;
+    }
+
+    // キャラクター画像生成（指定構図タグ版）
+    async function generateCharacterImageWithComposition(charAtLocation, place, actionIndex, compositionTag) {
+        const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
+        if (!runwareApiKey) return null;
+
+        const character = charAtLocation?.character;
+        const costumeId = charAtLocation?.status?.costumeId;
+        const relationshipId = charAtLocation?.status?.relationshipId;
+
+        // モデル取得
+        const modelId = selectedModelId || getFirstModelId(models);
+        if (!modelId || !models[modelId]) return null;
+        const model = models[modelId];
+
+        // プロンプト構築
+        const parts = [
+            model?.qualityPositive || '',
+            character?.tag || '',
+            place?.tag || '',
+            (actionIndex >= 0 && actions[actionIndex]) ? actions[actionIndex].prompt : '',
+            compositionTag,  // 指定された構図タグを使用
+            place?.additionalTag || '',
+            character?.additionalTag || ''
+        ].filter(p => p);
+
+        if (parts.length === 0) return null;
+
+        const prompt = cleanPrompt(parts.join(', '));
+        const negativePrompt = model?.qualityNegative || '';
+
+        // 服装・表情タグ取得
+        let clothesTag = '', camelTag = '', expressionTag = '';
+        if (costumeId) {
+            const costume = costumes.find(c => c.costume_id === costumeId);
+            if (costume) {
+                clothesTag = costume.tag || '';
+                camelTag = costume.camel_tag || '';
+            }
+        }
+        if (relationshipId) {
+            const relationship = relationships.find(r => r.relationship_id === relationshipId);
+            if (relationship) expressionTag = relationship.expression || '';
+        }
+
+        const characterWithExtras = character
+            ? { ...character, clothes: clothesTag, camel: camelTag, expression: expressionTag }
+            : { clothes: clothesTag, camel: camelTag, expression: expressionTag };
 
         showStatusImage();
         const result = await generateImage(runwareApiKey, modelId, prompt, {
