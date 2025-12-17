@@ -526,7 +526,15 @@
         });
 
         // ページ生成（アクション実行）
-        await generatePages('action_select', action.name, null, null);
+        // 入力フィールドに発言があれば action_with_speech、なければ action_select
+        const commandInput = document.getElementById('command-input');
+        const speechText = commandInput?.value?.trim() || '';
+        if (speechText) {
+            await generatePages('action_with_speech', speechText, null, null);
+            commandInput.value = ''; // 入力をクリア
+        } else {
+            await generatePages('action_select', action.name, null, null);
+        }
 
         // effectメッセージを表示（ページ生成後）
         if (effectMessages && effectMessages.length > 0) {
@@ -559,15 +567,17 @@
             }
         }
 
-        // 服装変更
+        // 服装変更（同じ服装の場合はスキップ）
         if (effects.costume_id) {
-            const newCostume = costumes.find(c => c.costume_id === effects.costume_id);
-            if (newCostume) {
-                const oldCostumeId = characterStatus[statusIndex].costumeId;
-                const oldCostume = costumes.find(c => c.costume_id === oldCostumeId);
-                characterStatus[statusIndex].costumeId = effects.costume_id;
-                console.log('[Effect] 服装変更:', oldCostume?.name, '→', newCostume.name);
-                messages.push(`👗 ${charAtLocation.character.name}の服装が「${oldCostume?.name || '不明'}」から「${newCostume.name}」に変わりました`);
+            const oldCostumeId = characterStatus[statusIndex].costumeId;
+            if (effects.costume_id !== oldCostumeId) {
+                const newCostume = costumes.find(c => c.costume_id === effects.costume_id);
+                if (newCostume) {
+                    const oldCostume = costumes.find(c => c.costume_id === oldCostumeId);
+                    characterStatus[statusIndex].costumeId = effects.costume_id;
+                    console.log('[Effect] 服装変更:', oldCostume?.name, '→', newCostume.name);
+                    messages.push(`👗 ${charAtLocation.character.name}の服装が「${oldCostume?.name || '不明'}」から「${newCostume.name}」に変わりました`);
+                }
             }
         }
 
@@ -627,7 +637,6 @@
 
         const { fullPrompt, simplePrompt } = buildCombinedPrompt('speech', userInput, null, null, charAtLocation, currentPlace, true);
         console.log('[会話モード] 完全版プロンプト:', fullPrompt);
-        console.log('[会話モード] シンプル版:', simplePrompt);
 
         showStatusLLM();
         const response = await callLLM(chatApiKey, fullPrompt, 'character', charAtLocation.character, null, simplePrompt);
@@ -636,22 +645,18 @@
 
         // 関係性変化の判定を抽出
         const { dialogue: parsedDialogue, narrative, newRelationshipName, relationshipMemo } = parseConversationResponse(response, charAtLocation);
-        console.log('[会話モード] セリフ:', parsedDialogue, '/ 地の文:', narrative, '/ 新関係性:', newRelationshipName, '/ メモ:', relationshipMemo);
 
         // 関係性変化の処理
         updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo);
 
-        console.log('[会話モード] addDialogue呼び出し前 - キャラ:', charAtLocation.character.name, '/ セリフ:', parsedDialogue);
         if (parsedDialogue) {
             addDialogue(charAtLocation.character.name, parsedDialogue);
-            console.log('[会話モード] addDialogue完了');
         } else {
             console.warn('[会話モード] セリフが空です');
         }
         // 地の文があれば追加
         if (narrative) {
             addDialogue('', narrative);
-            console.log('[会話モード] 地の文追加完了');
         }
     }
 
@@ -669,7 +674,6 @@
             const newRelationship = relationships.find(r => r.name === newRelationshipName);
             if (newRelationship && newRelationship.relationship_id !== currentRelationshipId) {
                 characterStatus[statusIndex].relationshipId = newRelationship.relationship_id;
-                console.log('[関係性変化]', charAtLocation.character.name, ':', currentRelationship?.name, '→', newRelationship.name);
                 addSystemMessage(`💫 ${charAtLocation.character.name}との関係性が「${currentRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
             }
         }
@@ -677,7 +681,6 @@
         // メモがあれば保存（関係性変化がなくても）
         if (relationshipMemo) {
             characterStatus[statusIndex].memo = relationshipMemo;
-            console.log('[メモ更新]', charAtLocation.character.name, ':', relationshipMemo);
         }
 
         updateCharacterStatusDisplay();
@@ -693,8 +696,6 @@
         const charActionIndex = charAtLocation.status?.actionIndex ?? -1;
         const charCostumeId = charAtLocation.status?.costumeId ?? null;
         const charRelationshipId = charAtLocation.status?.relationshipId ?? null;
-        console.log('[並列実行] LLM + 画像生成を開始');
-        console.log('[並列実行] costumeId:', charCostumeId, '/ relationshipId:', charRelationshipId);
         return new Promise(resolve => {
             setTimeout(async () => {
                 try {
@@ -817,8 +818,6 @@
         userState.placeIndex = targetPlaceIndex;
         updateUserStatusDisplay();
 
-        console.log('[単独移動]', previousPlace?.name, '→', newPlace?.name);
-
         // ページ生成（単独移動、companion=null）
         await generatePages('move', '', previousPlace, newPlace, null);
     }
@@ -931,7 +930,6 @@
 
         console.log('[LLM] レスポンス:', response);
         const { narrative, dialogue, newRelationshipName, relationshipMemo } = parseCombinedResponse(response, charAtLocation);
-        console.log('[LLM] パース結果 - 地の文:', narrative, '/ セリフ:', dialogue, '/ 新関係性:', newRelationshipName, '/ メモ:', relationshipMemo);
 
         // 最終的な地の文を表示
         if (streamPageIndex >= 0) {
@@ -953,9 +951,6 @@
 
         // 関係性変化の処理
         updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo);
-
-        // 地の文表示完了
-        console.log('[地の文表示完了]');
 
         // 画像生成がなければ読み込み完了
         if (!imagePromise) {
@@ -1016,7 +1011,6 @@
             if (costume) {
                 clothesTag = costume.tag || '';
                 camelTag = costume.camel_tag || '';
-                console.log('[画像生成] 服装:', costume.name, '/ タグ:', clothesTag, '/ camel:', camelTag);
             }
         }
 
@@ -1026,7 +1020,6 @@
             const relationship = relationships.find(r => r.relationship_id === relationshipId);
             if (relationship) {
                 expressionTag = relationship.expression || '';
-                console.log('[画像生成] 関係性:', relationship.name, '/ 表情:', expressionTag);
             }
         }
 
@@ -1034,9 +1027,6 @@
         const characterWithExtras = character
             ? { ...character, clothes: clothesTag, camel: camelTag, expression: expressionTag }
             : { clothes: clothesTag, camel: camelTag, expression: expressionTag };
-
-        console.log('[画像生成] モデル:', modelId);
-        console.log('[画像生成] 構図:', compositionTag || '(なし)');
         console.log('[画像生成] プロンプト:', prompt);
         console.log('[画像生成] ネガティブ:', negativePrompt);
 

@@ -263,9 +263,30 @@ function getPromptTemplate(templates, key, vars = {}) {
         return '';
     }
     let prompt = template.prompt;
-    // {name} などのプレースホルダーを置換
-    Object.keys(vars).forEach(varKey => {
-        prompt = prompt.replace(new RegExp(`\\{${varKey}\\}`, 'g'), vars[varKey]);
+
+    // {llm_xxx} 形式のプレースホルダーを再帰的にテンプレート展開
+    prompt = prompt.replace(/\{(llm_\d+)\}/g, (match, templateKey) => {
+        // varsに同名のキーがあればそれを優先（コード側で構築済みの値）
+        if (vars[templateKey] !== undefined) {
+            return vars[templateKey];
+        }
+        // なければテンプレートを取得して展開
+        return getPromptTemplate(templates, templateKey, vars);
     });
+
+    // 行ごとに処理：プレースホルダーがあった行で、置換後に空になった場合は削除
+    prompt = prompt.split('\n').map(line => {
+        const hasPlaceholder = /\{[a-zA-Z_][a-zA-Z0-9_]*\}/.test(line);
+        let replacedLine = line;
+        Object.keys(vars).forEach(varKey => {
+            replacedLine = replacedLine.replace(new RegExp(`\\{${varKey}\\}`, 'g'), vars[varKey]);
+        });
+        // プレースホルダーがあった行で、置換後に空白のみなら削除（null返却）
+        if (hasPlaceholder && replacedLine.trim() === '') {
+            return null;
+        }
+        return replacedLine;
+    }).filter(line => line !== null).join('\n');
+
     return prompt;
 }

@@ -25,12 +25,7 @@ async function generateImage(apiKey, modelId, prompt, options = {}) {
     const cleanedPrompt = buildFinalPrompt(prompt, options.character);
 
     // 最終プロンプトをコンソールに出力
-    console.log('[Runware] 画像生成リクエスト');
-    console.log('[Runware] モデル:', modelId);
     console.log('[Runware] プロンプト:', cleanedPrompt);
-    if (options.negativePrompt) {
-        console.log('[Runware] ネガティブ:', options.negativePrompt);
-    }
 
     const requestBody = {
         taskType: 'imageInference',
@@ -60,7 +55,6 @@ async function generateImage(apiKey, modelId, prompt, options = {}) {
     });
 
     const result = await response.json();
-    console.log('[Runware] レスポンス:', result);
 
     if (result.data && result.data.length > 0 && result.data[0].imageURL) {
         console.log('[Runware] 画像URL:', result.data[0].imageURL);

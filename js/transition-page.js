@@ -269,26 +269,20 @@ function addPage2(characterName, image, text) {
 }
 
 function addDialogue(characterName, text) {
-    console.log('[addDialogue] 開始 - name:', characterName, '/ text:', text);
     const lastPage = pages[pages.length - 1];
-    console.log('[addDialogue] lastPage type:', lastPage?.type, '/ pages.length:', pages.length);
 
     // 名前があれば「名前 テキスト」、なければテキストのみ
     const lineText = characterName ? `${characterName}${text}` : text;
-    console.log('[addDialogue] lineText:', lineText);
 
     // 最後のページがdialogueまたはcharacterタイプなら追記
     if (lastPage && (lastPage.type === 'dialogue' || lastPage.type === 'character')) {
-        console.log('[addDialogue] 追記モード開始');
         const pageIndex = pages.length - 1;
         // データ更新
         lastPage.text += `\n${lineText}`;
         lastPage.fullText = lastPage.text;
-        console.log('[addDialogue] データ更新完了 - text:', lastPage.text);
 
         // 既存のタイプライターがあれば完了させる
         if (!lastPage.typewriterCompleted) {
-            console.log('[addDialogue] タイプライター未完了 - 完了処理開始');
             // DOMに現在のテキスト（追記前）を反映
             const pageView = document.getElementById('page-view');
             const pageDiv = pageView.querySelector(`.page-content[data-page-index="${pageIndex}"]`);
@@ -323,7 +317,6 @@ function addDialogue(characterName, text) {
 }
 
 function startAppendTypewriter(pageIndex, appendText) {
-    console.log('[startAppendTypewriter] 開始 - pageIndex:', pageIndex, '/ appendText:', appendText);
     // 既存のタイプライターを停止
     stopTypewriter();
 
@@ -350,7 +343,6 @@ function startAppendTypewriter(pageIndex, appendText) {
         const prevLines = fullLines.slice(0, fullLines.length - appendLines.length);
         const prevHtml = prevLines.join('\n').replace(/\n/g, '<br>');
         textDiv.innerHTML = prevHtml;
-        console.log('[startAppendTypewriter] DOM更新完了 - prevHtml長:', prevHtml.length);
     }
 
     // 現在のDOM内容を保持
@@ -375,7 +367,6 @@ function startAppendTypewriter(pageIndex, appendText) {
 // ========== メッセージ関数 ==========
 
 function addSystemMessage(text) {
-    console.log('[System]', text);
     // 現在のページにシステムメッセージを追加
     if (pages.length > 0) {
         const pageIndex = pages.length - 1;
@@ -399,7 +390,6 @@ function addTransitionMessage(fromAction, toAction) {
 }
 
 function addCommandMessage(type, text) {
-    console.log(`[${type}]`, text);
 }
 
 function addAssistantMessage(name, text) {

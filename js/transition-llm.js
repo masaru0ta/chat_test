@@ -1,8 +1,27 @@
 /**
  * Transition LLM Functions
  *
- * 依存: transition-state.js, transition-page.js, prompt-utils.js, gas-api.js, constants.js
+ * 依存: transition-state.js, transition-page.js, prompt-utils.js, gas-api.js, constants.js, data-parser.js
  */
+
+// ========== テンプレート取得 ==========
+
+/**
+ * 必須テンプレートを取得（存在しない場合はエラー）
+ * @param {string} key - テンプレートキー
+ * @param {Object} vars - 置換変数
+ * @returns {string} 展開済みプロンプト
+ * @throws {Error} テンプレートが存在しない場合
+ */
+function requirePromptTemplate(key, vars = {}) {
+    const result = getPromptTemplate(promptTemplates, key, vars);
+    if (!result) {
+        const error = `[LLM] 必須テンプレート未定義: ${key}`;
+        console.error(error);
+        throw new Error(error);
+    }
+    return result;
+}
 
 // ========== ストリームハンドラー ==========
 
@@ -11,11 +30,6 @@
  */
 function createStreamChunkHandler(streamPageIndex, useAddDialogueMode, appendBaseHtml) {
     return (accumulatedText) => {
-        if (!window._chunkCallbackStarted) {
-            const elapsed = ((performance.now() - window._streamStartTime) / 1000).toFixed(3);
-            console.log(`[onStreamChunk] コールバック初回呼び出し (${elapsed}秒)`);
-            window._chunkCallbackStarted = true;
-        }
         // 【地の文】タグがあればその内容を抽出、なければ全体を表示
         let displayText = accumulatedText;
         const narrativeMatch = accumulatedText.match(/【地の文】\s*([\s\S]*?)(?=【|$)/);
@@ -66,25 +80,33 @@ function createStreamChunkHandler(streamPageIndex, useAddDialogueMode, appendBas
 // ========== プロンプト構築 ==========
 
 /**
- * 関係性情報のプロンプトテキストを構築
+ * 関係性情報のプロンプトテキストを構築（分離版）
  */
 function buildRelationshipInfoPrompt(charAtLocation) {
-    if (!charAtLocation) return { text: '', relationship: null };
+    const empty = {
+        relationshipText: '',
+        relationshipMemo: '',
+        nextRelationshipReq: '',
+        relationship: null
+    };
+    if (!charAtLocation) return empty;
 
     const relationshipId = charAtLocation.status?.relationshipId;
-    if (!relationshipId) return { text: '', relationship: null };
+    if (!relationshipId) return empty;
 
     const relationship = relationships.find(r => r.relationship_id === relationshipId);
-    if (!relationship) return { text: '', relationship: null };
+    if (!relationship) return empty;
 
-    let text = `\n現在の関係性: ${relationship.name}（${relationship.description || ''}）`;
-    if (charAtLocation.status?.memo) {
-        text += `\n関係性メモ: ${charAtLocation.status.memo}`;
-    }
-    if (relationship.next_relationship_req) {
-        text += `\n関係性進展条件: ${relationship.next_relationship_req}`;
-    }
-    return { text, relationship };
+    // 各パーツを分離（改行はテンプレート側で制御）
+    const relationshipText = `現在の関係性: ${relationship.name}（${relationship.description || ''}）`;
+    const relationshipMemo = charAtLocation.status?.memo
+        ? `関係性メモ: ${charAtLocation.status.memo}`
+        : '';
+    const nextRelationshipReq = relationship.next_relationship_req
+        ? `関係性進展条件: ${relationship.next_relationship_req}`
+        : '';
+
+    return { relationshipText, relationshipMemo, nextRelationshipReq, relationship };
 }
 
 /**
@@ -105,51 +127,64 @@ function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, cha
         if (char.profile) prompt += `\nプロフィール: ${char.profile}`;
 
         // 関係性情報
-        const { text: relationshipText, relationship } = buildRelationshipInfoPrompt(charAtLocation);
-        prompt += relationshipText;
+        const { relationshipText, relationshipMemo, nextRelationshipReq, relationship } = buildRelationshipInfoPrompt(charAtLocation);
+        if (relationshipText) prompt += `\n${relationshipText}`;
+        if (relationshipMemo) prompt += `\n${relationshipMemo}`;
+        if (nextRelationshipReq) prompt += `\n${nextRelationshipReq}`;
+
+        // 服装情報
+        const charCostumeId = charAtLocation.status?.costumeId;
+        if (charCostumeId && typeof costumes !== 'undefined') {
+            const costume = costumes.find(c => c.costume_id === charCostumeId);
+            if (costume) {
+                prompt += `\n現在の服装: ${costume.name}`;
+            }
+        }
 
         prompt += `\n\n主人公「${userInput}」\n`;
 
-        // 出力フォーマット
-        const dialogueInstruction = getPromptTemplate(promptTemplates, 'llm_003', { name: charName })
-            || `【${charName}のセリフ】「」付きで1-2文で出力`;
+        // 出力フォーマット（必須）
+        const dialogueInstruction = requirePromptTemplate('llm_002', { name: charName });
 
         prompt += `\n${dialogueInstruction}`;
         prompt += `\n【地の文】必要な場合のみ、セリフの後の状況や動作を1行で記載（不要なら省略）`;
 
-        // 関係性進展条件がある場合のみ判定を追加
+        // 関係性進展条件がある場合のみ判定を追加（必須）
         if (relationship && relationship.next_relationship_req) {
-            prompt += `\n【関係性変化】この会話で関係性進展条件を満たした場合、もしくは総合的に関係性変化が起きたと判断される場合は新しい関係性名を記載、満たしていない場合は「維持」と記載`;
-            prompt += `\n【関係性メモ】関係性が変化した場合は必ず記載。変化がなくてもメモ更新が必要な出来事があれば記載。キャラクター視点で50文字以内でどこで何が起きて、なぜその関係性になったのか、今後どうしていきたいか、キャラクターの感情を交えて記載。不要なら省略`;
+            prompt += '\n' + requirePromptTemplate('llm_008', {});
         }
 
         // 完全版とシンプル版の両方を返す
+        const simplePrompt = requirePromptTemplate('llm_013', { speech: userInput });
         return {
             fullPrompt: prompt,
-            simplePrompt: `会話：主人公「${userInput}」`
+            simplePrompt: simplePrompt
         };
     }
 
     let prompt = '';
 
-    // 状況説明（日本語）
+    // 状況説明（日本語）- テンプレートから取得（必須）
     let situationText = '';
+    let simpleSituationText = null;  // シンプル版用（テンプレートがある場合のみ使用）
     if (actionType === 'action_select' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
-        situationText = action?.name || '';
+        const actionName = action?.name || '';
+        situationText = requirePromptTemplate('llm_009', { action: actionName });
     } else if (actionType === 'action_with_speech' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
-        situationText = `${action?.name || ''} + 主人公の発言「${userInput}」`;
+        const actionName = action?.name || '';
+        situationText = requirePromptTemplate('llm_010', { action: actionName, speech: userInput });
     } else if (actionType === 'action' || actionType === 'scenario') {
         situationText = userInput;
     } else if (actionType === 'move') {
-        // 移動時専用テンプレート（llm_006）を使用
-        const moveTemplate = getPromptTemplate(promptTemplates, 'llm_006', {
+        situationText = requirePromptTemplate('llm_006', {
             from: previousPlace?.name || '',
             to: newPlace?.name || ''
         });
-        console.log('[移動] from:', previousPlace?.name, 'to:', newPlace?.name, 'template:', moveTemplate);
-        situationText = moveTemplate || `${previousPlace?.name || ''}から${newPlace?.name || ''}に移動`;
+
+        // 履歴用も同じ
+        simpleSituationText = situationText;
 
         // 一緒に移動した場合のみ、関係性をチェック
         if (companion) {
@@ -159,13 +194,12 @@ function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, cha
                 const relNum = parseInt(relNumMatch[1], 10);
                 if (relNum < 100) {
                     situationText += `（${companion.character.name}を無理やり連れて行った）`;
-                    console.log('[移動] 関係性', relId, '< rel_100 → 無理やり連れて行った');
+                    simpleSituationText += `（${companion.character.name}を無理やり連れて行った）`;
                 }
             }
         }
-    } else if (actionType === 'speech') {
-        situationText = `主人公の発言「${userInput}」`;
     }
+    // 注: speech タイプは会話モード（dialogueOnly=true）で処理されるため、ここには到達しない
 
     // 画像プロンプト（タグ）
     const imageParts = [];
@@ -189,7 +223,6 @@ function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, cha
         const charAction = actions[charActionIndex];
         if (charAction?.prompt) imageParts.push(charAction.prompt);
         const charCompositionTag = getCompositionTag(actions, charActionIndex);
-        console.log('[LLMプロンプト] キャラアクション:', charAction?.name, '構図:', charCompositionTag || '(なし)');
         if (charCompositionTag) imageParts.push(charCompositionTag);
     }
     if (currentPlace?.additionalTag) {
@@ -199,97 +232,74 @@ function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, cha
         imageParts.push(charAtLocation.character.additionalTag);
     }
 
-    prompt += `状況：${situationText}\n`;
-    prompt += `画像プロンプト：${imageParts.filter(p => p).join(', ')}\n`;
+    // 画像プロンプト文字列
+    const imagePromptText = imageParts.filter(p => p).join(', ');
 
-    // キャラクター情報と関係性（通常モード）
-    const { text: relationshipText, relationship } = buildRelationshipInfoPrompt(charAtLocation);
+    // キャラクター情報と関係性を構築
+    const { relationshipText, relationshipMemo, nextRelationshipReq, relationship } = buildRelationshipInfoPrompt(charAtLocation);
+    let characterInfo = '';
+    const charName = charAtLocation?.character?.name || '';
+
     if (charAtLocation) {
         const char = charAtLocation.character;
-        prompt += `\n【その場にいる人物】${char.name}`;
-        if (char.series) prompt += `（${char.series}）`;
-        if (char.profile) prompt += `\nプロフィール: ${char.profile}`;
-        prompt += relationshipText;
-        // キャラクターのアクション情報を追加
-        const charActionIndex = charAtLocation.status?.actionIndex ?? -1;
-        if (charActionIndex >= 0 && actions[charActionIndex]) {
-            const charAction = actions[charActionIndex];
-            prompt += `\n現在の行動: ${charAction.name}`;
-            if (charAction.prompt) prompt += `（${charAction.prompt}）`;
-        }
-        prompt += '\n';
-    }
 
-    // 通常モード：地の文 + セリフ + 関係性変化（テンプレートから取得）
-    const charName = charAtLocation?.character?.name || '';
-    let formatPrompt = getPromptTemplate(promptTemplates, 'llm_004', { name: charName })
-        || `以下の形式で出力してください：\n【地の文】（2-3文で状況を描写）\n${charName ? `【${charName}のセリフ】（「」付きで1-2文）` : ''}`;
+        // 各パーツを構築（空の場合は空文字、改行はテンプレート側で制御）
+        const seriesPart = char.series ? `（${char.series}）` : '';
+        const profilePart = char.profile ? `プロフィール: ${char.profile}` : '';
 
-    // 関係性進展条件がある場合のみ判定を追加
-    if (relationship && relationship.next_relationship_req) {
-        formatPrompt += `\n【関係性変化】このシーンで関係性進展条件を満たした場合、もしくは総合的に関係性変化が起きたと判断される場合は新しい関係性名を記載、満たしていない場合は「維持」と記載`;
-        formatPrompt += `\n【関係性メモ】関係性が変化した場合は必ず記載。変化がなくてもメモ更新が必要な出来事があれば記載。キャラクター視点で50文字以内でどこで何が起きて、なぜその関係性になったのか、今後どうしていきたいか、キャラクターの感情を交えて記載。不要なら省略`;
-    }
-
-    prompt += `\n${formatPrompt}`;
-
-    // 完全版とシンプル版の両方を返す
-    return {
-        fullPrompt: prompt,
-        simplePrompt: `状況：${situationText}`
-    };
-}
-
-/**
- * ページ1用プロンプト構築
- */
-function buildPage1Prompt(actionType, userInput, previousPlace, newPlace, charAtLocation) {
-    const narratorPrompt = getPromptTemplate(promptTemplates, 'llm_005')
-        || 'あなたは小説の地の文を書くナレーターです。簡潔に2-3文で状況を描写してください。';
-    let prompt = narratorPrompt + '\n\n';
-
-    const currentPlace = places[userState.placeIndex];
-    prompt += `【現在の場所】${currentPlace?.name || '不明'}\n`;
-
-    if (charAtLocation) {
-        prompt += `【その場にいる人物】${charAtLocation.character.name}`;
-        // 関係性情報を追加
-        const relationshipId = charAtLocation.status?.relationshipId;
-        if (relationshipId) {
-            const relationship = relationships.find(r => r.relationship_id === relationshipId);
-            if (relationship) {
-                prompt += `（関係性: ${relationship.name}`;
-                if (relationship.description) prompt += ` - ${relationship.description}`;
-                prompt += `）`;
+        // 服装情報
+        let costumePart = '';
+        const charCostumeId = charAtLocation.status?.costumeId;
+        if (charCostumeId && typeof costumes !== 'undefined') {
+            const costume = costumes.find(c => c.costume_id === charCostumeId);
+            if (costume) {
+                costumePart = `現在の服装: ${costume.name}`;
             }
         }
-        prompt += '\n';
+
+        // アクション情報（画像タグは含めない）
+        let actionPart = '';
+        const charActionIdx = charAtLocation.status?.actionIndex ?? -1;
+        if (charActionIdx >= 0 && actions[charActionIdx]) {
+            const charAction = actions[charActionIdx];
+            actionPart = `現在の行動: ${charAction.name}`;
+        }
+
+        // llm_007 テンプレートでキャラクター情報を構築（必須）
+        characterInfo = requirePromptTemplate('llm_007', {
+            name: char.name,
+            series: seriesPart,
+            profile: profilePart,
+            relationship: relationshipText,
+            relationship_memo: relationshipMemo,
+            next_relationship_req: nextRelationshipReq,
+            costume: costumePart,
+            action: actionPart
+        });
     }
 
-    switch (actionType) {
-        case 'move':
-            prompt += `【状況】主人公が「${previousPlace?.name || ''}」から「${newPlace?.name || ''}」に移動した。\n`;
-            break;
-        case 'speech':
-            prompt += `【状況】主人公が「${userInput}」と言った。\n`;
-            break;
-        case 'action':
-            prompt += `【状況】主人公が「${userInput}」という行為をした。\n`;
-            break;
-        case 'action_select':
-            prompt += `【状況】主人公が「${userInput}」を行った。\n`;
-            break;
-        case 'action_with_speech':
-            const actionName = actions[currentState.actionIndex]?.name || '';
-            prompt += `【状況】主人公が「${actionName}」をしながら「${userInput}」と言った。\n`;
-            break;
-        case 'scenario':
-            prompt += `【状況】${userInput}\n`;
-            break;
+    // 関係性進展条件がある場合のみ llm_008 を展開（必須）
+    let nextRelationshipInstruction = '';
+    if (relationship && relationship.next_relationship_req) {
+        nextRelationshipInstruction = requirePromptTemplate('llm_008', {});
     }
 
-    prompt += '\n地の文のみを出力してください。';
-    return prompt;
+    // llm_003 テンプレートで全体を構築（必須）
+    prompt = requirePromptTemplate('llm_003', {
+        situation: situationText,
+        imagePrompt: imagePromptText,
+        characterInfo: characterInfo,
+        name: charName,
+        next_relationship_instruction: nextRelationshipInstruction
+    });
+
+    // 完全版とシンプル版の両方を返す
+    const simpleSituation = simpleSituationText || situationText.split('\n')[0].trim();
+    const simplePrompt = requirePromptTemplate('llm_012', { situation: simpleSituation });
+    return {
+        fullPrompt: prompt,
+        simplePrompt: simplePrompt
+    };
 }
 
 // ========== レスポンス解析 ==========
@@ -410,9 +420,8 @@ function parseConversationResponse(response, charAtLocation) {
  * onChunk: ストリーム受信時のコールバック (accumulatedText) => void
  */
 async function callLLM(apiKey, prompt, role, character = null, onChunk = null, simplePrompt = null) {
-    // システムプロンプト（テンプレートから取得、なければデフォルト）
-    const systemPrompt = getPromptTemplate(promptTemplates, 'llm_001')
-        || 'あなたは小説のシーンを描写するアシスタントです。指定された形式で簡潔に出力してください。';
+    // システムプロンプト（テンプレートから取得・必須）
+    const systemPrompt = requirePromptTemplate('llm_001', {});
 
     // 履歴に保存するプロンプト（シンプル版があればそれを使用）
     const historyPrompt = simplePrompt || prompt;
@@ -424,7 +433,6 @@ async function callLLM(apiKey, prompt, role, character = null, onChunk = null, s
         { role: 'user', content: prompt }
     ];
 
-    console.log('[LLM] 履歴数:', chatHistory.length / 2, '往復');
     console.log('[LLM] 履歴用プロンプト:', historyPrompt);
 
     // GASにリクエストログを送信（ON時のみ、非同期）
@@ -436,7 +444,6 @@ async function callLLM(apiKey, prompt, role, character = null, onChunk = null, s
             logData.push({ log_key: `messages[${i}].role`, log_value: msg.role });
             logData.push({ log_key: `messages[${i}].content`, log_value: msg.content });
         });
-        console.log('[GAS Log] 送信データ:', logData);
         saveGasData(gasUrl, 'llm_req_log', logData)
             .then(res => console.log('[GAS Log] 送信結果:', res))
             .catch(e => console.error('[GAS Log Error]', e));
@@ -476,20 +483,12 @@ async function callLLM(apiKey, prompt, role, character = null, onChunk = null, s
 
             if (firstChunk) {
                 window._streamStartTime = performance.now();
-                console.log('[LLM] ストリーム受信開始 (0.000秒)');
+                console.log('[LLM] ストリーム受信開始');
                 firstChunk = false;
             }
 
             const decodedChunk = decoder.decode(value, { stream: true });
             buffer += decodedChunk;
-
-            // 最初の数回のチャンクをログ
-            if (!window._chunkLogCount) window._chunkLogCount = 0;
-            if (window._chunkLogCount < 3) {
-                const elapsed = ((performance.now() - window._streamStartTime) / 1000).toFixed(3);
-                console.log(`[LLM] チャンク受信 #${window._chunkLogCount + 1} (${elapsed}秒):`, decodedChunk.substring(0, 100));
-                window._chunkLogCount++;
-            }
 
             // 改行で分割してSSEイベントを処理
             const lines = buffer.split('\n');
