@@ -1,0 +1,978 @@
+/**
+ * test_transition.html 用スタイル
+ */
+
+html, body {
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    height: 100%;
+    height: 100dvh;
+    height: var(--visual-viewport-height, 100dvh);
+}
+
+.app-container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    height: 100vh;
+    height: 100dvh;
+    height: var(--visual-viewport-height, 100dvh);
+    transition: grid-template-columns 0.3s ease;
+}
+
+.app-container.sidebar-collapsed {
+    grid-template-columns: 0 1fr;
+}
+
+/* サイドバー */
+.sidebar {
+    background: #1a1a1a;
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.sidebar-collapsed .sidebar {
+    transform: translateX(-100%);
+    opacity: 0;
+}
+
+/* サイドバートグルボタン */
+.sidebar-toggle {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: #333;
+    border: 1px solid #444;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: left 0.3s ease, background 0.2s;
+}
+
+.sidebar-toggle:hover {
+    background: #4a9eff;
+}
+
+.app-container:not(.sidebar-collapsed) .sidebar-toggle {
+    left: 310px;
+}
+
+.sidebar-header {
+    padding: 15px;
+    background: #222;
+    border-bottom: 1px solid #333;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    color: #4a9eff;
+    font-size: 1rem;
+}
+
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    color: #888;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.current-state {
+    background: #222;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.current-state h3 {
+    margin: 0 0 10px 0;
+    color: #4a9eff;
+    font-size: 0.9rem;
+}
+
+.state-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #333;
+    font-size: 0.85rem;
+}
+
+.state-item:last-child {
+    border-bottom: none;
+}
+
+.state-label {
+    color: #888;
+}
+
+.state-value {
+    color: #fff;
+    text-align: right;
+    max-width: 150px;
+}
+
+.memo-line {
+    font-size: 0.8rem;
+    color: #aaa;
+    padding: 3px 0;
+}
+
+.place-btn {
+    background: #333;
+    border: 1px solid #444;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 2px 8px;
+}
+
+.place-btn:hover {
+    background: #4a9eff;
+    border-color: #4a9eff;
+}
+
+.sidebar-footer {
+    padding: 15px;
+    background: #222;
+    border-top: 1px solid #333;
+}
+
+.sidebar-footer input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+}
+
+/* チャットエリア */
+.chat-area {
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    overflow: hidden;
+    min-height: 0;
+    flex: 1;
+    position: relative;
+}
+
+/* 入力フォーカス時のスタイル */
+.chat-area.input-focused .page-area {
+    flex: 1;
+}
+
+.chat-area.input-focused .command-area {
+    padding-top: 8px;
+    gap: 0;
+}
+
+.chat-header {
+    padding: 10px 20px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ページ表示エリア（固定表示） */
+.page-area {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+}
+
+#page-view {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    overflow: hidden;
+    position: relative;
+}
+
+.page-content {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.page-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.page-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.page-image .placeholder {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.page-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 20px;
+    line-height: 1.8;
+    font-size: 1rem;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.6);
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+.page-text.system-text {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #888;
+    height: 100%;
+    max-height: none;
+    background: #000;
+}
+
+/* 画像なしのページ（dialogue等）*/
+.page-content:not(:has(.page-image)) .page-text {
+    position: static;
+    height: 100%;
+    max-height: none;
+    background: #000;
+}
+
+.page-label {
+    background: #4a9eff;
+    color: #fff;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    display: inline-block;
+    margin-bottom: 12px;
+    border-radius: 4px;
+}
+
+.page-label.character {
+    background: #e53e3e;
+}
+
+.page-label.system {
+    background: #555;
+}
+
+.action-name {
+    font-weight: bold;
+    color: #90cdf4;
+    margin-bottom: 5px;
+}
+
+.action-prompt {
+    font-size: 0.85rem;
+    color: #a0aec0;
+}
+
+.transition-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.transition-arrow {
+    color: #4a9eff;
+    font-size: 1.2rem;
+}
+
+/* 統合コマンドバー */
+.unified-command-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    flex-shrink: 0;
+}
+
+.unified-command-bar .cmd-btn {
+    padding: 8px 10px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.unified-command-bar .cmd-btn:hover {
+    background: #3a3a3a;
+    border-color: #4a9eff;
+}
+
+.unified-command-bar .cmd-btn.active {
+    background: #4a9eff;
+    border-color: #4a9eff;
+}
+
+.unified-command-bar .menu-btn {
+    font-size: 1.1rem;
+    padding: 8px 12px;
+}
+
+.unified-command-bar .cmd-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.unified-command-bar .cmd-input:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.unified-command-bar .nav-btn {
+    background: #333;
+}
+
+.unified-command-bar .nav-btn.ready {
+    background: #4a9eff;
+    border-color: #4a9eff;
+}
+
+/* 移動メニュー */
+.move-menu {
+    position: absolute;
+    bottom: 52px;
+    left: 10px;
+    right: 10px;
+    max-height: 50vh;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.move-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #222;
+    border-bottom: 1px solid #444;
+    font-weight: bold;
+    color: #fff;
+}
+
+.move-menu-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.move-menu-close:hover {
+    color: #fff;
+}
+
+.move-menu-options {
+    display: flex;
+    gap: 15px;
+    padding: 10px 15px;
+    background: #222;
+    border-bottom: 1px solid #333;
+}
+
+.move-mode-option {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #ccc;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.move-mode-option input {
+    cursor: pointer;
+}
+
+.move-menu-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.move-menu-item {
+    padding: 12px 15px;
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    color: #fff;
+    transition: all 0.2s;
+}
+
+.move-menu-item:hover {
+    background: #3a3a3a;
+    border-color: #4a9eff;
+}
+
+.move-menu-item.current {
+    border-color: #4a9eff;
+    background: #2a3a4a;
+}
+
+.move-menu-item .place-name {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.move-menu-item .place-info {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+/* 行為メニュー */
+.action-menu {
+    position: absolute;
+    bottom: 52px;
+    left: 10px;
+    right: 10px;
+    max-height: 50vh;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.action-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #222;
+    border-bottom: 1px solid #444;
+    font-weight: bold;
+    color: #fff;
+}
+
+.action-menu-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.action-menu-close:hover {
+    color: #fff;
+}
+
+.action-menu-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.action-menu-item {
+    padding: 12px 15px;
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    color: #fff;
+    transition: all 0.2s;
+}
+
+.action-menu-item:hover {
+    background: #3a3a3a;
+    border-color: #4a9eff;
+}
+
+.action-menu-item .action-name {
+    font-weight: bold;
+}
+
+/* コマンド入力エリア */
+.command-area {
+    padding: 12px 20px;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 10px;
+}
+
+.command-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.command-type-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.command-type-btn {
+    padding: 8px 12px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #888;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.command-type-btn:hover {
+    background: #3a3a3a;
+    border-color: #4a9eff;
+}
+
+.command-type-btn.active {
+    background: #4a9eff;
+    border-color: #4a9eff;
+    color: #fff;
+}
+
+#command-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+#command-input:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.command-target-select {
+    padding: 8px 12px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 0.85rem;
+    min-width: 150px;
+}
+
+.command-target-select:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+#status {
+    font-size: 0.8rem;
+    margin-top: 8px;
+}
+
+/* 設定モーダル */
+.settings-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.settings-modal.active {
+    display: flex;
+}
+
+.settings-content {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    width: 400px;
+    max-width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+}
+
+.settings-header h3 {
+    margin: 0;
+    color: #4a9eff;
+}
+
+.settings-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.settings-close:hover {
+    color: #fff;
+}
+
+.settings-group {
+    margin-bottom: 15px;
+}
+
+.settings-group label {
+    display: block;
+    color: #888;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+.settings-group input,
+.settings-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-row input {
+    flex: 1;
+}
+
+@media (max-width: 768px) {
+    html, body {
+        height: 100%;
+        height: var(--visual-viewport-height, 100dvh);
+    }
+    .app-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: 100%;
+        height: var(--visual-viewport-height, 100dvh);
+    }
+    .app-container.sidebar-collapsed {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+    }
+    .sidebar {
+        border-right: none;
+        border-bottom: 1px solid #333;
+        max-height: 30vh;
+        overflow-y: auto;
+    }
+    .sidebar-collapsed .sidebar {
+        display: none;
+    }
+    .chat-area {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .page-area {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+    .command-area {
+        position: fixed;
+        bottom: 0;
+        bottom: env(safe-area-inset-bottom, 0);
+        left: 0;
+        right: 0;
+        padding: 8px 10px;
+        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
+        background: #1a1a1a;
+        border-top: 1px solid #333;
+        z-index: 9999;
+    }
+    .command-row {
+        gap: 5px;
+    }
+    #command-input {
+        min-width: 0;
+    }
+    /* 統合コマンドバー：モバイル */
+    .unified-command-bar {
+        padding: 6px;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom, 0));
+        gap: 3px;
+        flex-shrink: 0;
+    }
+    .unified-command-bar .cmd-btn {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+    }
+    .unified-command-bar .cmd-input {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+    }
+    .move-menu, .action-menu {
+        bottom: calc(42px + env(safe-area-inset-bottom, 0));
+        left: 5px;
+        right: 5px;
+    }
+}
+
+/* ロック画面 */
+.lock-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #000;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.lock-screen.hidden {
+    display: none;
+}
+
+.lock-title {
+    color: #888;
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.lock-input-container {
+    display: flex;
+    gap: 10px;
+}
+
+.lock-digit {
+    width: 50px;
+    height: 60px;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1.5rem;
+    text-align: center;
+    outline: none;
+}
+
+.lock-digit:focus {
+    border-color: #4a9eff;
+}
+
+.lock-digit.error {
+    border-color: #ff4a4a;
+    animation: shake 0.3s;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.lock-error {
+    color: #ff4a4a;
+    font-size: 0.9rem;
+    height: 20px;
+}
+
+.lock-numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 70px);
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.lock-numpad-btn {
+    width: 70px;
+    height: 60px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.lock-numpad-btn:active {
+    background: #4a9eff;
+}
+
+.lock-numpad-btn.backspace {
+    font-size: 1.2rem;
+}
+
+/* ステータスインジケーター */
+.status-indicator {
+    position: fixed;
+    bottom: 70px;
+    right: 15px;
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.status-item {
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.status-item.active {
+    opacity: 1;
+}
+
+.status-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.status-item.image .status-spinner {
+    border-top-color: #9b59b6;
+    border-right-color: #9b59b6;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* LLM思考中パルスドット */
+.llm-thinking-dots {
+    display: flex;
+    gap: 5px;
+    padding: 10px 0;
+}
+
+.llm-thinking-dots span {
+    width: 8px;
+    height: 8px;
+    background: #4a9eff;
+    border-radius: 50%;
+    animation: llmPulse 1.4s ease-in-out infinite;
+}
+
+.llm-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.llm-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes llmPulse {
+    0%, 80%, 100% { opacity: 0.4; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1.2); }
+}
+
+@media (max-width: 768px) {
+    .status-indicator {
+        bottom: 60px;
+        right: 10px;
+    }
+}
