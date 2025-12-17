@@ -294,6 +294,18 @@ html, body {
     transition: opacity 0.2s ease;
 }
 
+#page-view.text-hidden::before {
+    content: '（クリックでテキスト表示）';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    z-index: 100;
+    pointer-events: none;
+}
+
 #page-view .page-text {
     transition: opacity 0.2s ease;
 }
@@ -304,6 +316,26 @@ html, body {
     height: 100%;
     max-height: none;
     background: #000;
+}
+
+/* 次のアクションボタン */
+.next-action-button-container {
+    margin-top: 12px;
+}
+
+.next-action-button {
+    background: rgba(74, 158, 255, 0.8);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.next-action-button:hover {
+    background: rgba(74, 158, 255, 1);
 }
 
 .page-label {

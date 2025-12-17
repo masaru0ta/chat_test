@@ -540,6 +540,71 @@
         if (effectMessages && effectMessages.length > 0) {
             effectMessages.forEach(msg => addSystemMessage(msg));
         }
+
+        // next_actionが定義されていればボタンを表示
+        if (action.next_action) {
+            const nextAction = actions.find(a => a.action_id === action.next_action);
+            if (nextAction) {
+                addNextActionButton(nextAction);
+            }
+        }
+    }
+
+    // 次のアクションボタンを追加
+    function addNextActionButton(nextAction) {
+        if (pages.length === 0) return;
+
+        const pageIndex = pages.length - 1;
+        const page = pages[pageIndex];
+
+        // タイプライター完了後にボタンを追加
+        if (page && !page.typewriterCompleted) {
+            // タイプライター完了を待つ
+            setTypewriterCompleteCallback((completedPageIndex) => {
+                appendNextActionButtonToPage(completedPageIndex, nextAction);
+            });
+        } else {
+            // すでに完了している場合は即座に追加
+            appendNextActionButtonToPage(pageIndex, nextAction);
+        }
+    }
+
+    // ページにボタンを実際に追加する
+    function appendNextActionButtonToPage(pageIndex, nextAction) {
+        const pageView = document.getElementById('page-view');
+        const pageDiv = pageView.querySelector(`.page-content[data-page-index="${pageIndex}"]`);
+        if (!pageDiv) return;
+
+        const pageText = pageDiv.querySelector('.page-text');
+        if (!pageText) return;
+
+        // 既存のボタンコンテナがあれば削除
+        const existingContainer = pageText.querySelector('.next-action-button-container');
+        if (existingContainer) existingContainer.remove();
+
+        // ボタン要素を作成（textDivの外、page-textの末尾に追加）
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'next-action-button-container';
+        buttonContainer.innerHTML = `<button class="next-action-button" data-action-id="${nextAction.action_id}">▶ ${nextAction.name}</button>`;
+        pageText.appendChild(buttonContainer);
+
+        // ボタンにイベントを設定
+        const button = buttonContainer.querySelector('.next-action-button');
+        if (button) {
+            button.addEventListener('click', async (e) => {
+                e.stopPropagation(); // テキストトグルを防止
+                // ボタンを削除してからアクション実行
+                buttonContainer.remove();
+                const actionId = button.dataset.actionId;
+                const actionToExecute = actions.find(a => a.action_id === actionId);
+                if (actionToExecute) {
+                    const actionIdx = actions.indexOf(actionToExecute);
+                    if (actionIdx >= 0) {
+                        await executeAction(actionIdx);
+                    }
+                }
+            });
+        }
     }
 
     // アクションのeffectを適用（状態変更を行い、メッセージ配列を返す）

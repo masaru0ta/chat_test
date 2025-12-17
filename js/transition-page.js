@@ -7,6 +7,9 @@
 // ローカル定数
 const TYPEWRITER_SPEED = DEFAULTS.TYPEWRITER_SPEED;
 
+// タイプライター完了コールバック
+let typewriterCompleteCallback = null;
+
 // ========== 読み込み・ステータス表示 ==========
 
 function showLoading() {
@@ -218,10 +221,22 @@ function startPageTypewriter(pageIndex) {
             updatePageText(typewriterPageIndex, typewriterDisplayed);
         } else {
             // 完了
+            const completedPageIndex = typewriterPageIndex;
             stopTypewriter();
-            pages[typewriterPageIndex].typewriterCompleted = true;
+            pages[completedPageIndex].typewriterCompleted = true;
+            // コールバックがあれば呼び出し
+            if (typewriterCompleteCallback) {
+                const callback = typewriterCompleteCallback;
+                typewriterCompleteCallback = null;
+                callback(completedPageIndex);
+            }
         }
     }, TYPEWRITER_SPEED);
+}
+
+// タイプライター完了時のコールバックを設定
+function setTypewriterCompleteCallback(callback) {
+    typewriterCompleteCallback = callback;
 }
 
 function updatePageText(pageIndex, newText) {
