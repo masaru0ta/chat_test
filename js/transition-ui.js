@@ -10,18 +10,60 @@ let sidebarCollapsed = false;
 // テキスト表示状態
 let textHidden = false;
 
+// ========== 全画面表示 ==========
+
+/**
+ * 全画面モードをトグル
+ */
+function toggleFullscreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        // 全画面に入る
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        }
+    } else {
+        // 全画面を解除
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        }
+    }
+}
+
 // ========== テキスト表示トグル ==========
 
 /**
- * ページビューのクリックでテキスト表示をトグル
+ * ページビューのクリックで領域に応じた操作
+ * - 左1/3: 前のページ
+ * - 中央1/3: テキスト表示トグル
+ * - 右1/3: 次のページ
  */
 function initTextToggle() {
     const pageView = document.getElementById('page-view');
     if (pageView) {
         pageView.addEventListener('click', (e) => {
             // ボタンやリンクのクリックは無視
-            if (e.target.closest('button, a, input, .action-menu, .move-menu')) return;
-            toggleTextDisplay();
+            if (e.target.closest('button, a, input, .action-menu, .move-menu, .next-action-button-container')) return;
+
+            // クリック位置からどの領域かを判定
+            const rect = pageView.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const thirdWidth = rect.width / 3;
+
+            if (clickX < thirdWidth) {
+                // 左1/3: 前のページ
+                prevPage();
+            } else if (clickX > thirdWidth * 2) {
+                // 右1/3: 次のページ
+                nextPage();
+            } else {
+                // 中央1/3: テキスト表示トグル
+                toggleTextDisplay();
+            }
         });
     }
 }

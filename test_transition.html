@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
     <title>Transition Test</title>
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/transition.css">
@@ -125,6 +129,7 @@
         <!-- 統合コマンドバー -->
         <div class="unified-command-bar">
             <button class="cmd-btn menu-btn" id="menu-toggle" onclick="toggleSidebar()">≡</button>
+            <button class="cmd-btn menu-btn" id="fullscreen-toggle" onclick="toggleFullscreen()">⛶</button>
             <button class="cmd-btn" id="target-toggle" onclick="openMoveMenu()">移動</button>
             <button class="cmd-btn" id="cmd-toggle" onclick="openActionMenu()">行為</button>
             <input type="text" class="cmd-input" id="command-input" placeholder="発言..." onkeydown="if(event.key==='Enter')executeCommand()">

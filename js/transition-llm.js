@@ -327,7 +327,7 @@ function buildMultiDialoguePrompt(actionType, userInput, charAtLocation, current
     const placeTag = currentPlace?.tag || '';
     const imagePromptText = [actionPrompt, placeTag].filter(p => p).join(', ') || '(なし)';
 
-    // キャラクター情報
+    // キャラクター情報（buildCombinedPromptと同じ形式で構築）
     let characterInfo = '';
     let charName = '';
     let relationship = null;
@@ -335,17 +335,37 @@ function buildMultiDialoguePrompt(actionType, userInput, charAtLocation, current
         const char = charAtLocation.character;
         charName = char.name;
         const seriesPart = char.series ? `（${char.series}）` : '';
-        const profile = char.profile || '';
+        const profilePart = char.profile ? `プロフィール: ${char.profile}` : '';
         const { relationshipText, relationshipMemo, nextRelationshipReq, relationship: rel } = buildRelationshipInfoPrompt(charAtLocation);
         relationship = rel;
+
+        // 服装情報
+        let costumePart = '';
+        const charCostumeId = charAtLocation.status?.costumeId;
+        if (charCostumeId && typeof costumes !== 'undefined') {
+            const costume = costumes.find(c => c.costume_id === charCostumeId);
+            if (costume) {
+                costumePart = `現在の服装: ${costume.name}`;
+            }
+        }
+
+        // アクション情報
+        let actionPart = '';
+        const charActionIdx = charAtLocation.status?.actionIndex ?? -1;
+        if (charActionIdx >= 0 && actions[charActionIdx]) {
+            const charAction = actions[charActionIdx];
+            actionPart = `現在の行動: ${charAction.name}`;
+        }
 
         characterInfo = requirePromptTemplate('llm_007', {
             name: charName,
             series: seriesPart,
-            profile: profile,
-            relationshipText: relationshipText || '',
-            relationshipMemo: relationshipMemo || '',
-            nextRelationshipReq: nextRelationshipReq || ''
+            profile: profilePart,
+            relationship: relationshipText,
+            relationship_memo: relationshipMemo,
+            next_relationship_req: nextRelationshipReq,
+            costume: costumePart,
+            action: actionPart
         });
     }
 
