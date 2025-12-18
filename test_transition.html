@@ -66,6 +66,10 @@
 
             <button class="btn btn-primary" onclick="startInitialSetup()" style="width:100%; margin-bottom:10px;">初期設定</button>
             <button class="btn" onclick="openSettings()" style="width:100%; background:#333; color:#fff; border:1px solid #444; padding:10px; border-radius:4px; cursor:pointer; margin-bottom:10px;">設定</button>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <button class="btn" onclick="saveGameState()" style="flex:1; background:#2a4a2a; color:#8f8; border:1px solid #4a4; padding:10px; border-radius:4px; cursor:pointer;">セーブ</button>
+                <button class="btn" onclick="loadGameState()" style="flex:1; background:#4a2a2a; color:#f88; border:1px solid #a44; padding:10px; border-radius:4px; cursor:pointer;">ロード</button>
+            </div>
             <button class="btn" onclick="toggleFullscreen()" style="width:100%; background:#222; color:#888; border:1px solid #333; padding:10px; border-radius:4px; cursor:pointer;">全画面切替</button>
         </div>
     </div>
@@ -195,7 +199,7 @@
     // キャラクターステータス（2人分初期値）
     let characterStatus = [
         { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_001', costumeId: 'cos_001', memo: '' },
-        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_001', costumeId: 'cos_001', memo: '' }
+        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_302', costumeId: 'cos_001', memo: '' }
     ];
 
     // 状態変数
@@ -482,7 +486,6 @@
             updateModelSelect();
 
             showStatus(`読込完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
-            addSystemMessage(`データ読み込み完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
         } catch (error) {
             console.error(error);
             showStatus('エラー: ' + error.message, 'error');
@@ -833,7 +836,7 @@
                 characterIndex: charIndices[i],
                 placeIndex: placeIndices[i],
                 actionIndex: actionIndex,
-                relationshipId: 'rel_001',  // 初期値
+                relationshipId: i === 1 ? 'rel_302' : 'rel_001',  // 2人目はrel_302
                 costumeId: 'cos_001',  // 服装初期値
                 memo: ''  // メモ初期値
             };
@@ -1170,6 +1173,85 @@
         hideStatusImage();
 
         return result.imageURL;
+    }
+
+    // セーブ機能
+    function saveGameState() {
+        try {
+            const saveData = {
+                version: 1,
+                timestamp: new Date().toISOString(),
+                pages: pages,
+                characterStatus: characterStatus,
+                userState: userState,
+                currentState: currentState,
+                currentPageIndex: currentPageIndex,
+                actionHistory: actionHistory,
+                chatHistory: chatHistory
+            };
+            localStorage.setItem('transition_game_save', JSON.stringify(saveData));
+            addSystemMessage('💾 ゲームをセーブしました');
+            console.log('[Save] ゲーム状態を保存:', saveData);
+        } catch (e) {
+            console.error('[Save] 保存エラー:', e);
+            addSystemMessage('❌ セーブに失敗しました: ' + e.message);
+        }
+    }
+
+    // ロード機能
+    function loadGameState() {
+        try {
+            const savedData = localStorage.getItem('transition_game_save');
+            if (!savedData) {
+                addSystemMessage('⚠️ セーブデータがありません');
+                return;
+            }
+
+            const saveData = JSON.parse(savedData);
+            console.log('[Load] セーブデータを読み込み:', saveData);
+
+            // 状態を復元
+            characterStatus = saveData.characterStatus || [];
+            userState = saveData.userState || { placeIndex: -1 };
+            currentState = saveData.currentState || { characterIndex: -1, placeIndex: -1, actionIndex: -1 };
+            actionHistory = saveData.actionHistory || [];
+            chatHistory = saveData.chatHistory || [];
+
+            // ページを復元（DOM再構築）
+            pages = [];
+            currentPageIndex = -1;
+            const pageView = document.getElementById('page-view');
+            pageView.innerHTML = '';
+
+            if (saveData.pages && saveData.pages.length > 0) {
+                for (const page of saveData.pages) {
+                    // ページタイプに応じてDOMを再構築
+                    if (page.type === 'character') {
+                        addPage2(page.speaker, page.image, page.text);
+                    } else {
+                        addPage1(page.image, page.text);
+                    }
+                    // typewriter完了状態を復元
+                    const lastIdx = pages.length - 1;
+                    if (pages[lastIdx]) {
+                        pages[lastIdx].typewriterCompleted = true;
+                    }
+                }
+                // 保存時のページに戻る
+                const targetPageIndex = saveData.currentPageIndex >= 0 ? saveData.currentPageIndex : pages.length - 1;
+                showPage(targetPageIndex);
+            }
+
+            // ステータス表示を更新
+            updateCharacterStatusDisplay();
+            updateUserStatusDisplay();
+
+            const savedTime = new Date(saveData.timestamp).toLocaleString('ja-JP');
+            addSystemMessage(`📂 ゲームをロードしました (${savedTime})`);
+        } catch (e) {
+            console.error('[Load] 読み込みエラー:', e);
+            addSystemMessage('❌ ロードに失敗しました: ' + e.message);
+        }
     }
 
     // キャラクター画像生成（指定構図タグ版）
