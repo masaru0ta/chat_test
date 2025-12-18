@@ -65,7 +65,8 @@
             </div>
 
             <button class="btn btn-primary" onclick="startInitialSetup()" style="width:100%; margin-bottom:10px;">初期設定</button>
-            <button class="btn" onclick="openSettings()" style="width:100%; background:#333; color:#fff; border:1px solid #444; padding:10px; border-radius:4px; cursor:pointer;">設定</button>
+            <button class="btn" onclick="openSettings()" style="width:100%; background:#333; color:#fff; border:1px solid #444; padding:10px; border-radius:4px; cursor:pointer; margin-bottom:10px;">設定</button>
+            <button class="btn" onclick="toggleFullscreen()" style="width:100%; background:#222; color:#888; border:1px solid #333; padding:10px; border-radius:4px; cursor:pointer;">全画面切替</button>
         </div>
     </div>
 
@@ -129,7 +130,6 @@
         <!-- 統合コマンドバー -->
         <div class="unified-command-bar">
             <button class="cmd-btn menu-btn" id="menu-toggle" onclick="toggleSidebar()">≡</button>
-            <button class="cmd-btn menu-btn" id="fullscreen-toggle" onclick="toggleFullscreen()">⛶</button>
             <button class="cmd-btn" id="target-toggle" onclick="openMoveMenu()">移動</button>
             <button class="cmd-btn" id="cmd-toggle" onclick="openActionMenu()">行為</button>
             <input type="text" class="cmd-input" id="command-input" placeholder="発言..." onkeydown="if(event.key==='Enter')executeCommand()">
