@@ -135,6 +135,7 @@ function parseActionsWithCompositions(rawData) {
             next_action: item['next-action'] || '',
             char_page_count: item['char_page_count'] || '',
             effect: item['effect'] || '',
+            agent: item['agent'] || '',
             compositions: []
         };
 

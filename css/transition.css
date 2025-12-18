@@ -626,7 +626,18 @@ html, body {
 }
 
 .action-menu-item .action-name {
-    font-weight: bold;
+    font-weight: normal;
+}
+
+.agent-tag {
+    display: inline-block;
+    background: #4a4a4a;
+    border: 1px solid #666;
+    border-radius: 3px;
+    padding: 2px 6px;
+    margin-right: 6px;
+    font-weight: normal;
+    color: #ccc;
 }
 
 /* コマンド入力エリア */

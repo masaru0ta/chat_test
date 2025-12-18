@@ -550,6 +550,10 @@
                         <label>エフェクト:</label>
                         <input type="text" id="detail-effect" onchange="updateActionField('effect', this.value)">
                     </div>
+                    <div class="field-row">
+                        <label>エージェント:</label>
+                        <input type="text" id="detail-agent" onchange="updateActionField('agent', this.value)">
+                    </div>
                     <div class="field-label">プロンプト</div>
                     <textarea class="field-value editable" id="detail-prompt" onchange="updateActionPrompt(this.value)"></textarea>
                 </div>
@@ -742,6 +746,7 @@
                     next_action: item['next-action'] || '',
                     char_page_count: item['char_page_count'] || '',
                     effect: item['effect'] || '',
+                    agent: item['agent'] || '',
                     compositions: []
                 };
                 COMPOSITION_KEYS.forEach(key => {
@@ -1049,6 +1054,7 @@
         document.getElementById('detail-action-type').value = action.action_type || '';
         document.getElementById('detail-effect').value = action.effect || '';
         document.getElementById('detail-char-page-count').value = action.char_page_count || '';
+        document.getElementById('detail-agent').value = action.agent || '';
 
         // アクション選択プルダウンを更新
         updateActionSelectOptions('detail-pre-action', action.pre_action);
@@ -1447,7 +1453,8 @@
                     'public-action': action.public_action,
                     'next-action': action.next_action,
                     'char_page_count': action.char_page_count,
-                    'effect': action.effect
+                    'effect': action.effect,
+                    'agent': action.agent
                 };
 
                 // 各構図のquality/tagを追加

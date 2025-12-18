@@ -4,6 +4,22 @@
  * 依存: transition-state.js, transition-page.js, prompt-utils.js, gas-api.js, constants.js, data-parser.js
  */
 
+// ========== ユーティリティ ==========
+
+/**
+ * agentの値を表示用テキストに変換
+ * @param {string} agent - アクションのagent値
+ * @param {Object} charAtLocation - キャラクター情報
+ * @returns {string} 表示用テキスト
+ */
+function resolveAgentText(agent, charAtLocation) {
+    if (!agent || agent === '') return '';
+    if (agent === 'user') return '主人公が';
+    if (agent === 'character' && charAtLocation) return `${charAtLocation.character.name}が`;
+    if (agent === 'they') return '二人は';
+    return '';
+}
+
 // ========== テンプレート取得 ==========
 
 /**
@@ -170,11 +186,13 @@ function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, cha
     if (actionType === 'action_select' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
         const actionName = action?.name || '';
-        situationText = requirePromptTemplate('llm_009', { action: actionName });
+        const agentText = resolveAgentText(action?.agent, charAtLocation);
+        situationText = requirePromptTemplate('llm_009', { agent: agentText, action: actionName });
     } else if (actionType === 'action_with_speech' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
         const actionName = action?.name || '';
-        situationText = requirePromptTemplate('llm_010', { action: actionName, speech: userInput });
+        const agentText = resolveAgentText(action?.agent, charAtLocation);
+        situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
     } else if (actionType === 'action' || actionType === 'scenario') {
         situationText = userInput;
     } else if (actionType === 'move') {
@@ -315,10 +333,14 @@ function buildMultiDialoguePrompt(actionType, userInput, charAtLocation, current
     let situationText = '';
     if (actionType === 'action_select' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
-        situationText = requirePromptTemplate('llm_009', { action: action?.name || '' });
+        const actionName = action?.name || '';
+        const agentText = resolveAgentText(action?.agent, charAtLocation);
+        situationText = requirePromptTemplate('llm_009', { agent: agentText, action: actionName });
     } else if (actionType === 'action_with_speech' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
-        situationText = requirePromptTemplate('llm_010', { action: action?.name || '', speech: userInput });
+        const actionName = action?.name || '';
+        const agentText = resolveAgentText(action?.agent, charAtLocation);
+        situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
     }
 
     // 画像プロンプト構築

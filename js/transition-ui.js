@@ -245,6 +245,20 @@ function selectMoveDestination(placeIndex, withCompanion = false) {
 // ========== 行為メニュー ==========
 
 /**
+ * agentの値をUI表示用ラベルに変換
+ * @param {string} agent - アクションのagent値
+ * @param {Object} companion - 現在地のキャラクター情報
+ * @returns {string} 表示用ラベル（空の場合は空文字）
+ */
+function getAgentLabel(agent, companion) {
+    if (!agent || agent === '') return '';
+    if (agent === 'user') return '主人公が';
+    if (agent === 'character' && companion) return `${companion.character.name}が`;
+    if (agent === 'they') return '二人は';
+    return '';
+}
+
+/**
  * 関係性に基づいてアクションが実行可能か判定
  * @param {Object} relationship - 関係性オブジェクト
  * @param {string} actionType - アクションタイプ (public/semi_private/private)
@@ -286,7 +300,11 @@ function openActionMenu() {
         const item = document.createElement('div');
         item.className = 'action-menu-item';
 
-        item.innerHTML = `<div class="action-name">${action.name}</div>`;
+        // agentタグを生成
+        const agentLabel = getAgentLabel(action.agent, companion);
+        const agentHtml = agentLabel ? `<span class="agent-tag">${agentLabel}</span>` : '';
+
+        item.innerHTML = `<div class="action-name">${agentHtml}${action.name}</div>`;
 
         item.onclick = () => selectAction(index);
         listEl.appendChild(item);
