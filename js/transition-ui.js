@@ -16,20 +16,28 @@ let textHidden = false;
  * 全画面モードをトグル
  */
 function toggleFullscreen() {
-    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    console.log('[Fullscreen] ボタンがクリックされました');
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+    console.log('[Fullscreen] 現在の状態:', isFullscreen ? '全画面中' : '通常');
+
+    if (!isFullscreen) {
         // 全画面に入る
-        const elem = document.documentElement;
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen();
-        } else if (elem.webkitRequestFullscreen) {
-            elem.webkitRequestFullscreen();
+        const elem = document.body;
+        const requestFS = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.mozRequestFullScreen || elem.msRequestFullscreen;
+        if (requestFS) {
+            requestFS.call(elem).catch(err => {
+                console.log('[Fullscreen] 全画面に入れませんでした:', err);
+            });
+        } else {
+            console.log('[Fullscreen] このブラウザは全画面APIに対応していません');
         }
     } else {
         // 全画面を解除
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
+        const exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+        if (exitFS) {
+            exitFS.call(document).catch(err => {
+                console.log('[Fullscreen] 全画面解除に失敗:', err);
+            });
         }
     }
 }
