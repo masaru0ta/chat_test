@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAS Upload & Delete Test</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; background-color: #f4f4f9; }
+        .container { background: white; border: 1px solid #ddd; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; color: #333; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        /* Old ID用のスタイルを目立たせる */
+        #oldFileId { background-color: #fff0f0; border-color: #ffcccc; }
+
+        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.3s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        #status { margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px; white-space: pre-wrap; word-break: break-all; border-left: 5px solid #ccc; }
+        
+        /* ステータスの色分け */
+        .status-success { border-left-color: #28a745 !important; background-color: #d4edda !important; color: #155724; }
+        .status-error { border-left-color: #dc3545 !important; background-color: #f8d7da !important; color: #721c24; }
+
+        #preview-area { margin-top: 20px; text-align: center; min-height: 150px; display: flex; align-items: center; justify-content: center; background: #fafafa; border: 2px dashed #ddd; border-radius: 8px; }
+        #uploaded-image { max-width: 100%; max-height: 400px; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🔄 上書き削除テスト</h2>
+        
+        <div class="form-group">
+            <label for="apiUrl">GAS Web App URL:</label>
+            <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec">
+        </div>
+        
+        <div class="form-group">
+            <label for="oldFileId">削除する Old File ID (任意):</label>
+            <input type="text" id="oldFileId" placeholder="初回は空欄でOK (次回から自動入力されます)">
+            <small style="color: #666;">※ここにIDが入っている状態でアップロードすると、そのIDのファイルは削除されます。</small>
+        </div>
+
+        <div class="form-group">
+            <label for="fileInput">アップロード画像:</label>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+
+        <button id="uploadBtn" onclick="uploadImage()">アップロード実行</button>
+
+        <div id="status">ここに結果が表示されます</div>
+        
+        <div id="preview-area">
+            <span id="placeholder-text">画像プレビュー</span>
+            <img id="uploaded-image" src="" alt="Uploaded Image">
+        </div>
+    </div>
+
+    <script>
+        async function uploadImage() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const oldFileIdInput = document.getElementById('oldFileId');
+            const fileInput = document.getElementById('fileInput');
+            const statusDiv = document.getElementById('status');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const imgPreview = document.getElementById('uploaded-image');
+            const placeholder = document.getElementById('placeholder-text');
+
+            // リセット
+            statusDiv.textContent = "処理中...";
+            statusDiv.className = "";
+            
+            // バリデーション
+            if (!apiUrl) { alert("GAS URLを入力してください"); return; }
+            if (fileInput.files.length === 0) { alert("画像を選択してください"); return; }
+
+            const file = fileInput.files[0];
+            const oldFileId = oldFileIdInput.value.trim();
+
+            uploadBtn.disabled = true;
+
+            try {
+                // Base64変換
+                const base64String = await toBase64(file);
+                const rawBase64 = base64String.split(',')[1];
+
+                // ペイロード作成 (oldFileIdを含める)
+                const payload = {
+                    filename: file.name,
+                    mimeType: file.type,
+                    image: rawBase64,
+                    oldFileId: oldFileId // 空文字なら無視される
+                };
+
+                // 送信
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    // 成功時の処理
+                    statusDiv.className = "status-success";
+                    let msg = `✅ **成功**\n${result.message}\n\n[New File ID]: ${result.data.fileId}`;
+                    
+                    // 次回用にOld ID欄を自動更新
+                    oldFileIdInput.value = result.data.fileId;
+                    msg += `\n\n👉 次のテスト用に「Old File ID」欄をこのIDで更新しました。`;
+                    
+                    statusDiv.innerHTML = msg.replace(/\n/g, '<br>');
+
+                    // 画像表示
+                    imgPreview.src = result.data.directUrl;
+                    imgPreview.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    
+                } else {
+                    throw new Error(result.message);
+                }
+
+            } catch (error) {
+                console.error(error);
+                statusDiv.className = "status-error";
+                statusDiv.textContent = "❌ エラーが発生しました:\n" + error.message;
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        }
+
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+    </script>
+</body>
+</html>

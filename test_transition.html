@@ -1586,9 +1586,22 @@
                 html += ` <button id="rel-desc-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
                 html += ` <button id="rel-desc-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
                 html += `</span></div>`;
-                if (relationship?.next_relationship_req) {
-                    html += `<div class="page-info-row"><span class="page-info-label">発展条件:</span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${escapeHtml(relationship.next_relationship_req)}</span></div>`;
-                }
+                // next_relationship_req編集可能行
+                const reqText = relationship?.next_relationship_req || '';
+                html += `<div class="page-info-row" id="rel-req-row">`;
+                html += `<span class="page-info-label">発展条件:</span>`;
+                html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
+                html += `<span id="rel-req-display">${escapeHtml(reqText) || '(なし)'}</span>`;
+                html += ` <button id="rel-req-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
+                html += `</span></div>`;
+                // 編集UI（初期非表示）
+                html += `<div class="page-info-row" id="rel-req-edit-row" style="display:none;">`;
+                html += `<span class="page-info-label">発展条件:</span>`;
+                html += `<span class="page-info-value" style="width:100%;">`;
+                html += `<input type="text" id="rel-req-input" style="width:60%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(reqText)}">`;
+                html += ` <button id="rel-req-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
+                html += ` <button id="rel-req-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
+                html += `</span></div>`;
             }
             html += '</div>';
 
@@ -1704,53 +1717,51 @@
         document.getElementById('pageInfoContent').innerHTML = html;
         document.getElementById('pageInfoPanel').classList.add('active');
 
-        // 関係性description編集イベントハンドラ
-        const editBtn = document.getElementById('rel-desc-edit-btn');
-        const saveBtn = document.getElementById('rel-desc-save-btn');
-        const cancelBtn = document.getElementById('rel-desc-cancel-btn');
-        const displayRow = document.getElementById('rel-desc-row');
-        const editRow = document.getElementById('rel-desc-edit-row');
-        const descInput = document.getElementById('rel-desc-input');
-        const descDisplay = document.getElementById('rel-desc-display');
+        // 関係性フィールド編集ハンドラを設定
+        function setupRelFieldEditor(prefix, fieldName, emptyText = '') {
+            const editBtn = document.getElementById(`${prefix}-edit-btn`);
+            const saveBtn = document.getElementById(`${prefix}-save-btn`);
+            const cancelBtn = document.getElementById(`${prefix}-cancel-btn`);
+            const displayRow = document.getElementById(`${prefix}-row`);
+            const editRow = document.getElementById(`${prefix}-edit-row`);
+            const input = document.getElementById(`${prefix}-input`);
+            const display = document.getElementById(`${prefix}-display`);
 
-        if (editBtn && genInfo?.relationshipId) {
+            if (!editBtn || !genInfo?.relationshipId) return;
+
             const relationshipId = genInfo.relationshipId;
 
             editBtn.onclick = () => {
                 displayRow.style.display = 'none';
                 editRow.style.display = 'flex';
-                descInput.focus();
+                input.focus();
             };
 
             cancelBtn.onclick = () => {
                 editRow.style.display = 'none';
                 displayRow.style.display = 'flex';
-                // 入力をリセット
                 const rel = relationships.find(r => r.relationship_id === relationshipId);
-                descInput.value = rel?.description || '';
+                input.value = rel?.[fieldName] || '';
             };
 
             saveBtn.onclick = async () => {
-                const newDesc = descInput.value.trim();
+                const newValue = input.value.trim();
                 const gasUrl = document.getElementById('gasUrl').value.trim();
                 if (!gasUrl) {
                     showStatus('GAS URLが設定されていません', 'error');
                     return;
                 }
 
-                // ローカルデータを更新
                 const rel = relationships.find(r => r.relationship_id === relationshipId);
                 if (rel) {
-                    rel.description = newDesc;
+                    rel[fieldName] = newValue;
                 }
 
-                // GASに保存
                 showStatus('保存中...', 'loading');
                 try {
                     await saveGasData(gasUrl, 'relationship', relationships);
                     showStatus('保存しました', 'ok');
-                    // 表示を更新
-                    descDisplay.textContent = newDesc;
+                    display.textContent = newValue || emptyText;
                     editRow.style.display = 'none';
                     displayRow.style.display = 'flex';
                 } catch (e) {
@@ -1759,6 +1770,9 @@
                 }
             };
         }
+
+        setupRelFieldEditor('rel-desc', 'description');
+        setupRelFieldEditor('rel-req', 'next_relationship_req', '(なし)');
     }
 
     function closePageInfo() {

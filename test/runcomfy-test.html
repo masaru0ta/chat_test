@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RunComfy API Test</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a1a;
+            color: #eee;
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2d5a7b;
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #888;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #333;
+            border-radius: 0.5rem;
+            background: #111;
+            color: #eee;
+            font-size: 1rem;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #2d5a7b;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-right: 0.5rem;
+        }
+        button:hover {
+            background: #3d6a8b;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #111;
+            border-radius: 0.5rem;
+            border: 1px solid #333;
+        }
+        .status-label {
+            font-weight: bold;
+            color: #2d5a7b;
+        }
+        .log {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #000;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .result-image {
+            max-width: 100%;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+        .time-info {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .error {
+            color: #e74c3c;
+        }
+        .success {
+            color: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RunComfy API Test</h1>
+
+        <div class="form-group">
+            <label>API Key</label>
+            <input type="password" id="api-key" value="2fde3d73-a323-4079-ba34-6a1f5d26423c">
+        </div>
+
+        <div class="form-group">
+            <label>Deployment ID</label>
+            <select id="deployment-id">
+                <option value="ee989c1f-38c6-4202-b2cf-0886921ee496">RunComfy公式 (ee989c1f...)</option>
+                <option value="2fe97b71-60d0-417f-bc42-3c7f948b1256">自分用 (2fe97b71...)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>プロンプト (Node 6)</label>
+            <textarea id="prompt">a cute cat sitting on a window</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>ポーリング間隔 (秒)</label>
+            <input type="number" id="poll-interval" value="5" min="1" max="60">
+        </div>
+
+        <button id="start-btn" onclick="startGeneration()">画像生成開始</button>
+        <button id="cancel-btn" onclick="cancelGeneration()" disabled>キャンセル</button>
+
+        <div class="status">
+            <div><span class="status-label">ステータス:</span> <span id="status">待機中</span></div>
+            <div class="time-info" id="time-info"></div>
+        </div>
+
+        <div class="log" id="log"></div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://api.runcomfy.net/prod/v1/deployments';
+        let currentRequestId = null;
+        let pollTimer = null;
+        let startTime = null;
+
+        function log(message, type = '') {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const className = type ? ` class="${type}"` : '';
+            logEl.innerHTML += `<div${className}>[${time}] ${message}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateStatus(status) {
+            document.getElementById('status').textContent = status;
+        }
+
+        function updateTimeInfo() {
+            if (startTime) {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('time-info').textContent = `経過時間: ${elapsed}秒`;
+            }
+        }
+
+        async function startGeneration() {
+            const apiKey = document.getElementById('api-key').value;
+            const deploymentId = document.getElementById('deployment-id').value;
+            const prompt = document.getElementById('prompt').value;
+            const pollInterval = parseInt(document.getElementById('poll-interval').value) * 1000;
+
+            if (!apiKey || !deploymentId || !prompt) {
+                alert('すべてのフィールドを入力してください');
+                return;
+            }
+
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('cancel-btn').disabled = false;
+            document.getElementById('log').innerHTML = '';
+            document.getElementById('result').innerHTML = '';
+            startTime = Date.now();
+
+            log('リクエスト送信中...');
+            updateStatus('送信中');
+
+            try {
+                const response = await fetch(`${API_BASE}/${deploymentId}/inference`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        overrides: {
+                            "6": {
+                                inputs: {
+                                    text: prompt
+                                }
+                            }
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                log('レスポンス: ' + JSON.stringify(data, null, 2));
+
+                if (data.request_id) {
+                    currentRequestId = data.request_id;
+                    log(`request_id: ${currentRequestId}`, 'success');
+                    updateStatus('リクエスト完了');
+
+                    // ポーリング開始
+                    pollTimer = setInterval(() => pollStatus(apiKey, deploymentId, pollInterval), pollInterval);
+                    updateTimeInfo();
+                } else {
+                    throw new Error('request_idが取得できませんでした');
+                }
+            } catch (error) {
+                log(`エラー: ${error.message}`, 'error');
+                updateStatus('エラー');
+                resetButtons();
+            }
+        }
+
+        async function pollStatus(apiKey, deploymentId, interval) {
+            updateTimeInfo();
+
+            try {
+                // statusエンドポイントを使用（より詳細な情報が得られる）
+                const response = await fetch(`${API_BASE}/${deploymentId}/requests/${currentRequestId}/status`, {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+
+                const data = await response.json();
+
+                // ステータスに応じた表示
+                let statusText = data.status;
+                if (data.status === 'in_queue') {
+                    statusText = `キュー待ち (位置: ${data.queue_position ?? '不明'})`;
+                    updateStatus('キュー待ち');
+                } else if (data.status === 'in_progress') {
+                    statusText = '処理中';
+                    updateStatus('処理中');
+                }
+
+                log(`ポーリング: ${statusText}`);
+
+                if (data.status === 'succeeded' || data.status === 'completed') {
+                    clearInterval(pollTimer);
+                    updateStatus('完了');
+
+                    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                    log(`完了! 所要時間: ${elapsed}秒`, 'success');
+
+                    // resultエンドポイントから画像を取得
+                    const resultResponse = await fetch(`${API_BASE}/${deploymentId}/requests/${currentRequestId}/result`, {
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        }
+                    });
+                    const resultData = await resultResponse.json();
+
+                    // 画像を表示
+                    if (resultData.outputs) {
+                        log('出力: ' + JSON.stringify(resultData.outputs, null, 2));
+
+                        // outputs内の画像を探す
+                        for (const nodeId in resultData.outputs) {
+                            const node = resultData.outputs[nodeId];
+                            if (node.images && node.images.length > 0) {
+                                for (const img of node.images) {
+                                    if (img.url) {
+                                        document.getElementById('result').innerHTML +=
+                                            `<img src="${img.url}" class="result-image" onclick="window.open('${img.url}', '_blank')">`;
+                                        log(`画像URL: ${img.url}`, 'success');
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    resetButtons();
+                } else if (data.status === 'failed') {
+                    clearInterval(pollTimer);
+                    updateStatus('失敗');
+                    log(`失敗: ${JSON.stringify(data)}`, 'error');
+                    resetButtons();
+                }
+            } catch (error) {
+                log(`ポーリングエラー: ${error.message}`, 'error');
+            }
+        }
+
+        async function cancelGeneration() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+
+            if (currentRequestId) {
+                const apiKey = document.getElementById('api-key').value;
+                const deploymentId = document.getElementById('deployment-id').value;
+
+                try {
+                    await fetch(`${API_BASE}/${deploymentId}/requests/${currentRequestId}/cancel`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        }
+                    });
+                    log('キャンセルリクエスト送信', 'error');
+                } catch (error) {
+                    log(`キャンセルエラー: ${error.message}`, 'error');
+                }
+            }
+
+            updateStatus('キャンセル');
+            resetButtons();
+        }
+
+        function resetButtons() {
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('cancel-btn').disabled = true;
+            currentRequestId = null;
+        }
+    </script>
+</body>
+</html>
