@@ -553,7 +553,7 @@
         }
     }
 
-    // 起動時にGAS設定の更新をチェック
+    // 起動時にGASデータの更新をチェック
     async function checkAndSyncSettings() {
         const baseUrl = localStorage.getItem(STORAGE_KEYS.GAS_URL);
         if (!baseUrl) return;
@@ -563,18 +563,45 @@
             const gasUpdated = meta.lastUpdated;
             const localUpdated = localStorage.getItem(GAS_LAST_UPDATED_KEY);
 
-            console.log('[Settings] GAS更新日時:', gasUpdated, 'ローカル:', localUpdated);
+            console.log('[Sync] GAS更新日時:', gasUpdated, 'ローカル:', localUpdated);
 
-            // GASが新しい場合、設定を取得
+            // GASが新しい場合、全データを取得
             if (!localUpdated || new Date(gasUpdated) > new Date(localUpdated)) {
-                console.log('[Settings] GASの設定が新しいため同期します');
+                console.log('[Sync] GASが新しいため全データを同期します');
+
+                // 設定を取得
                 await loadSettingsFromGas();
+
+                // 全データを取得（サイレントモード）
+                const [modelData, characterData, placeData, actionData, relationshipData, costumeData, promptData] = await Promise.all([
+                    fetchGasData(baseUrl, 'model'),
+                    fetchGasData(baseUrl, 'character'),
+                    fetchGasData(baseUrl, 'place'),
+                    fetchGasData(baseUrl, 'action'),
+                    fetchGasData(baseUrl, 'relationship'),
+                    fetchGasData(baseUrl, 'costume'),
+                    fetchGasData(baseUrl, 'llm_prompt_template')
+                ]);
+
+                models = parseModels(modelData);
+                characters = parseCharacters(characterData);
+                places = parsePlaces(placeData);
+                actions = parseActionsWithCompositions(actionData);
+                relationships = parseRelationships(relationshipData);
+                costumes = parseCostumes(costumeData);
+                promptTemplates = parsePromptTemplates(promptData);
+
+                saveCachedData();
+                updateAllSelects();
+                updateModelSelect();
+
                 localStorage.setItem(GAS_LAST_UPDATED_KEY, gasUpdated);
+                console.log('[Sync] 同期完了:', characters.length, 'キャラ,', places.length, '場所,', actions.length, 'アクション');
             } else {
-                console.log('[Settings] ローカル設定は最新です');
+                console.log('[Sync] ローカルデータは最新です');
             }
         } catch (error) {
-            console.log('[Settings] 同期チェックをスキップ:', error.message);
+            console.log('[Sync] 同期チェックをスキップ:', error.message);
         }
     }
 
