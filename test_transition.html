@@ -453,16 +453,16 @@
             const data = await fetchGasData(baseUrl, 'settings');
             console.log('[Settings] GASから読み込み:', data);
 
-            // データをkey-value形式に変換（1行目はヘッダー）
+            // データをkey-value形式に変換（オブジェクト配列形式）
             const settings = {};
-            if (data && data.length > 1) {
-                for (let i = 1; i < data.length; i++) {
-                    const row = data[i];
-                    if (row[0]) {
-                        settings[row[0]] = row[1] || '';
+            if (data && data.length > 0) {
+                for (const row of data) {
+                    if (row.key) {
+                        settings[row.key] = row.value ?? '';
                     }
                 }
             }
+            console.log('[Settings] パース結果:', settings);
 
             // 設定を適用
             if (settings.chatApiKey) {
