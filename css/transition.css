@@ -1087,7 +1087,8 @@ html, body {
 
 /* ページ情報パネル */
 .page-info-panel {
-    display: none;
+    display: none !important;
+    visibility: hidden;
     position: absolute;
     top: 0;
     left: 0;
@@ -1100,7 +1101,8 @@ html, body {
 }
 
 .page-info-panel.active {
-    display: flex;
+    display: flex !important;
+    visibility: visible;
 }
 
 .page-info-header {
