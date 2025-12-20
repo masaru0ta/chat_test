@@ -261,14 +261,14 @@ function getAgentLabel(agent, companion) {
 /**
  * 関係性に基づいてアクションが実行可能か判定
  * @param {Object} relationship - 関係性オブジェクト
- * @param {string} actionType - アクションタイプ (public/semi_private/private)
+ * @param {string} accessLevel - アクセスレベル (public/semi_private/private)
  * @returns {boolean} 実行可能かどうか
  */
-function canPerformAction(relationship, actionType) {
-    if (!actionType) return false;
-    if (actionType === 'public') return true;
-    if (actionType === 'semi_private' && relationship?.semi_private === 'ok') return true;
-    if (actionType === 'private' && relationship?.private === 'ok') return true;
+function canPerformAction(relationship, accessLevel) {
+    if (!accessLevel) return false;
+    if (accessLevel === 'public') return true;
+    if (accessLevel === 'semi_private' && relationship?.semi_private === 'ok') return true;
+    if (accessLevel === 'private' && relationship?.private === 'ok') return true;
     return false;
 }
 

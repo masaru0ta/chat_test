@@ -1109,7 +1109,7 @@
 
     // ページ生成メイン処理
     // companion: 一緒に移動するキャラクター（移動時のみ使用）
-    async function generatePages(actionType, userInput, previousPlace, newPlace, companion = null) {
+    async function generatePages(actionMode, userInput, previousPlace, newPlace, companion = null) {
         const chatApiKey = document.getElementById('chatApiKey').value.trim();
         if (!chatApiKey) {
             addSystemMessage('OpenRouter API Keyが必要です');
@@ -1124,14 +1124,14 @@
         const charAtLocation = companion || getCharacterAtUserLocation();
 
         // 発言かつキャラクターがいる場合は会話モード
-        if (actionType === 'speech' && charAtLocation) {
+        if (actionMode === 'speech' && charAtLocation) {
             await handleConversationMode(chatApiKey, charAtLocation, currentPlace, userInput);
             hideLoading();
             return;
         }
 
         // 発言だがキャラクターがいない場合
-        if (actionType === 'speech' && !charAtLocation) {
+        if (actionMode === 'speech' && !charAtLocation) {
             addSystemMessage('この場所には誰もいません');
             hideLoading();
             return;
@@ -1139,7 +1139,7 @@
 
         // 生成情報を収集するオブジェクト（IDのみ保持、名前は表示時に取得）
         let genInfo = {
-            actionMode: actionType,
+            actionMode: actionMode,
             characterId: charAtLocation?.character?.character_id || null,
             placeId: currentPlace?.place_id || null,
             actionId: currentState.actionIndex >= 0 ? actions[currentState.actionIndex]?.action_id : null,
@@ -1150,7 +1150,7 @@
 
         // 移動時は即座にプレースホルダーページを作成
         let movePageIndex = -1;
-        if (actionType === 'move' && newPlace) {
+        if (actionMode === 'move' && newPlace) {
             const placeImage = newPlace.image || null;
             genInfo.placeId = newPlace.place_id;
 
@@ -1178,7 +1178,7 @@
         }
 
         // char_page_count を取得（アクション実行時のみ）
-        const currentAction = (actionType === 'action_select' || actionType === 'action_with_speech') && currentState.actionIndex >= 0
+        const currentAction = (actionMode === 'action_select' || actionMode === 'action_with_speech') && currentState.actionIndex >= 0
             ? actions[currentState.actionIndex] : null;
         const charPageCount = parseInt(currentAction?.char_page_count) || 1;
 
@@ -1186,12 +1186,12 @@
         let combinedPrompt, combinedSimplePrompt;
         if (charPageCount >= 2 && charAtLocation) {
             // 複数セリフ用プロンプト
-            const result = buildMultiDialoguePrompt(actionType, userInput, charAtLocation, currentPlace, charPageCount);
+            const result = buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, currentPlace, charPageCount);
             combinedPrompt = result.fullPrompt;
             combinedSimplePrompt = result.simplePrompt;
         } else {
             // 通常プロンプト
-            const result = buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace, false, companion);
+            const result = buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, charAtLocation, currentPlace, false, companion);
             combinedPrompt = result.fullPrompt;
             combinedSimplePrompt = result.simplePrompt;
         }
@@ -1538,7 +1538,7 @@
             // 生成パラメータセクション
             html += '<div class="page-info-section">';
             html += '<div class="page-info-section-title">生成パラメータ</div>';
-            if (genInfo.actionMode) html += `<div class="page-info-row"><span class="page-info-label">アクション種別:</span><span class="page-info-value">${escapeHtml(genInfo.actionMode)}</span></div>`;
+            if (genInfo.actionMode) html += `<div class="page-info-row"><span class="page-info-label">mode:</span><span class="page-info-value">${escapeHtml(genInfo.actionMode)}</span></div>`;
             if (genInfo.characterId) {
                 const char = characters.find(c => c.character_id === genInfo.characterId);
                 const charDisplay = char?.name ? `${escapeHtml(char.name)}` : '';
@@ -1570,9 +1570,22 @@
                 const relationshipDisplay = relationship?.name ? `${escapeHtml(relationship.name)}` : '';
                 const relationshipIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.relationshipId)})</span>`;
                 html += `<div class="page-info-row"><span class="page-info-label">関係性:</span><span class="page-info-value">${relationshipDisplay}${relationshipIdDisplay}</span></div>`;
-                if (relationship?.description) {
-                    html += `<div class="page-info-row"><span class="page-info-label"></span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${escapeHtml(relationship.description)}</span></div>`;
-                }
+                // description編集可能行
+                const descText = relationship?.description || '';
+                html += `<div class="page-info-row" id="rel-desc-row">`;
+                html += `<span class="page-info-label"></span>`;
+                html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
+                html += `<span id="rel-desc-display">${escapeHtml(descText)}</span>`;
+                html += ` <button id="rel-desc-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
+                html += `</span></div>`;
+                // 編集UI（初期非表示）
+                html += `<div class="page-info-row" id="rel-desc-edit-row" style="display:none;">`;
+                html += `<span class="page-info-label"></span>`;
+                html += `<span class="page-info-value" style="width:100%;">`;
+                html += `<input type="text" id="rel-desc-input" style="width:70%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(descText)}">`;
+                html += ` <button id="rel-desc-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
+                html += ` <button id="rel-desc-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
+                html += `</span></div>`;
                 if (relationship?.next_relationship_req) {
                     html += `<div class="page-info-row"><span class="page-info-label">発展条件:</span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${escapeHtml(relationship.next_relationship_req)}</span></div>`;
                 }
@@ -1690,6 +1703,62 @@
 
         document.getElementById('pageInfoContent').innerHTML = html;
         document.getElementById('pageInfoPanel').classList.add('active');
+
+        // 関係性description編集イベントハンドラ
+        const editBtn = document.getElementById('rel-desc-edit-btn');
+        const saveBtn = document.getElementById('rel-desc-save-btn');
+        const cancelBtn = document.getElementById('rel-desc-cancel-btn');
+        const displayRow = document.getElementById('rel-desc-row');
+        const editRow = document.getElementById('rel-desc-edit-row');
+        const descInput = document.getElementById('rel-desc-input');
+        const descDisplay = document.getElementById('rel-desc-display');
+
+        if (editBtn && genInfo?.relationshipId) {
+            const relationshipId = genInfo.relationshipId;
+
+            editBtn.onclick = () => {
+                displayRow.style.display = 'none';
+                editRow.style.display = 'flex';
+                descInput.focus();
+            };
+
+            cancelBtn.onclick = () => {
+                editRow.style.display = 'none';
+                displayRow.style.display = 'flex';
+                // 入力をリセット
+                const rel = relationships.find(r => r.relationship_id === relationshipId);
+                descInput.value = rel?.description || '';
+            };
+
+            saveBtn.onclick = async () => {
+                const newDesc = descInput.value.trim();
+                const gasUrl = document.getElementById('gasUrl').value.trim();
+                if (!gasUrl) {
+                    showStatus('GAS URLが設定されていません', 'error');
+                    return;
+                }
+
+                // ローカルデータを更新
+                const rel = relationships.find(r => r.relationship_id === relationshipId);
+                if (rel) {
+                    rel.description = newDesc;
+                }
+
+                // GASに保存
+                showStatus('保存中...', 'loading');
+                try {
+                    await saveGasData(gasUrl, 'relationship', relationships);
+                    showStatus('保存しました', 'ok');
+                    // 表示を更新
+                    descDisplay.textContent = newDesc;
+                    editRow.style.display = 'none';
+                    displayRow.style.display = 'flex';
+                } catch (e) {
+                    console.error('[GAS] 保存エラー:', e);
+                    showStatus('保存に失敗しました', 'error');
+                }
+            };
+        }
     }
 
     function closePageInfo() {

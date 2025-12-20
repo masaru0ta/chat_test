@@ -130,7 +130,7 @@ function buildRelationshipInfoPrompt(charAtLocation) {
  * dialogueOnly: true の場合はセリフのみ要求（会話モード）
  * companion: 一緒に移動したキャラクター（移動時のみ）
  */
-function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, charAtLocation, currentPlace, dialogueOnly = false, companion = null) {
+function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, charAtLocation, currentPlace, dialogueOnly = false, companion = null) {
     // 会話モード
     if (dialogueOnly && charAtLocation) {
         const charName = charAtLocation.character.name;
@@ -183,19 +183,19 @@ function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, cha
     // 状況説明（日本語）- テンプレートから取得（必須）
     let situationText = '';
     let simpleSituationText = null;  // シンプル版用（テンプレートがある場合のみ使用）
-    if (actionType === 'action_select' && currentState.actionIndex >= 0) {
+    if (actionMode === 'action_select' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
         const actionName = action?.name || '';
         const agentText = resolveAgentText(action?.agent, charAtLocation);
         situationText = requirePromptTemplate('llm_009', { agent: agentText, action: actionName });
-    } else if (actionType === 'action_with_speech' && currentState.actionIndex >= 0) {
+    } else if (actionMode === 'action_with_speech' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
         const actionName = action?.name || '';
         const agentText = resolveAgentText(action?.agent, charAtLocation);
         situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
-    } else if (actionType === 'action' || actionType === 'scenario') {
+    } else if (actionMode === 'action' || actionMode === 'scenario') {
         situationText = userInput;
-    } else if (actionType === 'move') {
+    } else if (actionMode === 'move') {
         situationText = requirePromptTemplate('llm_006', {
             from: previousPlace?.name || '',
             to: newPlace?.name || ''
@@ -228,7 +228,7 @@ function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, cha
         imageParts.push(currentPlace.tag);
     }
     // ユーザーのアクション（action_select/action_with_speech時）
-    if ((actionType === 'action_select' || actionType === 'action_with_speech') && currentState.actionIndex >= 0) {
+    if ((actionMode === 'action_select' || actionMode === 'action_with_speech') && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
         if (action?.prompt) imageParts.push(action.prompt);
         const compositionTag = getCompositionTag(actions, currentState.actionIndex);
@@ -322,21 +322,21 @@ function buildCombinedPrompt(actionType, userInput, previousPlace, newPlace, cha
 
 /**
  * 複数セリフ用のプロンプトを構築（llm_014テンプレート使用）
- * @param {string} actionType - アクションタイプ
+ * @param {string} actionMode - アクションモード
  * @param {string} userInput - ユーザー入力
  * @param {Object} charAtLocation - キャラクター情報
  * @param {Object} currentPlace - 現在地
  * @param {number} dialogueCount - 生成するセリフの数
  * @returns {Object} { fullPrompt, simplePrompt }
  */
-function buildMultiDialoguePrompt(actionType, userInput, charAtLocation, currentPlace, dialogueCount) {
+function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, currentPlace, dialogueCount) {
     let situationText = '';
-    if (actionType === 'action_select' && currentState.actionIndex >= 0) {
+    if (actionMode === 'action_select' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
         const actionName = action?.name || '';
         const agentText = resolveAgentText(action?.agent, charAtLocation);
         situationText = requirePromptTemplate('llm_009', { agent: agentText, action: actionName });
-    } else if (actionType === 'action_with_speech' && currentState.actionIndex >= 0) {
+    } else if (actionMode === 'action_with_speech' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
         const actionName = action?.name || '';
         const agentText = resolveAgentText(action?.agent, charAtLocation);
