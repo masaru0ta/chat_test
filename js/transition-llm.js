@@ -283,11 +283,24 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
             actionPart = `現在の行動: ${charAction.name}`;
         }
 
+        // パーソナリティ情報
+        let personalityPart = '';
+        let personalityDescPart = '';
+        if (char.personality && typeof personalities !== 'undefined') {
+            const personality = personalities.find(p => p.personality_id === char.personality);
+            if (personality) {
+                personalityPart = personality.name || '';
+                personalityDescPart = personality.description || '';
+            }
+        }
+
         // llm_007 テンプレートでキャラクター情報を構築（必須）
         characterInfo = requirePromptTemplate('llm_007', {
             name: char.name,
             series: seriesPart,
             profile: profilePart,
+            personality: personalityPart,
+            personality_description: personalityDescPart,
             relationship: relationshipText,
             relationship_memo: relationshipMemo,
             next_relationship_req: nextRelationshipReq,
@@ -321,15 +334,16 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
 }
 
 /**
- * 複数セリフ用のプロンプトを構築（llm_014テンプレート使用）
+ * 複数セリフ用のプロンプトを構築
  * @param {string} actionMode - アクションモード
  * @param {string} userInput - ユーザー入力
  * @param {Object} charAtLocation - キャラクター情報
  * @param {Object} currentPlace - 現在地
  * @param {number} dialogueCount - 生成するセリフの数
+ * @param {string} templateKey - 使用するテンプレートキー (デフォルト: 'llm_014')
  * @returns {Object} { fullPrompt, simplePrompt }
  */
-function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, currentPlace, dialogueCount) {
+function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, currentPlace, dialogueCount, templateKey = 'llm_014') {
     let situationText = '';
     if (actionMode === 'action_select' && currentState.actionIndex >= 0) {
         const action = actions[currentState.actionIndex];
@@ -379,10 +393,23 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
             actionPart = `現在の行動: ${charAction.name}`;
         }
 
+        // パーソナリティ情報
+        let personalityPart = '';
+        let personalityDescPart = '';
+        if (char.personality && typeof personalities !== 'undefined') {
+            const personality = personalities.find(p => p.personality_id === char.personality);
+            if (personality) {
+                personalityPart = personality.name || '';
+                personalityDescPart = personality.description || '';
+            }
+        }
+
         characterInfo = requirePromptTemplate('llm_007', {
             name: charName,
             series: seriesPart,
             profile: profilePart,
+            personality: personalityPart,
+            personality_description: personalityDescPart,
             relationship: relationshipText,
             relationship_memo: relationshipMemo,
             next_relationship_req: nextRelationshipReq,
@@ -397,8 +424,8 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
         nextRelationshipInstruction = requirePromptTemplate('llm_008', {});
     }
 
-    // llm_014 テンプレートで複数セリフ用プロンプトを構築
-    const prompt = requirePromptTemplate('llm_014', {
+    // テンプレートで複数セリフ用プロンプトを構築
+    const prompt = requirePromptTemplate(templateKey, {
         situation: situationText,
         imagePrompt: imagePromptText,
         characterInfo: characterInfo,

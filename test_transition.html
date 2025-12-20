@@ -202,6 +202,7 @@
     let actions = [];
     let relationships = [];
     let costumes = [];
+    let personalities = [];
     let promptTemplates = {};
 
     // 現在の状態（後方互換用）
@@ -259,7 +260,7 @@
     // キャッシュデータを保存
     function saveCachedData() {
         localStorage.setItem(CACHE_KEY, JSON.stringify({
-            models, characters, places, actions, relationships, costumes, promptTemplates
+            models, characters, places, actions, relationships, costumes, personalities, promptTemplates
         }));
     }
 
@@ -275,6 +276,7 @@
                 actions = data.actions || [];
                 relationships = data.relationships || [];
                 costumes = data.costumes || [];
+                personalities = data.personalities || [];
                 promptTemplates = data.promptTemplates || {};
                 updateAllSelects();
                 updateModelSelect();
@@ -579,13 +581,14 @@
                 await loadSettingsFromGas();
 
                 // 全データを取得
-                const [modelData, characterData, placeData, actionData, relationshipData, costumeData, promptData] = await Promise.all([
+                const [modelData, characterData, placeData, actionData, relationshipData, costumeData, personalityData, promptData] = await Promise.all([
                     fetchGasData(baseUrl, 'model'),
                     fetchGasData(baseUrl, 'character'),
                     fetchGasData(baseUrl, 'place'),
                     fetchGasData(baseUrl, 'action'),
                     fetchGasData(baseUrl, 'relationship'),
                     fetchGasData(baseUrl, 'costume'),
+                    fetchGasData(baseUrl, 'personality'),
                     fetchGasData(baseUrl, 'llm_prompt_template')
                 ]);
 
@@ -595,6 +598,7 @@
                 actions = parseActionsWithCompositions(actionData);
                 relationships = parseRelationships(relationshipData);
                 costumes = parseCostumes(costumeData);
+                personalities = parsePersonalities(personalityData);
                 promptTemplates = parsePromptTemplates(promptData);
 
                 saveCachedData();
@@ -657,13 +661,14 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData, relationshipData, costumeData, promptData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData, costumeData, personalityData, promptData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
                 fetchGasData(baseUrl, 'relationship'),
                 fetchGasData(baseUrl, 'costume'),
+                fetchGasData(baseUrl, 'personality'),
                 fetchGasData(baseUrl, 'llm_prompt_template')
             ]);
 
@@ -673,6 +678,7 @@
             actions = parseActionsWithCompositions(actionData);
             relationships = parseRelationships(relationshipData);
             costumes = parseCostumes(costumeData);
+            personalities = parsePersonalities(personalityData);
             promptTemplates = parsePromptTemplates(promptData);
 
             saveCachedData();
@@ -694,8 +700,8 @@
         const action = actions[actionIndex];
         if (!action) return;
 
-        // 既存の次アクションボタンを削除
-        document.querySelectorAll('.next-action-button-container').forEach(el => el.remove());
+        // 既存のアクションボタンコンテナを削除
+        document.querySelectorAll('.page-action-buttons').forEach(el => el.remove());
 
         const prevActionIndex = currentState.actionIndex;
         const prevAction = prevActionIndex >= 0 ? actions[prevActionIndex] : null;
@@ -776,40 +782,39 @@
 
     // ページにボタンを実際に追加する
     function appendNextActionButtonToPage(pageIndex, nextAction) {
-        const pageView = document.getElementById('page-view');
-        const pageDiv = pageView.querySelector(`.page-content[data-page-index="${pageIndex}"]`);
-        if (!pageDiv) return;
+        const container = getOrCreateButtonContainer(pageIndex);
+        if (!container) return;
 
-        const pageText = pageDiv.querySelector('.page-text');
-        if (!pageText) return;
+        // 既存の次アクションボタンがあれば削除
+        const existingBtn = container.querySelector('.next-action-button');
+        if (existingBtn) existingBtn.remove();
 
-        // 既存のボタンコンテナがあれば削除
-        const existingContainer = pageText.querySelector('.next-action-button-container');
-        if (existingContainer) existingContainer.remove();
+        // ボタン要素を作成
+        const button = document.createElement('button');
+        button.className = 'next-action-button';
+        button.dataset.actionId = nextAction.action_id;
+        button.textContent = `▶ ${nextAction.name}`;
+        button.style.cssText = 'padding:8px 24px; background:#2a4a6a; color:#8cf; border:1px solid #4a6a8a; border-radius:4px; cursor:pointer; font-size:0.9rem;';
+        button.onmouseover = () => button.style.background = '#3a5a7a';
+        button.onmouseout = () => button.style.background = '#2a4a6a';
 
-        // ボタン要素を作成（textDivの外、page-textの末尾に追加）
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'next-action-button-container';
-        buttonContainer.innerHTML = `<button class="next-action-button" data-action-id="${nextAction.action_id}">▶ ${nextAction.name}</button>`;
-        pageText.appendChild(buttonContainer);
-
-        // ボタンにイベントを設定
-        const button = buttonContainer.querySelector('.next-action-button');
-        if (button) {
-            button.addEventListener('click', async (e) => {
-                e.stopPropagation(); // テキストトグルを防止
-                // ボタンを削除してからアクション実行
-                buttonContainer.remove();
-                const actionId = button.dataset.actionId;
-                const actionToExecute = actions.find(a => a.action_id === actionId);
-                if (actionToExecute) {
-                    const actionIdx = actions.indexOf(actionToExecute);
-                    if (actionIdx >= 0) {
-                        await executeAction(actionIdx);
-                    }
+        button.addEventListener('click', async (e) => {
+            e.stopPropagation(); // テキストトグルを防止
+            // ボタンを削除してからアクション実行
+            button.remove();
+            // コンテナが空になったら削除
+            if (container.children.length === 0) container.remove();
+            const actionId = button.dataset.actionId;
+            const actionToExecute = actions.find(a => a.action_id === actionId);
+            if (actionToExecute) {
+                const actionIdx = actions.indexOf(actionToExecute);
+                if (actionIdx >= 0) {
+                    await executeAction(actionIdx);
                 }
-            });
-        }
+            }
+        });
+
+        container.appendChild(button);
     }
 
     // アクションのeffectを適用（状態変更を行い、メッセージ配列を返す）
@@ -1002,11 +1007,35 @@
             return;
         }
 
-        // キャラクターをランダム選択（cast=onから、重複なし）
-        const charIndices = [];
-        const shuffledCast = [...castCharacters].sort(() => Math.random() - 0.5);
-        for (let i = 0; i < characterCount; i++) {
-            charIndices.push(shuffledCast[i].index);
+        // キャラクターをランダム選択（cast=onから、重複なし、性格重複は最大3回リトライ）
+        let charIndices = [];
+        let retryCount = 0;
+        const maxRetries = 3;
+
+        while (retryCount < maxRetries) {
+            charIndices = [];
+            const shuffledCast = [...castCharacters].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < characterCount; i++) {
+                charIndices.push(shuffledCast[i].index);
+            }
+
+            // 性格の重複チェック
+            const personalityIds = charIndices
+                .map(idx => characters[idx]?.personality)
+                .filter(p => p); // 空のpersonalityは除外
+
+            const uniquePersonalities = new Set(personalityIds);
+            if (uniquePersonalities.size === personalityIds.length) {
+                // 重複なし
+                break;
+            }
+
+            retryCount++;
+            console.log(`[初期設定] 性格重複のためリトライ (${retryCount}/${maxRetries})`);
+        }
+
+        if (retryCount >= maxRetries) {
+            console.log('[初期設定] 性格重複を回避できませんでした');
         }
 
         // 場所をランダム選択（重複なし）
@@ -1318,6 +1347,8 @@
                         nextBtn.classList.add('ready');
                     }
                 }
+                // 最後のページに「もっと」ボタンを追加
+                addMoreButton(pages.length - 1, charAtLocation, currentPlace, charPageCount);
             } else if (dialogue) {
                 // 通常モード：1ページのみ
                 const imageResult = imagePromise ? await imagePromise : null;
@@ -1329,6 +1360,148 @@
         }
 
         // 読み込み完了
+        hideLoading();
+    }
+
+    // ページのボタンコンテナを取得または作成
+    function getOrCreateButtonContainer(pageIndex) {
+        const pageView = document.getElementById('page-view');
+        const pageDiv = pageView.querySelector(`.page-content[data-page-index="${pageIndex}"]`);
+        if (!pageDiv) return null;
+
+        const pageText = pageDiv.querySelector('.page-text');
+        if (!pageText) return null;
+
+        let container = pageText.querySelector('.page-action-buttons');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'page-action-buttons';
+            container.style.cssText = 'display:flex; gap:10px; justify-content:center; margin-top:10px; flex-wrap:wrap;';
+            pageText.appendChild(container);
+        }
+        return container;
+    }
+
+    // 「もっと」ボタンを追加
+    function addMoreButton(pageIndex, charAtLocation, currentPlace, charPageCount) {
+        const container = getOrCreateButtonContainer(pageIndex);
+        if (!container) return;
+
+        // 既存のボタンがあれば削除
+        const existingBtn = container.querySelector('.more-button');
+        if (existingBtn) existingBtn.remove();
+
+        // ボタンを作成
+        const btn = document.createElement('button');
+        btn.className = 'more-button';
+        btn.textContent = 'もっと';
+        btn.style.cssText = 'padding:8px 24px; background:#444; color:#fff; border:1px solid #666; border-radius:4px; cursor:pointer; font-size:0.9rem;';
+        btn.onmouseover = () => btn.style.background = '#555';
+        btn.onmouseout = () => btn.style.background = '#444';
+
+        btn.onclick = async () => {
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+            await generateMorePages(charAtLocation, currentPlace, charPageCount);
+            btn.remove();
+            // コンテナが空になったら削除
+            if (container.children.length === 0) container.remove();
+        };
+
+        container.appendChild(btn);
+    }
+
+    // 「もっと」ボタン押下時の追加ページ生成
+    async function generateMorePages(charAtLocation, currentPlace, charPageCount) {
+        const chatApiKey = document.getElementById('chatApiKey').value.trim();
+        if (!chatApiKey) {
+            addSystemMessage('APIキーが設定されていません');
+            return;
+        }
+
+        showLoading();
+        showStatusLLM();
+
+        try {
+            // 複数セリフ用プロンプトを構築（もっと用はllm_015）
+            const result = buildMultiDialoguePrompt('action_select', '', charAtLocation, currentPlace, charPageCount, 'llm_015');
+            console.log('[もっと] 完全版プロンプト:', result.fullPrompt);
+            const response = await callLLM(chatApiKey, result.fullPrompt, 'assistant', charAtLocation?.character, null, result.simplePrompt);
+            console.log('[もっと] レスポンス:', response);
+
+            hideStatusLLM();
+
+            // レスポンスをパース
+            const { narrative, dialogues, newRelationshipName, relationshipMemo } = parseMultipleDialogues(response, charAtLocation, charPageCount);
+
+            // 関係性変化の処理
+            updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo);
+
+            // 地の文があれば最後のページに追加
+            if (narrative && pages.length > 0) {
+                const lastPageIndex = pages.length - 1;
+                const lastPage = pages[lastPageIndex];
+                lastPage.text += (lastPage.text ? '\n' : '') + narrative;
+                lastPage.fullText = lastPage.text;
+                // DOM更新
+                const pageView = document.getElementById('page-view');
+                const pageDiv = pageView.querySelector(`.page-content[data-page-index="${lastPageIndex}"]`);
+                if (pageDiv) {
+                    const textDiv = pageDiv.querySelector('.page-text > div');
+                    if (textDiv) {
+                        textDiv.innerHTML = lastPage.text.replace(/\n/g, '<br>');
+                    }
+                }
+            }
+
+            // genInfo構築
+            const genInfo = {
+                actionMode: 'more',
+                characterId: charAtLocation?.character?.character_id,
+                placeId: currentPlace?.place_id,
+                actionId: currentState.actionIndex >= 0 ? actions[currentState.actionIndex]?.action_id : null,
+                costumeId: charAtLocation?.status?.costumeId,
+                relationshipId: charAtLocation?.status?.relationshipId
+            };
+
+            // ページ生成
+            for (let i = 0; i < dialogues.length; i++) {
+                // 画像生成（もっと用は explicit を追加）
+                const compositionTag = getCompositionTag(actions, currentState.actionIndex);
+                const imageResult = await generateCharacterImageWithComposition(charAtLocation, currentPlace, currentState.actionIndex, compositionTag, 'explicit');
+                const charImage = imageResult?.imageURL || null;
+
+                const pageGenInfo = {
+                    ...genInfo,
+                    imageGenInfo: imageResult?.imageGenInfo || null
+                };
+                addPage2(charAtLocation.character.name, charImage, dialogues[i], pageGenInfo);
+
+                const nextBtn = document.getElementById('next-btn');
+                if (nextBtn && currentPageIndex < pages.length - 1) {
+                    nextBtn.classList.add('ready');
+                }
+            }
+
+            // 最後のページにボタンを追加
+            const lastPageIndex = pages.length - 1;
+            addMoreButton(lastPageIndex, charAtLocation, currentPlace, charPageCount);
+
+            // next_actionが定義されていれば「次のアクション」ボタンも追加
+            const currentAction = currentState.actionIndex >= 0 ? actions[currentState.actionIndex] : null;
+            if (currentAction?.next_action) {
+                const nextAction = actions.find(a => a.action_id === currentAction.next_action);
+                if (nextAction) {
+                    appendNextActionButtonToPage(lastPageIndex, nextAction);
+                }
+            }
+
+        } catch (e) {
+            console.error('[generateMorePages] エラー:', e);
+            addSystemMessage('追加生成に失敗しました: ' + e.message);
+            hideStatusLLM();
+        }
+
         hideLoading();
     }
 
@@ -1481,15 +1654,16 @@
             pages = [];
             currentPageIndex = -1;
             const pageView = document.getElementById('page-view');
-            pageView.innerHTML = '';
+            // info-buttonとpageInfoPanelは保持し、page-contentのみ削除
+            pageView.querySelectorAll('.page-content').forEach(el => el.remove());
 
             if (saveData.pages && saveData.pages.length > 0) {
                 for (const page of saveData.pages) {
-                    // ページタイプに応じてDOMを再構築
+                    // ページタイプに応じてDOMを再構築（genInfoも復元）
                     if (page.type === 'character') {
-                        addPage2(page.speaker, page.image, page.text);
+                        addPage2(page.speaker, page.image, page.text, page.genInfo || null);
                     } else {
-                        addPage1(page.image, page.text);
+                        addPage1(page.image, page.text, page.genInfo || null);
                     }
                     // typewriter完了状態を復元
                     const lastIdx = pages.length - 1;
@@ -1546,6 +1720,31 @@
                 html += `<div class="page-info-row"><span class="page-info-label">キャラクター:</span><span class="page-info-value">${charDisplay}${charIdDisplay}</span></div>`;
                 const profileText = char?.profile ? escapeHtml(char.profile) : 'なし';
                 html += `<div class="page-info-row"><span class="page-info-label">プロフィール:</span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${profileText}</span></div>`;
+                // パーソナリティ表示
+                if (char?.personality) {
+                    const personality = personalities.find(p => p.personality_id === char.personality);
+                    if (personality) {
+                        const persDisplay = `${escapeHtml(personality.name)}`;
+                        const persIdDisplay = ` <span style="color:#888">(${escapeHtml(char.personality)})</span>`;
+                        html += `<div class="page-info-row"><span class="page-info-label">性格:</span><span class="page-info-value">${persDisplay}${persIdDisplay}</span></div>`;
+                        // description編集可能行
+                        const persDescText = personality.description || '';
+                        html += `<div class="page-info-row" id="pers-desc-row">`;
+                        html += `<span class="page-info-label"></span>`;
+                        html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
+                        html += `<span id="pers-desc-display">${escapeHtml(persDescText) || '(なし)'}</span>`;
+                        html += ` <button id="pers-desc-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
+                        html += `</span></div>`;
+                        // 編集UI（初期非表示）
+                        html += `<div class="page-info-row" id="pers-desc-edit-row" style="display:none;">`;
+                        html += `<span class="page-info-label"></span>`;
+                        html += `<span class="page-info-value" style="width:100%;">`;
+                        html += `<input type="text" id="pers-desc-input" style="width:70%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(persDescText)}">`;
+                        html += ` <button id="pers-desc-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
+                        html += ` <button id="pers-desc-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
+                        html += `</span></div>`;
+                    }
+                }
             }
             if (genInfo.placeId) {
                 const place = places.find(p => p.place_id === genInfo.placeId);
@@ -1717,19 +1916,22 @@
         document.getElementById('pageInfoContent').innerHTML = html;
         document.getElementById('pageInfoPanel').classList.add('active');
 
-        // 関係性フィールド編集ハンドラを設定
-        function setupRelFieldEditor(prefix, fieldName, emptyText = '') {
+        // 汎用フィールド編集ハンドラ
+        // prefix: DOM要素のID接頭辞
+        // dataArray: 編集対象の配列 (relationships, personalities等)
+        // idField: ID列名 (relationship_id, personality_id等)
+        // targetId: 対象レコードのID値
+        // fieldName: 編集するフィールド名
+        // sheetName: GAS保存時のシート名
+        // emptyText: 空の場合の表示テキスト
+        function setupFieldEditor(prefix, dataArray, idField, targetId, fieldName, sheetName, emptyText = '') {
             const editBtn = document.getElementById(`${prefix}-edit-btn`);
-            const saveBtn = document.getElementById(`${prefix}-save-btn`);
-            const cancelBtn = document.getElementById(`${prefix}-cancel-btn`);
+            if (!editBtn || !targetId) return;
+
             const displayRow = document.getElementById(`${prefix}-row`);
             const editRow = document.getElementById(`${prefix}-edit-row`);
             const input = document.getElementById(`${prefix}-input`);
             const display = document.getElementById(`${prefix}-display`);
-
-            if (!editBtn || !genInfo?.relationshipId) return;
-
-            const relationshipId = genInfo.relationshipId;
 
             editBtn.onclick = () => {
                 displayRow.style.display = 'none';
@@ -1737,14 +1939,14 @@
                 input.focus();
             };
 
-            cancelBtn.onclick = () => {
+            document.getElementById(`${prefix}-cancel-btn`).onclick = () => {
                 editRow.style.display = 'none';
                 displayRow.style.display = 'flex';
-                const rel = relationships.find(r => r.relationship_id === relationshipId);
-                input.value = rel?.[fieldName] || '';
+                const record = dataArray.find(r => r[idField] === targetId);
+                input.value = record?.[fieldName] || '';
             };
 
-            saveBtn.onclick = async () => {
+            document.getElementById(`${prefix}-save-btn`).onclick = async () => {
                 const newValue = input.value.trim();
                 const gasUrl = document.getElementById('gasUrl').value.trim();
                 if (!gasUrl) {
@@ -1752,14 +1954,15 @@
                     return;
                 }
 
-                const rel = relationships.find(r => r.relationship_id === relationshipId);
-                if (rel) {
-                    rel[fieldName] = newValue;
+                const record = dataArray.find(r => r[idField] === targetId);
+                if (record) {
+                    record[fieldName] = newValue;
                 }
 
                 showStatus('保存中...', 'loading');
                 try {
-                    await saveGasData(gasUrl, 'relationship', relationships);
+                    await saveGasData(gasUrl, sheetName, dataArray);
+                    saveCachedData();
                     showStatus('保存しました', 'ok');
                     display.textContent = newValue || emptyText;
                     editRow.style.display = 'none';
@@ -1771,8 +1974,19 @@
             };
         }
 
-        setupRelFieldEditor('rel-desc', 'description');
-        setupRelFieldEditor('rel-req', 'next_relationship_req', '(なし)');
+        // 関係性フィールド
+        if (genInfo?.relationshipId) {
+            setupFieldEditor('rel-desc', relationships, 'relationship_id', genInfo.relationshipId, 'description', 'relationship');
+            setupFieldEditor('rel-req', relationships, 'relationship_id', genInfo.relationshipId, 'next_relationship_req', 'relationship', '(なし)');
+        }
+
+        // パーソナリティフィールド
+        if (genInfo?.characterId) {
+            const char = characters.find(c => c.character_id === genInfo.characterId);
+            if (char?.personality) {
+                setupFieldEditor('pers-desc', personalities, 'personality_id', char.personality, 'description', 'personality', '(なし)');
+            }
+        }
     }
 
     function closePageInfo() {
@@ -1788,7 +2002,7 @@
 
     // キャラクター画像生成（指定構図タグ版）
     // 戻り値: { imageURL, imageGenInfo } または null
-    async function generateCharacterImageWithComposition(charAtLocation, place, actionIndex, compositionTag) {
+    async function generateCharacterImageWithComposition(charAtLocation, place, actionIndex, compositionTag, promptPrefix = '') {
         const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
         if (!runwareApiKey) return null;
 
@@ -1804,7 +2018,12 @@
         const promptResult = buildImageGenPrompt(modelId, character, place, actionIndex, compositionTag, costumeId, relationshipId);
         if (!promptResult) return null;
 
-        const { finalPrompt, negativePrompt, characterWithExtras } = promptResult;
+        let { finalPrompt, negativePrompt, characterWithExtras } = promptResult;
+
+        // プレフィックスがあれば先頭に追加
+        if (promptPrefix) {
+            finalPrompt = promptPrefix + ', ' + finalPrompt;
+        }
 
         showStatusImage();
         const result = await generateImage(runwareApiKey, modelId, finalPrompt, {

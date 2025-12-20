@@ -174,6 +174,10 @@
                 <input type="text" class="field-input" id="detail-additionalTag" onchange="updateCharacterField('additionalTag', this.value)">
                 <div class="field-label">Cast</div>
                 <input type="text" class="field-input" id="detail-cast" onchange="updateCharacterField('cast', this.value)">
+                <div class="field-label">Personality</div>
+                <select class="field-input" id="detail-personality" onchange="updateCharacterField('personality', this.value)">
+                    <option value="">-- 選択 --</option>
+                </select>
             </div>
         </div>
         <!-- 全身画像エリア -->
@@ -223,6 +227,7 @@
     let actions = [];
     let relationships = [];
     let costumes = [];
+    let personalities = [];
     let characterImages = {};
     let originalGasImages = {};
     let fullbodyImages = {};
@@ -247,7 +252,7 @@
     });
 
     function saveCachedData() {
-        const data = { models, characters, places, actions, relationships };
+        const data = { models, characters, places, actions, relationships, personalities };
         localStorage.setItem(GAS_DATA_KEY, JSON.stringify(data));
         localStorage.setItem(CHAR_IMAGES_KEY, JSON.stringify(characterImages));
         localStorage.setItem(FULLBODY_IMAGES_KEY, JSON.stringify(fullbodyImages));
@@ -263,6 +268,7 @@
                 places = data.places || [];
                 actions = data.actions || [];
                 relationships = data.relationships || [];
+                personalities = data.personalities || [];
             }
             const cachedImages = localStorage.getItem(CHAR_IMAGES_KEY);
             if (cachedImages) characterImages = JSON.parse(cachedImages);
@@ -297,13 +303,14 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData, relationshipData, costumeData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData, costumeData, personalityData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
                 fetchGasData(baseUrl, 'relationship'),
-                fetchGasData(baseUrl, 'costume')
+                fetchGasData(baseUrl, 'costume'),
+                fetchGasData(baseUrl, 'personality')
             ]);
 
             models = parseModels(modelData);
@@ -311,6 +318,7 @@
             actions = parseActionsWithCompositions(actionData);
             relationships = parseRelationships(relationshipData);
             costumes = parseCostumes(costumeData);
+            personalities = parsePersonalities(personalityData);
 
             // キャラクター設定（画像URL処理があるため個別）
             originalGasImages = {};
@@ -462,6 +470,7 @@
                 uniform2: char.uniform2 || '',
                 'additional tag': char.additionalTag || '',
                 cast: char.cast || '',
+                personality: char.personality || '',
                 image: characterImages[char.name] || ''
             }));
 
@@ -635,6 +644,7 @@
         document.getElementById('detail-uniform2').value = char.uniform2 || '';
         document.getElementById('detail-additionalTag').value = char.additionalTag || '';
         document.getElementById('detail-cast').value = char.cast || '';
+        updatePersonalitySelect(char.personality || '');
 
         // 画像を設定
         const imageDiv = document.getElementById('detail-image');
@@ -680,6 +690,14 @@
         if (currentValue && parseInt(currentValue) < places.length) {
             select.value = currentValue;
         }
+    }
+
+    function updatePersonalitySelect(selectedId) {
+        const select = document.getElementById('detail-personality');
+        select.innerHTML = '<option value="">-- 選択 --</option>' +
+            personalities.map(p =>
+                `<option value="${p.personality_id}"${p.personality_id === selectedId ? ' selected' : ''}>${p.name || p.personality_id}</option>`
+            ).join('');
     }
 
     function closeDetailPage() {

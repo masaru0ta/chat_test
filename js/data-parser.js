@@ -59,6 +59,7 @@ function parseCharacters(rawData) {
             uniform2: item.uniform2 || '',
             additionalTag: item['additional tag'] || '',
             cast: item.cast || '',
+            personality: item.personality || '',
             image: item.image || ''
         };
     });
@@ -247,6 +248,38 @@ function parseCostumes(rawData) {
             name: item.name || '',
             tag: item.tag || '',
             camel_tag: item['camel_tag'] || ''
+        };
+    });
+}
+
+/**
+ * パーソナリティデータをパース
+ * @param {Array} rawData - GASから取得した生データ
+ * @returns {Array} パース済みパーソナリティ配列
+ */
+function parsePersonalities(rawData) {
+    // 既存のprs_xxx形式のIDから最大番号を取得
+    let maxNum = 0;
+    rawData.forEach(item => {
+        const id = item['personality_id'] || '';
+        const match = id.match(/^prs_(\d+)$/);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+        }
+    });
+
+    return rawData.map(item => {
+        let personalityId = item['personality_id'] || '';
+        if (!personalityId) {
+            maxNum++;
+            personalityId = 'prs_' + String(maxNum).padStart(3, '0');
+        }
+
+        return {
+            personality_id: personalityId,
+            name: item.name || '',
+            description: item.description || ''
         };
     });
 }
