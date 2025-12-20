@@ -287,6 +287,7 @@
 <script src="js/transition-page.js"></script>
 <script src="js/transition-ui.js"></script>
 <script src="js/transition-llm.js"></script>
+<script src="js/transition-image.js"></script>
 <script>
     // 移動実行
     async function executeMove(placeIndex) {
@@ -786,77 +787,6 @@
         container.appendChild(button);
     }
 
-    // アクションのeffectを適用（状態変更を行い、メッセージ配列を返す）
-    function applyActionEffect(action, charAtLocation, statusIndex) {
-        const messages = [];
-        if (!action.effect || !charAtLocation) return messages;
-
-        const effectStr = action.effect.trim();
-        if (!effectStr) return messages;
-
-        console.log('[Effect] 効果を解析:', effectStr);
-
-        // effectをパース（形式: relationship_id=rel_002,costume_id=cos_002 または rel_002,cos_002）
-        const effects = parseEffectString(effectStr);
-
-        // 関係性変更
-        if (effects.relationship_id) {
-            const newRelationship = relationships.find(r => r.relationship_id === effects.relationship_id);
-            if (newRelationship) {
-                const oldRelationshipId = characterStatus[statusIndex].relationshipId;
-                const oldRelationship = relationships.find(r => r.relationship_id === oldRelationshipId);
-                characterStatus[statusIndex].relationshipId = effects.relationship_id;
-                console.log('[Effect] 関係性変更:', oldRelationship?.name, '→', newRelationship.name);
-                messages.push(`🎭 ${charAtLocation.character.name}との関係性が「${oldRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
-            }
-        }
-
-        // 服装変更（同じ服装の場合はスキップ）
-        if (effects.costume_id) {
-            const oldCostumeId = characterStatus[statusIndex].costumeId;
-            if (effects.costume_id !== oldCostumeId) {
-                const newCostume = costumes.find(c => c.costume_id === effects.costume_id);
-                if (newCostume) {
-                    const oldCostume = costumes.find(c => c.costume_id === oldCostumeId);
-                    characterStatus[statusIndex].costumeId = effects.costume_id;
-                    console.log('[Effect] 服装変更:', oldCostume?.name, '→', newCostume.name);
-                    messages.push(`👗 ${charAtLocation.character.name}の服装が「${oldCostume?.name || '不明'}」から「${newCostume.name}」に変わりました`);
-                }
-            }
-        }
-
-        return messages;
-    }
-
-    // effect文字列をパース
-    function parseEffectString(effectStr) {
-        const result = { relationship_id: null, costume_id: null };
-
-        // カンマで分割
-        const parts = effectStr.split(',').map(p => p.trim()).filter(p => p);
-
-        parts.forEach(part => {
-            // key=value形式
-            if (part.includes('=')) {
-                const [key, value] = part.split('=').map(s => s.trim());
-                if (key === 'relationship_id' || key === 'rel') {
-                    result.relationship_id = value;
-                } else if (key === 'costume_id' || key === 'cos') {
-                    result.costume_id = value;
-                }
-            } else {
-                // IDのみの形式（プレフィックスで判定）
-                if (part.startsWith('rel_')) {
-                    result.relationship_id = part;
-                } else if (part.startsWith('cos_')) {
-                    result.costume_id = part;
-                }
-            }
-        });
-
-        return result;
-    }
-
     // 会話モード処理
     async function handleConversationMode(chatApiKey, charAtLocation, currentPlace, userInput) {
         // ユーザーの発言を追加
@@ -911,32 +841,6 @@
         }
 
         updateCharacterStatusDisplay();
-    }
-
-    // 画像生成を非同期に開始（ブロックを回避）
-    // 戻り値: { imageURL, imageGenInfo } または null
-    function startImageGenerationAsync(charAtLocation, currentPlace) {
-        const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
-        if (!charAtLocation || !imageGenEnabled || !runwareApiKey) {
-            return null;
-        }
-        localStorage.setItem(STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY, runwareApiKey);
-        const charActionIndex = charAtLocation.status?.actionIndex ?? -1;
-        return new Promise(resolve => {
-            setTimeout(async () => {
-                try {
-                    const result = await generateCharacterImage({
-                        charAtLocation: charAtLocation,
-                        place: currentPlace,
-                        actionIndex: charActionIndex
-                    });
-                    resolve(result); // { imageURL, imageGenInfo } または null
-                } catch (e) {
-                    console.error('[画像生成エラー]', e);
-                    resolve(null);
-                }
-            }, 0);
-        });
     }
 
     // 初期設定開始
@@ -1090,102 +994,6 @@
         return null;
     }
 
-    // 生成情報オブジェクトを作成
-    function createGenInfo(actionMode, charAtLocation, currentPlace) {
-        return {
-            actionMode: actionMode,
-            characterId: charAtLocation?.character?.character_id || null,
-            placeId: currentPlace?.place_id || null,
-            actionId: currentState.actionIndex >= 0 ? actions[currentState.actionIndex]?.action_id : null,
-            relationshipId: charAtLocation?.status?.relationshipId || null,
-            costumeId: charAtLocation?.status?.costumeId || null,
-            imageGenInfo: null
-        };
-    }
-
-    // ストリームページのセットアップ
-    function setupStreamPage(movePageIndex, currentPlace) {
-        let streamPageIndex = -1;
-        let useAddDialogueMode = false;  // アクション時は最後のページに追記
-        let appendBaseHtml = '';  // アクション時の追記ベースHTML
-
-        if (movePageIndex >= 0) {
-            // 移動時：既存のプレースホルダーページを使用
-            streamPageIndex = movePageIndex;
-        } else {
-            // アクション時：最後のページに追記モード
-            useAddDialogueMode = true;
-            // 現在の最後のページのHTMLを保存
-            if (pages.length > 0) {
-                const lastPageIndex = pages.length - 1;
-                const pageView = document.getElementById('page-view');
-                const pageDiv = pageView.querySelector(`.page-content[data-page-index="${lastPageIndex}"]`);
-                if (pageDiv) {
-                    const textDiv = pageDiv.querySelector('.page-text > div');
-                    if (textDiv) {
-                        appendBaseHtml = textDiv.innerHTML;
-                    }
-                }
-            }
-        }
-
-        // ストリーミング用タイプライター開始（移動時のみ）
-        if (streamPageIndex >= 0) {
-            startTypewriter(streamPageIndex);
-        }
-
-        return { streamPageIndex, useAddDialogueMode, appendBaseHtml };
-    }
-
-    // 地の文をページに表示
-    async function displayNarrative(narrative, streamPageIndex, useAddDialogueMode) {
-        if (streamPageIndex >= 0) {
-            // 移動時：タイプライターで表示
-            appendToTypewriter(narrative);
-            await waitForTypewriter();
-            // タイプライター完了後、fullTextを更新してフラグを立てる
-            if (pages[streamPageIndex]) {
-                pages[streamPageIndex].fullText = narrative;
-                pages[streamPageIndex].typewriterCompleted = true;
-            }
-        } else if (useAddDialogueMode && narrative && pages.length > 0) {
-            // アクション時：ストリームで既に表示済み、データのみ更新
-            const lastPageIndex = pages.length - 1;
-            const lastPage = pages[lastPageIndex];
-            lastPage.text += (lastPage.text ? '\n' : '') + narrative;
-            lastPage.fullText = lastPage.text;
-        }
-    }
-
-    // 移動時のプレースホルダーページを作成
-    function createMovePagePlaceholder(newPlace, genInfo) {
-        const placeImage = newPlace.image || null;
-        genInfo.placeId = newPlace.place_id;
-
-        // 移動先のキャラクターを取得
-        const newPlaceIndex = places.findIndex(p => p.place_id === newPlace.place_id);
-        for (const status of characterStatus) {
-            if (status.placeIndex === newPlaceIndex && status.characterIndex >= 0) {
-                const charAtNewPlace = characters[status.characterIndex];
-                genInfo.characterId = charAtNewPlace?.character_id || null;
-                genInfo.relationshipId = status.relationshipId || null;
-                genInfo.costumeId = status.costumeId || null;
-                break;
-            }
-        }
-
-        // 移動先のデフォルトアクションを取得
-        if (newPlace.default_action) {
-            genInfo.actionId = newPlace.default_action;
-        }
-
-        const pageIndex = addPage1(placeImage, `${newPlace.name}に移動...`, genInfo);
-        // ストリーミングで更新するのでshowPageからのタイプライター起動を防ぐ
-        pages[pageIndex].typewriterCompleted = true;
-        goToLatestPage();
-        return pageIndex;
-    }
-
     // ページ生成メイン処理
     // companion: 一緒に移動するキャラクター（移動時のみ使用）
     async function generatePages(actionMode, userInput, previousPlace, newPlace, companion = null) {
@@ -1316,11 +1124,7 @@
                         imageGenInfo: imageResult?.imageGenInfo || null
                     };
                     addPage2(charAtLocation.character.name, charImage, dialogues[i], pageGenInfo);
-                    // 各ページ生成後に次へボタンを有効化（isLoading中でも強制的に）
-                    const nextBtn = document.getElementById('next-btn');
-                    if (nextBtn && currentPageIndex < pages.length - 1) {
-                        nextBtn.classList.add('ready');
-                    }
+                    enableNextButton();
                 }
                 // 最後のページに「もっと」ボタンを追加
                 addMoreButton(pages.length - 1, charAtLocation, currentPlace, charPageCount);
@@ -1336,6 +1140,14 @@
 
         // 読み込み完了
         hideLoading();
+    }
+
+    // 次へボタンを有効化（ページ追加後に呼び出す）
+    function enableNextButton() {
+        const nextBtn = document.getElementById('next-btn');
+        if (nextBtn && currentPageIndex < pages.length - 1) {
+            nextBtn.classList.add('ready');
+        }
     }
 
     // ページのボタンコンテナを取得または作成
@@ -1450,11 +1262,7 @@
                     imageGenInfo: imageResult?.imageGenInfo || null
                 };
                 addPage2(charAtLocation.character.name, charImage, dialogues[i], pageGenInfo);
-
-                const nextBtn = document.getElementById('next-btn');
-                if (nextBtn && currentPageIndex < pages.length - 1) {
-                    nextBtn.classList.add('ready');
-                }
+                enableNextButton();
             }
 
             // 最後のページにボタンを追加
@@ -1477,125 +1285,6 @@
         }
 
         hideLoading();
-    }
-
-    // 画像生成プロンプト構築（共通関数）
-    // 戻り値: { finalPrompt, negativePrompt } または null
-    function buildImageGenPrompt(modelId, character, place, actionIndex, compositionTag, costumeId, relationshipId) {
-        if (!modelId || !models[modelId]) return null;
-        const model = models[modelId];
-
-        // プロンプト構築（image_gen_base.htmlと同じ順序）
-        const parts = [
-            model?.qualityPositive || '',           // 品質タグ（ポジティブ）
-            character?.tag || '',                    // キャラタグ
-            place?.tag || '',                        // 場所タグ
-            (actionIndex >= 0 && actions[actionIndex]) ? actions[actionIndex].prompt : '',  // アクションプロンプト
-            compositionTag || '',                    // 構図タグ
-            place?.additionalTag || '',              // 場所の追加タグ
-            character?.additionalTag || ''           // キャラの追加タグ
-        ].filter(p => p);
-
-        if (parts.length === 0) return null;
-
-        const prompt = cleanPrompt(parts.join(', '));
-        const negativePrompt = model?.qualityNegative || '';
-
-        // costumeIdから服装タグ・camelタグを取得
-        let clothesTag = '';
-        let camelTag = '';
-        if (costumeId) {
-            const costume = costumes.find(c => c.costume_id === costumeId);
-            if (costume) {
-                clothesTag = costume.tag || '';
-                camelTag = costume.camel_tag || '';
-            }
-        }
-
-        // relationshipIdから表情タグを取得
-        let expressionTag = '';
-        if (relationshipId) {
-            const relationship = relationships.find(r => r.relationship_id === relationshipId);
-            if (relationship) {
-                expressionTag = relationship.expression || '';
-            }
-        }
-
-        // キャラクターオブジェクトにclothes, camel, expression追加
-        const characterWithExtras = character
-            ? { ...character, clothes: clothesTag, camel: camelTag, expression: expressionTag }
-            : { clothes: clothesTag, camel: camelTag, expression: expressionTag };
-
-        // タグ置換して最終プロンプトを生成
-        const finalPrompt = buildFinalPrompt(prompt, characterWithExtras);
-
-        return { finalPrompt, negativePrompt, characterWithExtras };
-    }
-
-    // キャラクター画像生成（統合版）
-    // options: { character, charAtLocation, place, actionIndex, costumeId, relationshipId, compositionTag, promptPrefix }
-    // 戻り値: { imageURL, imageGenInfo } または null
-    async function generateCharacterImage(options) {
-        const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
-        if (!runwareApiKey) return null;
-
-        // charAtLocationから各値を取得（直接指定があれば優先）
-        const character = options.character || options.charAtLocation?.character;
-        const costumeId = options.costumeId ?? options.charAtLocation?.status?.costumeId ?? null;
-        const relationshipId = options.relationshipId ?? options.charAtLocation?.status?.relationshipId ?? null;
-        const actionIndex = options.actionIndex ?? -1;
-        const place = options.place;
-
-        if (!character) return null;
-
-        // モデル取得（選択されたモデルを優先、なければ最初のモデル）
-        const modelId = selectedModelId || getFirstModelId(models);
-        if (!modelId || !models[modelId]) {
-            console.log('[画像生成] モデルが未設定');
-            return null;
-        }
-
-        // 構図タグ（明示指定があれば使用、なければ自動取得）
-        const compositionTag = options.compositionTag || getCompositionTag(actions, actionIndex);
-
-        // プロンプト構築（共通関数を使用）
-        const promptResult = buildImageGenPrompt(modelId, character, place, actionIndex, compositionTag, costumeId, relationshipId);
-        if (!promptResult) {
-            console.log('[画像生成] プロンプトが空のためスキップ');
-            return null;
-        }
-
-        let { finalPrompt, negativePrompt, characterWithExtras } = promptResult;
-
-        // promptPrefixがあれば先頭に追加
-        if (options.promptPrefix) {
-            finalPrompt = options.promptPrefix + ', ' + finalPrompt;
-        }
-
-        console.log('[画像生成] プロンプト:', finalPrompt);
-        console.log('[画像生成] ネガティブ:', negativePrompt);
-
-        showStatusImage();
-        const result = await generateImage(runwareApiKey, modelId, finalPrompt, {
-            negativePrompt: negativePrompt,
-            steps: models[modelId]?.steps || 20,
-            cfgScale: models[modelId]?.cfgScale || 7,
-            scheduler: models[modelId]?.scheduler || 'Default',
-            width: 1024,
-            height: 1024,
-            character: characterWithExtras
-        });
-        hideStatusImage();
-
-        // 画像生成情報を含めて返す（IDのみ保持、名前は表示時に取得）
-        return {
-            imageURL: result.imageURL,
-            imageGenInfo: {
-                modelId: modelId,
-                compositionTag: compositionTag,
-                seed: result.seed
-            }
-        };
     }
 
     // セーブ機能
@@ -1674,6 +1363,67 @@
             console.error('[Load] 読み込みエラー:', e);
             addSystemMessage('❌ ロードに失敗しました: ' + e.message);
         }
+    }
+
+    // genInfoからオブジェクトを解決（共通ヘルパー）
+    function resolveGenInfoObjects(genInfo) {
+        if (!genInfo) return { char: null, place: null, actionIndex: -1 };
+        return {
+            char: genInfo.characterId ? characters.find(c => c.character_id === genInfo.characterId) : null,
+            place: genInfo.placeId ? places.find(p => p.place_id === genInfo.placeId) : null,
+            actionIndex: genInfo.actionId ? actions.findIndex(a => a.action_id === genInfo.actionId) : -1
+        };
+    }
+
+    // 汎用フィールド編集ハンドラ（ページ情報パネル用）
+    function setupFieldEditor(prefix, dataArray, idField, targetId, fieldName, sheetName, emptyText = '') {
+        const editBtn = document.getElementById(`${prefix}-edit-btn`);
+        if (!editBtn || !targetId) return;
+
+        const displayRow = document.getElementById(`${prefix}-row`);
+        const editRow = document.getElementById(`${prefix}-edit-row`);
+        const input = document.getElementById(`${prefix}-input`);
+        const display = document.getElementById(`${prefix}-display`);
+
+        editBtn.onclick = () => {
+            displayRow.style.display = 'none';
+            editRow.style.display = 'flex';
+            input.focus();
+        };
+
+        document.getElementById(`${prefix}-cancel-btn`).onclick = () => {
+            editRow.style.display = 'none';
+            displayRow.style.display = 'flex';
+            const record = dataArray.find(r => r[idField] === targetId);
+            input.value = record?.[fieldName] || '';
+        };
+
+        document.getElementById(`${prefix}-save-btn`).onclick = async () => {
+            const newValue = input.value.trim();
+            const gasUrl = document.getElementById('gasUrl').value.trim();
+            if (!gasUrl) {
+                showStatus('GAS URLが設定されていません', 'error');
+                return;
+            }
+
+            const record = dataArray.find(r => r[idField] === targetId);
+            if (record) {
+                record[fieldName] = newValue;
+            }
+
+            showStatus('保存中...', 'loading');
+            try {
+                await saveGasData(gasUrl, sheetName, dataArray);
+                saveCachedData();
+                showStatus('保存しました', 'ok');
+                display.textContent = newValue || emptyText;
+                editRow.style.display = 'none';
+                displayRow.style.display = 'flex';
+            } catch (e) {
+                console.error('[GAS] 保存エラー:', e);
+                showStatus('保存に失敗しました', 'error');
+            }
+        };
     }
 
     // ページ情報: 基本情報セクションHTML生成
@@ -1786,6 +1536,117 @@
         return html;
     }
 
+    // ページ情報: LLMプロンプト再現セクションHTML生成
+    function buildLLMPromptSectionHtml(genInfo, objects) {
+        let html = '<div class="page-info-section">';
+        html += '<div class="page-info-section-title">LLMプロンプト（再現）</div>';
+
+        let reconstructedPrompt = null;
+        try {
+            const { char, place, actionIndex } = objects;
+
+            // charAtLocationを再構築
+            let charAtLocation = null;
+            if (char) {
+                charAtLocation = {
+                    character: char,
+                    status: {
+                        characterIndex: characters.indexOf(char),
+                        placeIndex: place ? places.indexOf(place) : -1,
+                        actionIndex: actionIndex,
+                        relationshipId: genInfo.relationshipId || null,
+                        costumeId: genInfo.costumeId || null
+                    }
+                };
+            }
+
+            // currentStateを一時的に設定してbuildCombinedPromptを呼び出す
+            const savedActionIndex = currentState.actionIndex;
+            currentState.actionIndex = actionIndex;
+
+            const result = buildCombinedPrompt(
+                genInfo.actionMode,
+                '',  // userInputは保持していないので空
+                null,  // previousPlace
+                place,  // newPlace (移動時)
+                charAtLocation,
+                place,  // currentPlace
+                false,  // dialogueOnly
+                null   // companion
+            );
+
+            currentState.actionIndex = savedActionIndex;
+
+            if (result && result.fullPrompt) {
+                reconstructedPrompt = result.fullPrompt;
+            }
+        } catch (e) {
+            console.log('[PageInfo] プロンプト再現エラー:', e);
+        }
+
+        if (reconstructedPrompt) {
+            html += `<div class="page-info-text">${escapeHtml(reconstructedPrompt)}</div>`;
+        } else {
+            html += '<div style="color:#888">(再現不可)</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    // ページ情報: 画像生成セクションHTML生成
+    function buildImageGenSectionHtml(genInfo, objects) {
+        if (!genInfo.imageGenInfo) return '';
+
+        const img = genInfo.imageGenInfo;
+        const { char, place, actionIndex } = objects;
+
+        let html = '<div class="page-info-section">';
+        html += '<div class="page-info-section-title">画像生成</div>';
+
+        if (img.modelId) {
+            const model = models[img.modelId];
+            const modelDisplay = model?.name ? `${escapeHtml(model.name)}` : '';
+            const modelIdDisplay = ` <span style="color:#888">(${escapeHtml(img.modelId)})</span>`;
+            html += `<div class="page-info-row"><span class="page-info-label">モデル:</span><span class="page-info-value">${modelDisplay}${modelIdDisplay}</span></div>`;
+        }
+        if (img.seed) html += `<div class="page-info-row"><span class="page-info-label">シード:</span><span class="page-info-value">${img.seed}</span></div>`;
+        if (img.compositionTag) html += `<div class="page-info-row"><span class="page-info-label">構図:</span><span class="page-info-value">${escapeHtml(img.compositionTag)}</span></div>`;
+
+        // 服装タグ
+        if (genInfo.costumeId) {
+            const costume = costumes.find(c => c.costume_id === genInfo.costumeId);
+            if (costume?.tag) html += `<div class="page-info-row"><span class="page-info-label">服装タグ:</span><span class="page-info-value">${escapeHtml(costume.tag)}</span></div>`;
+        }
+
+        // 表情タグ
+        if (genInfo.relationshipId) {
+            const rel = relationships.find(r => r.relationship_id === genInfo.relationshipId);
+            if (rel?.expression) html += `<div class="page-info-row"><span class="page-info-label">表情:</span><span class="page-info-value">${escapeHtml(rel.expression)}</span></div>`;
+        }
+
+        // 画像プロンプト再現
+        try {
+            const imagePromptResult = buildImageGenPrompt(
+                img.modelId,
+                char,
+                place,
+                actionIndex,
+                img.compositionTag,
+                genInfo.costumeId,
+                genInfo.relationshipId
+            );
+            if (imagePromptResult?.finalPrompt) {
+                html += '<div style="margin-top:8px"><span class="page-info-label">画像プロンプト（再現）:</span></div>';
+                html += `<div class="page-info-text">${escapeHtml(imagePromptResult.finalPrompt)}</div>`;
+            }
+        } catch (e) {
+            console.log('[PageInfo] 画像プロンプト再現エラー:', e);
+        }
+
+        html += '</div>';
+        return html;
+    }
+
     // ページ情報表示（テキスト非表示時の情報ボタン）
     function showPageInfo() {
         if (currentPageIndex < 0 || !pages[currentPageIndex]) {
@@ -1801,114 +1662,17 @@
         html += buildBasicInfoHtml(page, currentPageIndex, pages.length);
 
         if (genInfo) {
+            // オブジェクトを1回だけ解決
+            const objects = resolveGenInfoObjects(genInfo);
+
             // 生成パラメータセクション
             html += buildGenParamsHtml(genInfo);
 
             // LLMプロンプト再現セクション
-            html += '<div class="page-info-section">';
-            html += '<div class="page-info-section-title">LLMプロンプト（再現）</div>';
-
-            // genInfoからオブジェクトを再構築
-            let reconstructedPrompt = null;
-            try {
-                const char = genInfo.characterId ? characters.find(c => c.character_id === genInfo.characterId) : null;
-                const place = genInfo.placeId ? places.find(p => p.place_id === genInfo.placeId) : null;
-                const actionIndex = genInfo.actionId ? actions.findIndex(a => a.action_id === genInfo.actionId) : -1;
-
-                // charAtLocationを再構築
-                let charAtLocation = null;
-                if (char) {
-                    charAtLocation = {
-                        character: char,
-                        status: {
-                            characterIndex: characters.indexOf(char),
-                            placeIndex: place ? places.indexOf(place) : -1,
-                            actionIndex: actionIndex,
-                            relationshipId: genInfo.relationshipId || null,
-                            costumeId: genInfo.costumeId || null
-                        }
-                    };
-                }
-
-                // currentStateを一時的に設定してbuildCombinedPromptを呼び出す
-                const savedActionIndex = currentState.actionIndex;
-                currentState.actionIndex = actionIndex;
-
-                const result = buildCombinedPrompt(
-                    genInfo.actionMode,
-                    '',  // userInputは保持していないので空
-                    null,  // previousPlace
-                    place,  // newPlace (移動時)
-                    charAtLocation,
-                    place,  // currentPlace
-                    false,  // dialogueOnly
-                    null   // companion
-                );
-
-                currentState.actionIndex = savedActionIndex;
-
-                if (result && result.fullPrompt) {
-                    reconstructedPrompt = result.fullPrompt;
-                }
-            } catch (e) {
-                console.log('[PageInfo] プロンプト再現エラー:', e);
-            }
-
-            if (reconstructedPrompt) {
-                html += `<div class="page-info-text">${escapeHtml(reconstructedPrompt)}</div>`;
-            } else {
-                html += '<div style="color:#888">(再現不可)</div>';
-            }
-            html += '</div>';
+            html += buildLLMPromptSectionHtml(genInfo, objects);
 
             // 画像生成セクション
-            if (genInfo.imageGenInfo) {
-                const img = genInfo.imageGenInfo;
-                html += '<div class="page-info-section">';
-                html += '<div class="page-info-section-title">画像生成</div>';
-                if (img.modelId) {
-                    const model = models[img.modelId];
-                    const modelDisplay = model?.name ? `${escapeHtml(model.name)}` : '';
-                    const modelIdDisplay = ` <span style="color:#888">(${escapeHtml(img.modelId)})</span>`;
-                    html += `<div class="page-info-row"><span class="page-info-label">モデル:</span><span class="page-info-value">${modelDisplay}${modelIdDisplay}</span></div>`;
-                }
-                if (img.seed) html += `<div class="page-info-row"><span class="page-info-label">シード:</span><span class="page-info-value">${img.seed}</span></div>`;
-                if (img.compositionTag) html += `<div class="page-info-row"><span class="page-info-label">構図:</span><span class="page-info-value">${escapeHtml(img.compositionTag)}</span></div>`;
-                // 服装タグはgenInfo.costumeIdから取得
-                if (genInfo.costumeId) {
-                    const costume = costumes.find(c => c.costume_id === genInfo.costumeId);
-                    if (costume?.tag) html += `<div class="page-info-row"><span class="page-info-label">服装タグ:</span><span class="page-info-value">${escapeHtml(costume.tag)}</span></div>`;
-                }
-                // 表情タグはgenInfo.relationshipIdから取得
-                if (genInfo.relationshipId) {
-                    const rel = relationships.find(r => r.relationship_id === genInfo.relationshipId);
-                    if (rel?.expression) html += `<div class="page-info-row"><span class="page-info-label">表情:</span><span class="page-info-value">${escapeHtml(rel.expression)}</span></div>`;
-                }
-
-                // 画像プロンプト再現（buildImageGenPromptを使用）
-                try {
-                    const char = genInfo.characterId ? characters.find(c => c.character_id === genInfo.characterId) : null;
-                    const place = genInfo.placeId ? places.find(p => p.place_id === genInfo.placeId) : null;
-                    const actionIndex = genInfo.actionId ? actions.findIndex(a => a.action_id === genInfo.actionId) : -1;
-                    const imagePromptResult = buildImageGenPrompt(
-                        img.modelId,
-                        char,
-                        place,
-                        actionIndex,
-                        img.compositionTag,
-                        genInfo.costumeId,
-                        genInfo.relationshipId
-                    );
-                    if (imagePromptResult?.finalPrompt) {
-                        html += '<div style="margin-top:8px"><span class="page-info-label">画像プロンプト（再現）:</span></div>';
-                        html += `<div class="page-info-text">${escapeHtml(imagePromptResult.finalPrompt)}</div>`;
-                    }
-                } catch (e) {
-                    console.log('[PageInfo] 画像プロンプト再現エラー:', e);
-                }
-
-                html += '</div>';
-            }
+            html += buildImageGenSectionHtml(genInfo, objects);
         } else {
             html += '<div class="page-info-section"><div style="color:#888">(生成情報なし)</div></div>';
         }
@@ -1916,71 +1680,11 @@
         document.getElementById('pageInfoContent').innerHTML = html;
         document.getElementById('pageInfoPanel').classList.add('active');
 
-        // 汎用フィールド編集ハンドラ
-        // prefix: DOM要素のID接頭辞
-        // dataArray: 編集対象の配列 (relationships, personalities等)
-        // idField: ID列名 (relationship_id, personality_id等)
-        // targetId: 対象レコードのID値
-        // fieldName: 編集するフィールド名
-        // sheetName: GAS保存時のシート名
-        // emptyText: 空の場合の表示テキスト
-        function setupFieldEditor(prefix, dataArray, idField, targetId, fieldName, sheetName, emptyText = '') {
-            const editBtn = document.getElementById(`${prefix}-edit-btn`);
-            if (!editBtn || !targetId) return;
-
-            const displayRow = document.getElementById(`${prefix}-row`);
-            const editRow = document.getElementById(`${prefix}-edit-row`);
-            const input = document.getElementById(`${prefix}-input`);
-            const display = document.getElementById(`${prefix}-display`);
-
-            editBtn.onclick = () => {
-                displayRow.style.display = 'none';
-                editRow.style.display = 'flex';
-                input.focus();
-            };
-
-            document.getElementById(`${prefix}-cancel-btn`).onclick = () => {
-                editRow.style.display = 'none';
-                displayRow.style.display = 'flex';
-                const record = dataArray.find(r => r[idField] === targetId);
-                input.value = record?.[fieldName] || '';
-            };
-
-            document.getElementById(`${prefix}-save-btn`).onclick = async () => {
-                const newValue = input.value.trim();
-                const gasUrl = document.getElementById('gasUrl').value.trim();
-                if (!gasUrl) {
-                    showStatus('GAS URLが設定されていません', 'error');
-                    return;
-                }
-
-                const record = dataArray.find(r => r[idField] === targetId);
-                if (record) {
-                    record[fieldName] = newValue;
-                }
-
-                showStatus('保存中...', 'loading');
-                try {
-                    await saveGasData(gasUrl, sheetName, dataArray);
-                    saveCachedData();
-                    showStatus('保存しました', 'ok');
-                    display.textContent = newValue || emptyText;
-                    editRow.style.display = 'none';
-                    displayRow.style.display = 'flex';
-                } catch (e) {
-                    console.error('[GAS] 保存エラー:', e);
-                    showStatus('保存に失敗しました', 'error');
-                }
-            };
-        }
-
-        // 関係性フィールド
+        // フィールドエディタ設定
         if (genInfo?.relationshipId) {
             setupFieldEditor('rel-desc', relationships, 'relationship_id', genInfo.relationshipId, 'description', 'relationship');
             setupFieldEditor('rel-req', relationships, 'relationship_id', genInfo.relationshipId, 'next_relationship_req', 'relationship', '(なし)');
         }
-
-        // パーソナリティフィールド
         if (genInfo?.characterId) {
             const char = characters.find(c => c.character_id === genInfo.characterId);
             if (char?.personality) {

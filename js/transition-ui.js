@@ -557,3 +557,76 @@ function updateUserStatusDisplay() {
     const place = userState.placeIndex >= 0 ? places[userState.placeIndex] : null;
     document.getElementById('user-place').textContent = place ? place.name : '未選択';
 }
+
+// ========== アクション効果処理 ==========
+
+// effect文字列をパース
+function parseEffectString(effectStr) {
+    const result = { relationship_id: null, costume_id: null };
+
+    // カンマで分割
+    const parts = effectStr.split(',').map(p => p.trim()).filter(p => p);
+
+    parts.forEach(part => {
+        // key=value形式
+        if (part.includes('=')) {
+            const [key, value] = part.split('=').map(s => s.trim());
+            if (key === 'relationship_id' || key === 'rel') {
+                result.relationship_id = value;
+            } else if (key === 'costume_id' || key === 'cos') {
+                result.costume_id = value;
+            }
+        } else {
+            // IDのみの形式（プレフィックスで判定）
+            if (part.startsWith('rel_')) {
+                result.relationship_id = part;
+            } else if (part.startsWith('cos_')) {
+                result.costume_id = part;
+            }
+        }
+    });
+
+    return result;
+}
+
+// アクションのeffectを適用（状態変更を行い、メッセージ配列を返す）
+function applyActionEffect(action, charAtLocation, statusIndex) {
+    const messages = [];
+    if (!action.effect || !charAtLocation) return messages;
+
+    const effectStr = action.effect.trim();
+    if (!effectStr) return messages;
+
+    console.log('[Effect] 効果を解析:', effectStr);
+
+    // effectをパース（形式: relationship_id=rel_002,costume_id=cos_002 または rel_002,cos_002）
+    const effects = parseEffectString(effectStr);
+
+    // 関係性変更
+    if (effects.relationship_id) {
+        const newRelationship = relationships.find(r => r.relationship_id === effects.relationship_id);
+        if (newRelationship) {
+            const oldRelationshipId = characterStatus[statusIndex].relationshipId;
+            const oldRelationship = relationships.find(r => r.relationship_id === oldRelationshipId);
+            characterStatus[statusIndex].relationshipId = effects.relationship_id;
+            console.log('[Effect] 関係性変更:', oldRelationship?.name, '→', newRelationship.name);
+            messages.push(`🎭 ${charAtLocation.character.name}との関係性が「${oldRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
+        }
+    }
+
+    // 服装変更（同じ服装の場合はスキップ）
+    if (effects.costume_id) {
+        const oldCostumeId = characterStatus[statusIndex].costumeId;
+        if (effects.costume_id !== oldCostumeId) {
+            const newCostume = costumes.find(c => c.costume_id === effects.costume_id);
+            if (newCostume) {
+                const oldCostume = costumes.find(c => c.costume_id === oldCostumeId);
+                characterStatus[statusIndex].costumeId = effects.costume_id;
+                console.log('[Effect] 服装変更:', oldCostume?.name, '→', newCostume.name);
+                messages.push(`👗 ${charAtLocation.character.name}の服装が「${oldCostume?.name || '不明'}」から「${newCostume.name}」に変わりました`);
+            }
+        }
+    }
+
+    return messages;
+}

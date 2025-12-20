@@ -425,3 +425,101 @@ function addAssistantMessage(name, text) {
         label: name
     });
 }
+
+// ========== ページ生成ヘルパー ==========
+
+// 生成情報オブジェクトを作成
+function createGenInfo(actionMode, charAtLocation, currentPlace) {
+    return {
+        actionMode: actionMode,
+        characterId: charAtLocation?.character?.character_id || null,
+        placeId: currentPlace?.place_id || null,
+        actionId: currentState.actionIndex >= 0 ? actions[currentState.actionIndex]?.action_id : null,
+        relationshipId: charAtLocation?.status?.relationshipId || null,
+        costumeId: charAtLocation?.status?.costumeId || null,
+        imageGenInfo: null
+    };
+}
+
+// ストリームページのセットアップ
+function setupStreamPage(movePageIndex, currentPlace) {
+    let streamPageIndex = -1;
+    let useAddDialogueMode = false;  // アクション時は最後のページに追記
+    let appendBaseHtml = '';  // アクション時の追記ベースHTML
+
+    if (movePageIndex >= 0) {
+        // 移動時：既存のプレースホルダーページを使用
+        streamPageIndex = movePageIndex;
+    } else {
+        // アクション時：最後のページに追記モード
+        useAddDialogueMode = true;
+        // 現在の最後のページのHTMLを保存
+        if (pages.length > 0) {
+            const lastPageIndex = pages.length - 1;
+            const pageView = document.getElementById('page-view');
+            const pageDiv = pageView.querySelector(`.page-content[data-page-index="${lastPageIndex}"]`);
+            if (pageDiv) {
+                const textDiv = pageDiv.querySelector('.page-text > div');
+                if (textDiv) {
+                    appendBaseHtml = textDiv.innerHTML;
+                }
+            }
+        }
+    }
+
+    // ストリーミング用タイプライター開始（移動時のみ）
+    if (streamPageIndex >= 0) {
+        startTypewriter(streamPageIndex);
+    }
+
+    return { streamPageIndex, useAddDialogueMode, appendBaseHtml };
+}
+
+// 地の文をページに表示
+async function displayNarrative(narrative, streamPageIndex, useAddDialogueMode) {
+    if (streamPageIndex >= 0) {
+        // 移動時：タイプライターで表示
+        appendToTypewriter(narrative);
+        await waitForTypewriter();
+        // タイプライター完了後、fullTextを更新してフラグを立てる
+        if (pages[streamPageIndex]) {
+            pages[streamPageIndex].fullText = narrative;
+            pages[streamPageIndex].typewriterCompleted = true;
+        }
+    } else if (useAddDialogueMode && narrative && pages.length > 0) {
+        // アクション時：ストリームで既に表示済み、データのみ更新
+        const lastPageIndex = pages.length - 1;
+        const lastPage = pages[lastPageIndex];
+        lastPage.text += (lastPage.text ? '\n' : '') + narrative;
+        lastPage.fullText = lastPage.text;
+    }
+}
+
+// 移動時のプレースホルダーページを作成
+function createMovePagePlaceholder(newPlace, genInfo) {
+    const placeImage = newPlace.image || null;
+    genInfo.placeId = newPlace.place_id;
+
+    // 移動先のキャラクターを取得
+    const newPlaceIndex = places.findIndex(p => p.place_id === newPlace.place_id);
+    for (const status of characterStatus) {
+        if (status.placeIndex === newPlaceIndex && status.characterIndex >= 0) {
+            const charAtNewPlace = characters[status.characterIndex];
+            genInfo.characterId = charAtNewPlace?.character_id || null;
+            genInfo.relationshipId = status.relationshipId || null;
+            genInfo.costumeId = status.costumeId || null;
+            break;
+        }
+    }
+
+    // 移動先のデフォルトアクションを取得
+    if (newPlace.default_action) {
+        genInfo.actionId = newPlace.default_action;
+    }
+
+    const pageIndex = addPage1(placeImage, `${newPlace.name}に移動...`, genInfo);
+    // ストリーミングで更新するのでshowPageからのタイプライター起動を防ぐ
+    pages[pageIndex].typewriterCompleted = true;
+    goToLatestPage();
+    return pageIndex;
+}
