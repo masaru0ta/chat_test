@@ -32,11 +32,11 @@ function showStatus(msg, type = 'ok') {
             const typeClass = type === 'error' ? 'status-error' : type === 'loading' ? 'status-loading' : 'status-ok';
             toast.className = `toast show ${typeClass}`;
 
-            // loading以外は5秒後に非表示
+            // loading以外は2秒後に非表示
             if (type !== 'loading') {
                 toastTimer = setTimeout(() => {
                     toast.className = 'toast';
-                }, 5000);
+                }, 2000);
             }
         } else {
             toast.className = 'toast';
