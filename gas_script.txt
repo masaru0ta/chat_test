@@ -19,12 +19,21 @@ function getSheet(sheetName) {
  * メタデータのみ取得: .../exec?meta=true
  */
 function doGet(e) {
-  // メタデータのみ返す（スプレッドシートの最終更新日時）
+  // メタデータのみ返す（最終更新日時）
   if (e.parameter.meta === 'true') {
     const file = DriveApp.getFileById(SPREADSHEET_ID);
+    const driveUpdated = file.getLastUpdated();
+
+    // API経由の更新日時を取得
+    const apiUpdatedStr = PropertiesService.getScriptProperties().getProperty('lastUpdated');
+    const apiUpdated = apiUpdatedStr ? new Date(apiUpdatedStr) : null;
+
+    // 新しい方を返す
+    const lastUpdated = (apiUpdated && apiUpdated > driveUpdated) ? apiUpdated : driveUpdated;
+
     return ContentService.createTextOutput(JSON.stringify({
-      lastUpdated: file.getLastUpdated().toISOString()
-    })).setMimeType(ContentService.MimeType.JSON);
+      lastUpdated: lastUpdated.toISOString()
+    }));
   }
 
   // パラメータからシート名を取得。指定がなければ DEFAULT_SHEET_NAME を使用
@@ -119,9 +128,14 @@ function doPost(e) {
     if (newRows.length > 0) {
       sheet.getRange(2, 1, newRows.length, newRows[0].length).setValues(newRows);
     }
-    
-    return ContentService.createTextOutput(JSON.stringify({ 
-      status: 'success', 
+
+    // API更新日時を記録（ログシート以外）
+    if (!IS_LOG_SHEET) {
+      PropertiesService.getScriptProperties().setProperty('lastUpdated', new Date().toISOString());
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
       message: `Replaced all data. Old: ${currentDataCount}, New: ${newRows.length}${IS_LOG_SHEET ? ' (Log sheet override allowed)' : ''}`
     })).setMimeType(ContentService.MimeType.JSON);
 

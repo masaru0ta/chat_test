@@ -602,7 +602,7 @@
                 updateModelSelect();
 
                 localStorage.setItem(GAS_LAST_UPDATED_KEY, gasUpdated);
-                console.log('[Sync] 同期完了:', characters.length, 'キャラ,', places.length, '場所,', actions.length, 'アクション');
+                console.log('[Sync] 同期完了:', `${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
                 showStatus(`GAS同期完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
             } else {
                 console.log('[Sync] ローカルデータは最新です');
