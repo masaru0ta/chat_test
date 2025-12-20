@@ -120,6 +120,13 @@
                 <label>ロックパスワード（4桁）</label>
                 <input type="password" id="lockPasswordInput" maxlength="4" placeholder="4桁の数字" inputmode="numeric" pattern="[0-9]{4}" onchange="saveLockPassword()" style="width:100px;">
             </div>
+            <div class="settings-group" style="margin-top:15px; padding-top:15px; border-top:1px solid #444;">
+                <label>GAS設定同期</label>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn" onclick="saveSettingsToGas()" style="flex:1; background:#2a4a2a; color:#8f8; border:1px solid #4a4; padding:10px; border-radius:4px; cursor:pointer;">GASに保存</button>
+                    <button class="btn" onclick="loadSettingsFromGas()" style="flex:1; background:#2a2a4a; color:#88f; border:1px solid #44a; padding:10px; border-radius:4px; cursor:pointer;">GASから読込</button>
+                </div>
+            </div>
             <div id="status"></div>
         </div>
     </div>
@@ -430,6 +437,113 @@
 
         const savedModelId = localStorage.getItem(SELECTED_MODEL_KEY);
         if (savedModelId) selectedModelId = savedModelId;
+    }
+
+    // GASから設定を読み込み
+    async function loadSettingsFromGas() {
+        const baseUrl = document.getElementById('gasUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        showStatus('設定を読み込み中...', 'loading');
+
+        try {
+            const data = await fetchGasData(baseUrl, 'settings');
+            console.log('[Settings] GASから読み込み:', data);
+
+            // データをkey-value形式に変換（1行目はヘッダー）
+            const settings = {};
+            if (data && data.length > 1) {
+                for (let i = 1; i < data.length; i++) {
+                    const row = data[i];
+                    if (row[0]) {
+                        settings[row[0]] = row[1] || '';
+                    }
+                }
+            }
+
+            // 設定を適用
+            if (settings.chatApiKey) {
+                document.getElementById('chatApiKey').value = settings.chatApiKey;
+                localStorage.setItem(CHAT_API_KEY, settings.chatApiKey);
+            }
+            if (settings.runwareApiKey) {
+                document.getElementById('runwareApiKey').value = settings.runwareApiKey;
+                localStorage.setItem(RUNWARE_API_KEY, settings.runwareApiKey);
+            }
+            if (settings.llmLogEnabled !== undefined) {
+                llmLogEnabled = settings.llmLogEnabled === 'on';
+                localStorage.setItem(LLM_LOG_ENABLED_KEY, settings.llmLogEnabled);
+                updateLLMLogButton();
+            }
+            if (settings.imageGenEnabled !== undefined) {
+                imageGenEnabled = settings.imageGenEnabled !== 'off';
+                localStorage.setItem(IMAGE_GEN_ENABLED_KEY, settings.imageGenEnabled);
+                updateImageGenButton();
+            }
+            if (settings.llmModelId) {
+                selectedLLMModelId = settings.llmModelId;
+                localStorage.setItem(SELECTED_LLM_MODEL_KEY, settings.llmModelId);
+                document.getElementById('llmModelSelect').value = settings.llmModelId;
+            }
+            if (settings.imageModelId) {
+                selectedModelId = settings.imageModelId;
+                localStorage.setItem(SELECTED_MODEL_KEY, settings.imageModelId);
+                document.getElementById('modelSelect').value = settings.imageModelId;
+            }
+            if (settings.characterCount) {
+                characterCount = parseInt(settings.characterCount) || 2;
+                localStorage.setItem(CHARACTER_COUNT_KEY, characterCount.toString());
+                document.getElementById('characterCountInput').value = characterCount;
+                updateCharacterStatusArray();
+            }
+            if (settings.lockPassword) {
+                localStorage.setItem(STORAGE_KEYS.LOCK_PASSWORD, settings.lockPassword);
+                document.getElementById('lockPasswordInput').value = settings.lockPassword;
+            }
+
+            showStatus('設定を読み込みました');
+        } catch (error) {
+            console.error('[Settings] 読み込みエラー:', error);
+            showStatus('読み込みエラー: ' + error.message, 'error');
+        }
+    }
+
+    // GASに設定を保存
+    async function saveSettingsToGas() {
+        const baseUrl = document.getElementById('gasUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        showStatus('設定を保存中...', 'loading');
+
+        try {
+            // 現在の設定を収集
+            const settings = [
+                ['key', 'value'],  // ヘッダー行
+                ['chatApiKey', document.getElementById('chatApiKey').value || ''],
+                ['runwareApiKey', document.getElementById('runwareApiKey').value || ''],
+                ['llmLogEnabled', llmLogEnabled ? 'on' : 'off'],
+                ['imageGenEnabled', imageGenEnabled ? 'on' : 'off'],
+                ['llmModelId', selectedLLMModelId || ''],
+                ['imageModelId', selectedModelId || ''],
+                ['characterCount', characterCount.toString()],
+                ['lockPassword', document.getElementById('lockPasswordInput').value || '']
+            ];
+
+            console.log('[Settings] GASに保存:', settings);
+            const result = await saveGasData(baseUrl, 'settings', settings);
+            console.log('[Settings] 保存結果:', result);
+
+            showStatus('設定を保存しました');
+        } catch (error) {
+            console.error('[Settings] 保存エラー:', error);
+            showStatus('保存エラー: ' + error.message, 'error');
+        }
     }
 
     // キーボードナビゲーション初期化
