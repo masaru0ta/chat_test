@@ -522,17 +522,16 @@
         showStatus('設定を保存中...', 'loading');
 
         try {
-            // 現在の設定を収集
+            // 現在の設定を収集（オブジェクトの配列形式）
             const settings = [
-                ['key', 'value'],  // ヘッダー行
-                ['chatApiKey', document.getElementById('chatApiKey').value || ''],
-                ['runwareApiKey', document.getElementById('runwareApiKey').value || ''],
-                ['llmLogEnabled', llmLogEnabled ? 'on' : 'off'],
-                ['imageGenEnabled', imageGenEnabled ? 'on' : 'off'],
-                ['llmModelId', selectedLLMModelId || ''],
-                ['imageModelId', selectedModelId || ''],
-                ['characterCount', characterCount.toString()],
-                ['lockPassword', document.getElementById('lockPasswordInput').value || '']
+                { key: 'chatApiKey', value: document.getElementById('chatApiKey').value || '' },
+                { key: 'runwareApiKey', value: document.getElementById('runwareApiKey').value || '' },
+                { key: 'llmLogEnabled', value: llmLogEnabled ? 'on' : 'off' },
+                { key: 'imageGenEnabled', value: imageGenEnabled ? 'on' : 'off' },
+                { key: 'llmModelId', value: selectedLLMModelId || '' },
+                { key: 'imageModelId', value: selectedModelId || '' },
+                { key: 'characterCount', value: characterCount.toString() },
+                { key: 'lockPassword', value: document.getElementById('lockPasswordInput').value || '' }
             ];
 
             console.log('[Settings] GASに保存:', settings);
