@@ -128,6 +128,17 @@
     <div class="chat-area">
         <div class="page-area">
             <div id="page-view">
+                <!-- テキスト非表示時の情報ボタン -->
+                <button class="info-button" id="infoButton" onclick="showPageInfo()" title="ページ情報">i</button>
+                <!-- ページ情報パネル -->
+                <div class="page-info-panel" id="pageInfoPanel">
+                    <div class="page-info-header">
+                        <h3>ページ情報</h3>
+                        <button class="page-info-close" onclick="closePageInfo()">×</button>
+                    </div>
+                    <div class="page-info-content" id="pageInfoContent">
+                    </div>
+                </div>
             </div>
         </div>
         <!-- 統合コマンドバー -->
@@ -762,6 +773,7 @@
     }
 
     // 画像生成を非同期に開始（ブロックを回避）
+    // 戻り値: { imageURL, imageGenInfo } または null
     function startImageGenerationAsync(charAtLocation, currentPlace) {
         const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
         if (!charAtLocation || !imageGenEnabled || !runwareApiKey) {
@@ -774,8 +786,8 @@
         return new Promise(resolve => {
             setTimeout(async () => {
                 try {
-                    const image = await generateCharacterImage(charAtLocation.character, currentPlace, charActionIndex, charCostumeId, charRelationshipId);
-                    resolve(image);
+                    const result = await generateCharacterImage(charAtLocation.character, currentPlace, charActionIndex, charCostumeId, charRelationshipId);
+                    resolve(result); // { imageURL, imageGenInfo } または null
                 } catch (e) {
                     console.error('[画像生成エラー]', e);
                     resolve(null);
@@ -941,11 +953,41 @@
             return;
         }
 
+        // 生成情報を収集するオブジェクト（IDのみ保持、名前は表示時に取得）
+        let genInfo = {
+            actionType: actionType,
+            characterId: charAtLocation?.character?.character_id || null,
+            placeId: currentPlace?.place_id || null,
+            actionId: currentState.actionIndex >= 0 ? actions[currentState.actionIndex]?.action_id : null,
+            relationshipId: charAtLocation?.status?.relationshipId || null,
+            costumeId: charAtLocation?.status?.costumeId || null,
+            imageGenInfo: null
+        };
+
         // 移動時は即座にプレースホルダーページを作成
         let movePageIndex = -1;
         if (actionType === 'move' && newPlace) {
             const placeImage = newPlace.image || null;
-            movePageIndex = addPage1(placeImage, `${newPlace.name}に移動...`);
+            genInfo.placeId = newPlace.place_id;
+
+            // 移動先のキャラクターを取得
+            const newPlaceIndex = places.findIndex(p => p.place_id === newPlace.place_id);
+            for (const status of characterStatus) {
+                if (status.placeIndex === newPlaceIndex && status.characterIndex >= 0) {
+                    const charAtNewPlace = characters[status.characterIndex];
+                    genInfo.characterId = charAtNewPlace?.character_id || null;
+                    genInfo.relationshipId = status.relationshipId || null;
+                    genInfo.costumeId = status.costumeId || null;
+                    break;
+                }
+            }
+
+            // 移動先のデフォルトアクションを取得
+            if (newPlace.default_action) {
+                genInfo.actionId = newPlace.default_action;
+            }
+
+            movePageIndex = addPage1(placeImage, `${newPlace.name}に移動...`, genInfo);
             // ストリーミングで更新するのでshowPageからのタイプライター起動を防ぐ
             pages[movePageIndex].typewriterCompleted = true;
             goToLatestPage();
@@ -971,6 +1013,7 @@
         }
         console.log('[Combined] 完全版プロンプト:', combinedPrompt);
         console.log('[Combined] シンプル版:', combinedSimplePrompt);
+
 
         // 画像生成を非同期に開始（複数ページの場合は後で個別に生成）
         const imagePromise = charPageCount >= 2 ? null : startImageGenerationAsync(charAtLocation, currentPlace);
@@ -1077,8 +1120,14 @@
             if (charPageCount >= 2 && dialogues && dialogues.length > 0) {
                 // 複数ページモード：並列生成した画像を順次取得してページ作成
                 for (let i = 0; i < dialogues.length; i++) {
-                    const charImage = await imagePromises[i];
-                    addPage2(charAtLocation.character.name, charImage, dialogues[i]);
+                    const imageResult = await imagePromises[i];
+                    const charImage = imageResult?.imageURL || null;
+                    // 各ページ用の genInfo を作成
+                    const pageGenInfo = {
+                        ...genInfo,
+                        imageGenInfo: imageResult?.imageGenInfo || null
+                    };
+                    addPage2(charAtLocation.character.name, charImage, dialogues[i], pageGenInfo);
                     // 各ページ生成後に次へボタンを有効化（isLoading中でも強制的に）
                     const nextBtn = document.getElementById('next-btn');
                     if (nextBtn && currentPageIndex < pages.length - 1) {
@@ -1087,8 +1136,10 @@
                 }
             } else if (dialogue) {
                 // 通常モード：1ページのみ
-                const charImage = imagePromise ? await imagePromise : null;
-                addPage2(charAtLocation.character.name, charImage, dialogue);
+                const imageResult = imagePromise ? await imagePromise : null;
+                const charImage = imageResult?.imageURL || null;
+                genInfo.imageGenInfo = imageResult?.imageGenInfo || null;
+                addPage2(charAtLocation.character.name, charImage, dialogue, genInfo);
                 updatePageStatus();
             }
         }
@@ -1097,21 +1148,11 @@
         hideLoading();
     }
 
-    // キャラクター画像生成（image_gen_base.htmlと同じ方式）
-    async function generateCharacterImage(character, place, actionIndex, costumeId = null, relationshipId = null) {
-        const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
-        if (!runwareApiKey) return null;
-
-        // モデル取得（選択されたモデルを優先、なければ最初のモデル）
-        const modelId = selectedModelId || getFirstModelId(models);
-        if (!modelId || !models[modelId]) {
-            console.log('[画像生成] モデルが未設定');
-            return null;
-        }
+    // 画像生成プロンプト構築（共通関数）
+    // 戻り値: { finalPrompt, negativePrompt } または null
+    function buildImageGenPrompt(modelId, character, place, actionIndex, compositionTag, costumeId, relationshipId) {
+        if (!modelId || !models[modelId]) return null;
         const model = models[modelId];
-
-        // 構図タグを取得（BESTから選択）
-        const compositionTag = getCompositionTag(actions, actionIndex);
 
         // プロンプト構築（image_gen_base.htmlと同じ順序）
         const parts = [
@@ -1119,15 +1160,12 @@
             character?.tag || '',                    // キャラタグ
             place?.tag || '',                        // 場所タグ
             (actionIndex >= 0 && actions[actionIndex]) ? actions[actionIndex].prompt : '',  // アクションプロンプト
-            compositionTag,                          // 構図タグ（BEST選択）
+            compositionTag || '',                    // 構図タグ
             place?.additionalTag || '',              // 場所の追加タグ
             character?.additionalTag || ''           // キャラの追加タグ
         ].filter(p => p);
 
-        if (parts.length === 0) {
-            console.log('[画像生成] プロンプトが空のためスキップ');
-            return null;
-        }
+        if (parts.length === 0) return null;
 
         const prompt = cleanPrompt(parts.join(', '));
         const negativePrompt = model?.qualityNegative || '';
@@ -1156,22 +1194,61 @@
         const characterWithExtras = character
             ? { ...character, clothes: clothesTag, camel: camelTag, expression: expressionTag }
             : { clothes: clothesTag, camel: camelTag, expression: expressionTag };
-        console.log('[画像生成] プロンプト:', prompt);
+
+        // タグ置換して最終プロンプトを生成
+        const finalPrompt = buildFinalPrompt(prompt, characterWithExtras);
+
+        return { finalPrompt, negativePrompt, characterWithExtras };
+    }
+
+    // キャラクター画像生成（image_gen_base.htmlと同じ方式）
+    // 戻り値: { imageURL, imageGenInfo } または null
+    async function generateCharacterImage(character, place, actionIndex, costumeId = null, relationshipId = null) {
+        const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
+        if (!runwareApiKey) return null;
+
+        // モデル取得（選択されたモデルを優先、なければ最初のモデル）
+        const modelId = selectedModelId || getFirstModelId(models);
+        if (!modelId || !models[modelId]) {
+            console.log('[画像生成] モデルが未設定');
+            return null;
+        }
+
+        // 構図タグを取得（BESTから選択）
+        const compositionTag = getCompositionTag(actions, actionIndex);
+
+        // プロンプト構築（共通関数を使用）
+        const promptResult = buildImageGenPrompt(modelId, character, place, actionIndex, compositionTag, costumeId, relationshipId);
+        if (!promptResult) {
+            console.log('[画像生成] プロンプトが空のためスキップ');
+            return null;
+        }
+
+        const { finalPrompt, negativePrompt, characterWithExtras } = promptResult;
+        console.log('[画像生成] プロンプト:', finalPrompt);
         console.log('[画像生成] ネガティブ:', negativePrompt);
 
         showStatusImage();
-        const result = await generateImage(runwareApiKey, modelId, prompt, {
+        const result = await generateImage(runwareApiKey, modelId, finalPrompt, {
             negativePrompt: negativePrompt,
-            steps: model?.steps || 20,
-            cfgScale: model?.cfgScale || 7,
-            scheduler: model?.scheduler || 'Default',
+            steps: models[modelId]?.steps || 20,
+            cfgScale: models[modelId]?.cfgScale || 7,
+            scheduler: models[modelId]?.scheduler || 'Default',
             width: 1024,
             height: 1024,
             character: characterWithExtras
         });
         hideStatusImage();
 
-        return result.imageURL;
+        // 画像生成情報を含めて返す（IDのみ保持、名前は表示時に取得）
+        return {
+            imageURL: result.imageURL,
+            imageGenInfo: {
+                modelId: modelId,
+                compositionTag: compositionTag,
+                seed: result.seed
+            }
+        };
     }
 
     // セーブ機能
@@ -1253,7 +1330,189 @@
         }
     }
 
+    // ページ情報表示（テキスト非表示時の情報ボタン）
+    function showPageInfo() {
+        if (currentPageIndex < 0 || !pages[currentPageIndex]) {
+            console.log('[Info] ページがありません');
+            return;
+        }
+        const page = pages[currentPageIndex];
+        const genInfo = page.genInfo;
+        const typeLabels = { narrative: '地の文ページ', character: 'セリフのページ' };
+
+        let html = '';
+
+        // 基本情報セクション
+        html += '<div class="page-info-section">';
+        html += `<div class="page-info-section-title">ページ ${currentPageIndex + 1}/${pages.length}</div>`;
+        if (page.type) {
+            html += `<div class="page-info-row"><span class="page-info-label">種別:</span><span class="page-info-value">${typeLabels[page.type] || page.type}</span></div>`;
+        }
+        html += '</div>';
+
+        if (genInfo) {
+            // 生成パラメータセクション
+            html += '<div class="page-info-section">';
+            html += '<div class="page-info-section-title">生成パラメータ</div>';
+            if (genInfo.actionType) html += `<div class="page-info-row"><span class="page-info-label">アクション種別:</span><span class="page-info-value">${escapeHtml(genInfo.actionType)}</span></div>`;
+            if (genInfo.characterId) {
+                const char = characters.find(c => c.character_id === genInfo.characterId);
+                const charDisplay = char?.name ? `${escapeHtml(char.name)}` : '';
+                const charIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.characterId)})</span>`;
+                html += `<div class="page-info-row"><span class="page-info-label">キャラクター:</span><span class="page-info-value">${charDisplay}${charIdDisplay}</span></div>`;
+            }
+            if (genInfo.placeId) {
+                const place = places.find(p => p.place_id === genInfo.placeId);
+                const placeDisplay = place?.name ? `${escapeHtml(place.name)}` : '';
+                const placeIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.placeId)})</span>`;
+                html += `<div class="page-info-row"><span class="page-info-label">場所:</span><span class="page-info-value">${placeDisplay}${placeIdDisplay}</span></div>`;
+            }
+            if (genInfo.actionId) {
+                const action = actions.find(a => a.action_id === genInfo.actionId);
+                const actionDisplay = action?.name ? `${escapeHtml(action.name)}` : '';
+                const actionIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.actionId)})</span>`;
+                html += `<div class="page-info-row"><span class="page-info-label">アクション:</span><span class="page-info-value">${actionDisplay}${actionIdDisplay}</span></div>`;
+            }
+            if (genInfo.costumeId) {
+                const costume = costumes.find(c => c.costume_id === genInfo.costumeId);
+                const costumeDisplay = costume?.name ? `${escapeHtml(costume.name)}` : '';
+                const costumeIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.costumeId)})</span>`;
+                html += `<div class="page-info-row"><span class="page-info-label">服装:</span><span class="page-info-value">${costumeDisplay}${costumeIdDisplay}</span></div>`;
+            }
+            if (genInfo.relationshipId) {
+                const relationship = relationships.find(r => r.relationship_id === genInfo.relationshipId);
+                const relationshipDisplay = relationship?.name ? `${escapeHtml(relationship.name)}` : '';
+                const relationshipIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.relationshipId)})</span>`;
+                html += `<div class="page-info-row"><span class="page-info-label">関係性:</span><span class="page-info-value">${relationshipDisplay}${relationshipIdDisplay}</span></div>`;
+            }
+            html += '</div>';
+
+            // LLMプロンプト再現セクション
+            html += '<div class="page-info-section">';
+            html += '<div class="page-info-section-title">LLMプロンプト（再現）</div>';
+
+            // genInfoからオブジェクトを再構築
+            let reconstructedPrompt = null;
+            try {
+                const char = genInfo.characterId ? characters.find(c => c.character_id === genInfo.characterId) : null;
+                const place = genInfo.placeId ? places.find(p => p.place_id === genInfo.placeId) : null;
+                const actionIndex = genInfo.actionId ? actions.findIndex(a => a.action_id === genInfo.actionId) : -1;
+
+                // charAtLocationを再構築
+                let charAtLocation = null;
+                if (char) {
+                    charAtLocation = {
+                        character: char,
+                        status: {
+                            characterIndex: characters.indexOf(char),
+                            placeIndex: place ? places.indexOf(place) : -1,
+                            actionIndex: actionIndex,
+                            relationshipId: genInfo.relationshipId || null,
+                            costumeId: genInfo.costumeId || null
+                        }
+                    };
+                }
+
+                // currentStateを一時的に設定してbuildCombinedPromptを呼び出す
+                const savedActionIndex = currentState.actionIndex;
+                currentState.actionIndex = actionIndex;
+
+                const result = buildCombinedPrompt(
+                    genInfo.actionType,
+                    '',  // userInputは保持していないので空
+                    null,  // previousPlace
+                    place,  // newPlace (移動時)
+                    charAtLocation,
+                    place,  // currentPlace
+                    false,  // dialogueOnly
+                    null   // companion
+                );
+
+                currentState.actionIndex = savedActionIndex;
+
+                if (result && result.fullPrompt) {
+                    reconstructedPrompt = result.fullPrompt;
+                }
+            } catch (e) {
+                console.log('[PageInfo] プロンプト再現エラー:', e);
+            }
+
+            if (reconstructedPrompt) {
+                html += `<div class="page-info-text">${escapeHtml(reconstructedPrompt)}</div>`;
+            } else {
+                html += '<div style="color:#888">(再現不可)</div>';
+            }
+            html += '</div>';
+
+            // 画像生成セクション
+            if (genInfo.imageGenInfo) {
+                const img = genInfo.imageGenInfo;
+                html += '<div class="page-info-section">';
+                html += '<div class="page-info-section-title">画像生成</div>';
+                if (img.modelId) {
+                    const model = models[img.modelId];
+                    const modelDisplay = model?.name ? `${escapeHtml(model.name)}` : '';
+                    const modelIdDisplay = ` <span style="color:#888">(${escapeHtml(img.modelId)})</span>`;
+                    html += `<div class="page-info-row"><span class="page-info-label">モデル:</span><span class="page-info-value">${modelDisplay}${modelIdDisplay}</span></div>`;
+                }
+                if (img.seed) html += `<div class="page-info-row"><span class="page-info-label">シード:</span><span class="page-info-value">${img.seed}</span></div>`;
+                if (img.compositionTag) html += `<div class="page-info-row"><span class="page-info-label">構図:</span><span class="page-info-value">${escapeHtml(img.compositionTag)}</span></div>`;
+                // 服装タグはgenInfo.costumeIdから取得
+                if (genInfo.costumeId) {
+                    const costume = costumes.find(c => c.costume_id === genInfo.costumeId);
+                    if (costume?.tag) html += `<div class="page-info-row"><span class="page-info-label">服装タグ:</span><span class="page-info-value">${escapeHtml(costume.tag)}</span></div>`;
+                }
+                // 表情タグはgenInfo.relationshipIdから取得
+                if (genInfo.relationshipId) {
+                    const rel = relationships.find(r => r.relationship_id === genInfo.relationshipId);
+                    if (rel?.expression) html += `<div class="page-info-row"><span class="page-info-label">表情:</span><span class="page-info-value">${escapeHtml(rel.expression)}</span></div>`;
+                }
+
+                // 画像プロンプト再現（buildImageGenPromptを使用）
+                try {
+                    const char = genInfo.characterId ? characters.find(c => c.character_id === genInfo.characterId) : null;
+                    const place = genInfo.placeId ? places.find(p => p.place_id === genInfo.placeId) : null;
+                    const actionIndex = genInfo.actionId ? actions.findIndex(a => a.action_id === genInfo.actionId) : -1;
+                    const imagePromptResult = buildImageGenPrompt(
+                        img.modelId,
+                        char,
+                        place,
+                        actionIndex,
+                        img.compositionTag,
+                        genInfo.costumeId,
+                        genInfo.relationshipId
+                    );
+                    if (imagePromptResult?.finalPrompt) {
+                        html += '<div style="margin-top:8px"><span class="page-info-label">画像プロンプト（再現）:</span></div>';
+                        html += `<div class="page-info-text">${escapeHtml(imagePromptResult.finalPrompt)}</div>`;
+                    }
+                } catch (e) {
+                    console.log('[PageInfo] 画像プロンプト再現エラー:', e);
+                }
+
+                html += '</div>';
+            }
+        } else {
+            html += '<div class="page-info-section"><div style="color:#888">(生成情報なし)</div></div>';
+        }
+
+        document.getElementById('pageInfoContent').innerHTML = html;
+        document.getElementById('pageInfoPanel').classList.add('active');
+    }
+
+    function closePageInfo() {
+        document.getElementById('pageInfoPanel').classList.remove('active');
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // キャラクター画像生成（指定構図タグ版）
+    // 戻り値: { imageURL, imageGenInfo } または null
     async function generateCharacterImageWithComposition(charAtLocation, place, actionIndex, compositionTag) {
         const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
         if (!runwareApiKey) return null;
@@ -1265,55 +1524,33 @@
         // モデル取得
         const modelId = selectedModelId || getFirstModelId(models);
         if (!modelId || !models[modelId]) return null;
-        const model = models[modelId];
 
-        // プロンプト構築
-        const parts = [
-            model?.qualityPositive || '',
-            character?.tag || '',
-            place?.tag || '',
-            (actionIndex >= 0 && actions[actionIndex]) ? actions[actionIndex].prompt : '',
-            compositionTag,  // 指定された構図タグを使用
-            place?.additionalTag || '',
-            character?.additionalTag || ''
-        ].filter(p => p);
+        // プロンプト構築（共通関数を使用）
+        const promptResult = buildImageGenPrompt(modelId, character, place, actionIndex, compositionTag, costumeId, relationshipId);
+        if (!promptResult) return null;
 
-        if (parts.length === 0) return null;
-
-        const prompt = cleanPrompt(parts.join(', '));
-        const negativePrompt = model?.qualityNegative || '';
-
-        // 服装・表情タグ取得
-        let clothesTag = '', camelTag = '', expressionTag = '';
-        if (costumeId) {
-            const costume = costumes.find(c => c.costume_id === costumeId);
-            if (costume) {
-                clothesTag = costume.tag || '';
-                camelTag = costume.camel_tag || '';
-            }
-        }
-        if (relationshipId) {
-            const relationship = relationships.find(r => r.relationship_id === relationshipId);
-            if (relationship) expressionTag = relationship.expression || '';
-        }
-
-        const characterWithExtras = character
-            ? { ...character, clothes: clothesTag, camel: camelTag, expression: expressionTag }
-            : { clothes: clothesTag, camel: camelTag, expression: expressionTag };
+        const { finalPrompt, negativePrompt, characterWithExtras } = promptResult;
 
         showStatusImage();
-        const result = await generateImage(runwareApiKey, modelId, prompt, {
+        const result = await generateImage(runwareApiKey, modelId, finalPrompt, {
             negativePrompt: negativePrompt,
-            steps: model?.steps || 20,
-            cfgScale: model?.cfgScale || 7,
-            scheduler: model?.scheduler || 'Default',
+            steps: models[modelId]?.steps || 20,
+            cfgScale: models[modelId]?.cfgScale || 7,
+            scheduler: models[modelId]?.scheduler || 'Default',
             width: 1024,
             height: 1024,
             character: characterWithExtras
         });
         hideStatusImage();
 
-        return result.imageURL;
+        return {
+            imageURL: result.imageURL,
+            imageGenInfo: {
+                modelId: modelId,
+                compositionTag: compositionTag,
+                seed: result.seed
+            }
+        };
     }
 
 </script>

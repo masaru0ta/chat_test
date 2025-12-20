@@ -200,6 +200,14 @@ function showPage(index) {
         }
         startPageTypewriter(index);
     }
+
+    // ページ情報パネルが開いていれば内容を更新
+    const pageInfoPanel = document.getElementById('pageInfoPanel');
+    if (pageInfoPanel && pageInfoPanel.classList.contains('active')) {
+        if (typeof showPageInfo === 'function') {
+            showPageInfo();
+        }
+    }
 }
 
 function startPageTypewriter(pageIndex) {
@@ -261,24 +269,26 @@ function updatePageText(pageIndex, newText) {
 
 // ========== ページ追加ヘルパー ==========
 
-function addPage1(placeImage, text) {
+function addPage1(placeImage, text, genInfo = null) {
     const pageIndex = pages.length;
     addPage({
         type: 'narrative',
         image: placeImage,
         text: text,
-        label: ''
+        label: '',
+        genInfo: genInfo
     });
     return pageIndex;
 }
 
-function addPage2(characterName, image, text) {
+function addPage2(characterName, image, text, genInfo = null) {
     const pageIndex = pages.length;
     addPage({
         type: 'character',
         image: image,
         text: text,
-        label: characterName
+        label: characterName,
+        genInfo: genInfo
     });
     return pageIndex;
 }

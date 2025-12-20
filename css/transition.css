@@ -306,6 +306,36 @@ html, body {
     pointer-events: none;
 }
 
+/* 情報ボタン（テキスト非表示時のみ表示） */
+.info-button {
+    display: none;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    z-index: 101;
+    transition: all 0.2s ease;
+}
+
+.info-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+#page-view.text-hidden .info-button {
+    display: block;
+}
+
 #page-view .page-text {
     transition: opacity 0.2s ease;
 }
@@ -1053,4 +1083,101 @@ html, body {
         bottom: 60px;
         right: 10px;
     }
+}
+
+/* ページ情報パネル */
+.page-info-panel {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 200;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.page-info-panel.active {
+    display: flex;
+}
+
+.page-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #444;
+    flex-shrink: 0;
+}
+
+.page-info-header h3 {
+    margin: 0;
+    color: #4a9eff;
+    font-size: 1rem;
+}
+
+.page-info-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+}
+
+.page-info-close:hover {
+    color: #fff;
+}
+
+.page-info-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    color: #ccc;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.page-info-section {
+    margin-bottom: 15px;
+}
+
+.page-info-section-title {
+    color: #4a9eff;
+    font-weight: bold;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #333;
+}
+
+.page-info-row {
+    display: flex;
+    margin-bottom: 4px;
+}
+
+.page-info-label {
+    color: #888;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.page-info-value {
+    color: #fff;
+    word-break: break-all;
+}
+
+.page-info-text {
+    background: #1a1a1a;
+    padding: 10px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    color: #aaa;
 }

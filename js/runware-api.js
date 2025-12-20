@@ -60,7 +60,8 @@ async function generateImage(apiKey, modelId, prompt, options = {}) {
         console.log('[Runware] 画像URL:', result.data[0].imageURL);
         return {
             imageURL: result.data[0].imageURL,
-            seed: result.data[0].seed || seed
+            seed: result.data[0].seed || seed,
+            finalPrompt: cleanedPrompt
         };
     } else if (result.errors) {
         console.error('[Runware] エラー:', result.errors);
