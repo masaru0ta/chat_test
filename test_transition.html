@@ -219,8 +219,8 @@
 
     // キャラクターステータス（2人分初期値）
     let characterStatus = [
-        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_001', costumeId: 'cos_001', memo: '' },
-        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: 'rel_302', costumeId: 'cos_001', memo: '' }
+        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: DEFAULTS.RELATIONSHIP_PRIMARY, costumeId: DEFAULTS.COSTUME, memo: '' },
+        { characterIndex: -1, placeIndex: -1, actionIndex: -1, relationshipId: DEFAULTS.RELATIONSHIP_SECONDARY, costumeId: DEFAULTS.COSTUME, memo: '' }
     ];
 
     // 状態変数
@@ -250,8 +250,8 @@
                 characterIndex: -1,
                 placeIndex: -1,
                 actionIndex: -1,
-                relationshipId: 'rel_001',
-                costumeId: 'cos_001',
+                relationshipId: DEFAULTS.RELATIONSHIP_PRIMARY,
+                costumeId: DEFAULTS.COSTUME,
                 memo: ''
             });
         }
@@ -293,17 +293,6 @@
 <script src="js/transition-ui.js"></script>
 <script src="js/transition-llm.js"></script>
 <script>
-    // ストレージキーのエイリアス（constants.jsから参照）
-    const CHARACTER_COUNT_KEY = STORAGE_KEYS.TRANSITION_CHARACTER_COUNT;
-    const CHAT_API_KEY = STORAGE_KEYS.TRANSITION_CHAT_API_KEY;
-    const RUNWARE_API_KEY = STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY;
-    const IMAGE_GEN_ENABLED_KEY = STORAGE_KEYS.TRANSITION_IMAGE_GEN_ENABLED;
-    const LLM_LOG_ENABLED_KEY = STORAGE_KEYS.TRANSITION_LLM_LOG_ENABLED;
-    const SELECTED_MODEL_KEY = STORAGE_KEYS.TRANSITION_SELECTED_MODEL;
-    const SELECTED_LLM_MODEL_KEY = STORAGE_KEYS.TRANSITION_SELECTED_LLM_MODEL;
-    const SIDEBAR_COLLAPSED_KEY = STORAGE_KEYS.TRANSITION_SIDEBAR_COLLAPSED;
-    const GAS_LAST_UPDATED_KEY = 'transition_gas_last_updated';
-
     // 移動実行
     async function executeMove(placeIndex) {
         const previousPlace = userState.placeIndex >= 0 ? places[userState.placeIndex] : null;
@@ -367,7 +356,7 @@
             alert('OpenRouter API Key を入力してください');
             return;
         }
-        localStorage.setItem(CHAT_API_KEY, chatApiKey);
+        localStorage.setItem(STORAGE_KEYS.TRANSITION_CHAT_API_KEY, chatApiKey);
 
         if (userState.placeIndex < 0) {
             alert('初期設定を実行してください');
@@ -427,21 +416,21 @@
         const settings = loadSettings(STORAGE_KEYS.GAS_URL, STORAGE_KEYS.API_KEY);
         if (settings.gasUrl) document.getElementById('gasUrl').value = settings.gasUrl;
 
-        const savedApiKey = localStorage.getItem(CHAT_API_KEY);
+        const savedApiKey = localStorage.getItem(STORAGE_KEYS.TRANSITION_CHAT_API_KEY);
         if (savedApiKey) document.getElementById('chatApiKey').value = savedApiKey;
 
-        const savedRunwareKey = localStorage.getItem(RUNWARE_API_KEY);
+        const savedRunwareKey = localStorage.getItem(STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY);
         if (savedRunwareKey) document.getElementById('runwareApiKey').value = savedRunwareKey;
 
-        const savedImageGenEnabled = localStorage.getItem(IMAGE_GEN_ENABLED_KEY);
+        const savedImageGenEnabled = localStorage.getItem(STORAGE_KEYS.TRANSITION_IMAGE_GEN_ENABLED);
         imageGenEnabled = savedImageGenEnabled !== 'off';
         updateImageGenButton();
 
-        const savedLLMLogEnabled = localStorage.getItem(LLM_LOG_ENABLED_KEY);
+        const savedLLMLogEnabled = localStorage.getItem(STORAGE_KEYS.TRANSITION_LLM_LOG_ENABLED);
         llmLogEnabled = savedLLMLogEnabled === 'on';
         updateLLMLogButton();
 
-        const savedModelId = localStorage.getItem(SELECTED_MODEL_KEY);
+        const savedModelId = localStorage.getItem(STORAGE_KEYS.TRANSITION_SELECTED_MODEL);
         if (savedModelId) selectedModelId = savedModelId;
     }
 
@@ -473,35 +462,35 @@
             // 設定を適用
             if (settings.chatApiKey) {
                 document.getElementById('chatApiKey').value = settings.chatApiKey;
-                localStorage.setItem(CHAT_API_KEY, settings.chatApiKey);
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_CHAT_API_KEY, settings.chatApiKey);
             }
             if (settings.runwareApiKey) {
                 document.getElementById('runwareApiKey').value = settings.runwareApiKey;
-                localStorage.setItem(RUNWARE_API_KEY, settings.runwareApiKey);
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY, settings.runwareApiKey);
             }
             if (settings.llmLogEnabled !== undefined) {
                 llmLogEnabled = settings.llmLogEnabled === 'on';
-                localStorage.setItem(LLM_LOG_ENABLED_KEY, settings.llmLogEnabled);
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_LLM_LOG_ENABLED, settings.llmLogEnabled);
                 updateLLMLogButton();
             }
             if (settings.imageGenEnabled !== undefined) {
                 imageGenEnabled = settings.imageGenEnabled !== 'off';
-                localStorage.setItem(IMAGE_GEN_ENABLED_KEY, settings.imageGenEnabled);
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_IMAGE_GEN_ENABLED, settings.imageGenEnabled);
                 updateImageGenButton();
             }
             if (settings.llmModelId) {
                 selectedLLMModelId = settings.llmModelId;
-                localStorage.setItem(SELECTED_LLM_MODEL_KEY, settings.llmModelId);
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_SELECTED_LLM_MODEL, settings.llmModelId);
                 document.getElementById('llmModelSelect').value = settings.llmModelId;
             }
             if (settings.imageModelId) {
                 selectedModelId = settings.imageModelId;
-                localStorage.setItem(SELECTED_MODEL_KEY, settings.imageModelId);
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_SELECTED_MODEL, settings.imageModelId);
                 document.getElementById('modelSelect').value = settings.imageModelId;
             }
             if (settings.characterCount) {
                 characterCount = parseInt(settings.characterCount) || 2;
-                localStorage.setItem(CHARACTER_COUNT_KEY, characterCount.toString());
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_CHARACTER_COUNT, characterCount.toString());
                 document.getElementById('characterCountInput').value = characterCount;
                 updateCharacterStatusArray();
             }
@@ -547,7 +536,7 @@
             // 保存後、GASの更新日時を取得してローカルに保存
             const meta = await fetchGasMeta(baseUrl);
             if (meta.lastUpdated) {
-                localStorage.setItem(GAS_LAST_UPDATED_KEY, meta.lastUpdated);
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_GAS_LAST_UPDATED, meta.lastUpdated);
                 console.log('[Settings] 更新日時を保存:', meta.lastUpdated);
             }
 
@@ -568,7 +557,7 @@
         try {
             const meta = await fetchGasMeta(baseUrl);
             const gasUpdated = meta.lastUpdated;
-            const localUpdated = localStorage.getItem(GAS_LAST_UPDATED_KEY);
+            const localUpdated = localStorage.getItem(STORAGE_KEYS.TRANSITION_GAS_LAST_UPDATED);
 
             console.log('[Sync] GAS更新日時:', gasUpdated, 'ローカル:', localUpdated);
 
@@ -605,7 +594,7 @@
                 updateAllSelects();
                 updateModelSelect();
 
-                localStorage.setItem(GAS_LAST_UPDATED_KEY, gasUpdated);
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_GAS_LAST_UPDATED, gasUpdated);
                 console.log('[Sync] 同期完了:', `${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
                 showStatus(`GAS同期完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
             } else {
@@ -888,23 +877,6 @@
         return result;
     }
 
-    function clearChat() {
-        pages = [];
-        currentPageIndex = -1;
-        actionHistory = [];
-        chatHistory = [];
-        // DOM要素を全削除
-        const pageView = document.getElementById('page-view');
-        pageView.innerHTML = '';
-        console.log('[System] チャットをクリアしました');
-    }
-
-    // 履歴をコンソールに出力（デバッグ用）
-    function dumpHistory() {
-        console.log('Action History:', actionHistory);
-        return actionHistory;
-    }
-
     // 会話モード処理
     async function handleConversationMode(chatApiKey, charAtLocation, currentPlace, userInput) {
         // ユーザーの発言を追加
@@ -968,14 +940,16 @@
         if (!charAtLocation || !imageGenEnabled || !runwareApiKey) {
             return null;
         }
-        localStorage.setItem(RUNWARE_API_KEY, runwareApiKey);
+        localStorage.setItem(STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY, runwareApiKey);
         const charActionIndex = charAtLocation.status?.actionIndex ?? -1;
-        const charCostumeId = charAtLocation.status?.costumeId ?? null;
-        const charRelationshipId = charAtLocation.status?.relationshipId ?? null;
         return new Promise(resolve => {
             setTimeout(async () => {
                 try {
-                    const result = await generateCharacterImage(charAtLocation.character, currentPlace, charActionIndex, charCostumeId, charRelationshipId);
+                    const result = await generateCharacterImage({
+                        charAtLocation: charAtLocation,
+                        place: currentPlace,
+                        actionIndex: charActionIndex
+                    });
                     resolve(result); // { imageURL, imageGenInfo } または null
                 } catch (e) {
                     console.error('[画像生成エラー]', e);
@@ -1060,8 +1034,8 @@
                 characterIndex: charIndices[i],
                 placeIndex: placeIndices[i],
                 actionIndex: actionIndex,
-                relationshipId: i === 1 ? 'rel_302' : 'rel_001',  // 2人目はrel_302
-                costumeId: 'cos_001',  // 服装初期値
+                relationshipId: i === 1 ? DEFAULTS.RELATIONSHIP_SECONDARY : DEFAULTS.RELATIONSHIP_PRIMARY,  // 2人目はrel_302
+                costumeId: DEFAULTS.COSTUME,  // 服装初期値
                 memo: ''  // メモ初期値
             };
         }
@@ -1071,8 +1045,8 @@
         currentState.placeIndex = placeIndices[0];
         currentState.actionIndex = -1;
 
-        // ユーザーの初期位置を「101号室 玄関」に設定
-        const userPlaceIndex = places.findIndex(p => p.name === '101号室 玄関');
+        // ユーザーの初期位置を設定
+        const userPlaceIndex = places.findIndex(p => p.name === DEFAULTS.USER_START_PLACE);
         userState.placeIndex = userPlaceIndex >= 0 ? userPlaceIndex : -1;
 
         updateCharacterStatusDisplay();
@@ -1262,11 +1236,6 @@
             startTypewriter(streamPageIndex);
         }
 
-        // デバッグ用フラグリセット
-        window._streamDisplayStarted = false;
-        window._chunkCallbackStarted = false;
-        window._displayTextLogged = false;
-
         // ストリーム受信時のコールバック生成
         const onStreamChunk = createStreamChunkHandler(streamPageIndex, useAddDialogueMode, appendBaseHtml);
 
@@ -1275,7 +1244,12 @@
         if (charPageCount >= 2 && charAtLocation) {
             const compositionTags = getCompositionTagsForMultiplePages(actions, currentState.actionIndex, charPageCount);
             imagePromises = compositionTags.map(tag =>
-                generateCharacterImageWithComposition(charAtLocation, currentPlace, currentState.actionIndex, tag)
+                generateCharacterImage({
+                    charAtLocation: charAtLocation,
+                    place: currentPlace,
+                    actionIndex: currentState.actionIndex,
+                    compositionTag: tag
+                })
             );
         }
 
@@ -1468,7 +1442,13 @@
             for (let i = 0; i < dialogues.length; i++) {
                 // 画像生成（もっと用は explicit を追加）
                 const compositionTag = getCompositionTag(actions, currentState.actionIndex);
-                const imageResult = await generateCharacterImageWithComposition(charAtLocation, currentPlace, currentState.actionIndex, compositionTag, 'explicit');
+                const imageResult = await generateCharacterImage({
+                    charAtLocation: charAtLocation,
+                    place: currentPlace,
+                    actionIndex: currentState.actionIndex,
+                    compositionTag: compositionTag,
+                    promptPrefix: 'explicit'
+                });
                 const charImage = imageResult?.imageURL || null;
 
                 const pageGenInfo = {
@@ -1558,11 +1538,21 @@
         return { finalPrompt, negativePrompt, characterWithExtras };
     }
 
-    // キャラクター画像生成（image_gen_base.htmlと同じ方式）
+    // キャラクター画像生成（統合版）
+    // options: { character, charAtLocation, place, actionIndex, costumeId, relationshipId, compositionTag, promptPrefix }
     // 戻り値: { imageURL, imageGenInfo } または null
-    async function generateCharacterImage(character, place, actionIndex, costumeId = null, relationshipId = null) {
+    async function generateCharacterImage(options) {
         const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
         if (!runwareApiKey) return null;
+
+        // charAtLocationから各値を取得（直接指定があれば優先）
+        const character = options.character || options.charAtLocation?.character;
+        const costumeId = options.costumeId ?? options.charAtLocation?.status?.costumeId ?? null;
+        const relationshipId = options.relationshipId ?? options.charAtLocation?.status?.relationshipId ?? null;
+        const actionIndex = options.actionIndex ?? -1;
+        const place = options.place;
+
+        if (!character) return null;
 
         // モデル取得（選択されたモデルを優先、なければ最初のモデル）
         const modelId = selectedModelId || getFirstModelId(models);
@@ -1571,8 +1561,8 @@
             return null;
         }
 
-        // 構図タグを取得（BESTから選択）
-        const compositionTag = getCompositionTag(actions, actionIndex);
+        // 構図タグ（明示指定があれば使用、なければ自動取得）
+        const compositionTag = options.compositionTag || getCompositionTag(actions, actionIndex);
 
         // プロンプト構築（共通関数を使用）
         const promptResult = buildImageGenPrompt(modelId, character, place, actionIndex, compositionTag, costumeId, relationshipId);
@@ -1581,7 +1571,13 @@
             return null;
         }
 
-        const { finalPrompt, negativePrompt, characterWithExtras } = promptResult;
+        let { finalPrompt, negativePrompt, characterWithExtras } = promptResult;
+
+        // promptPrefixがあれば先頭に追加
+        if (options.promptPrefix) {
+            finalPrompt = options.promptPrefix + ', ' + finalPrompt;
+        }
+
         console.log('[画像生成] プロンプト:', finalPrompt);
         console.log('[画像生成] ネガティブ:', negativePrompt);
 
@@ -1688,6 +1684,116 @@
         }
     }
 
+    // ページ情報: 基本情報セクションHTML生成
+    function buildBasicInfoHtml(page, pageIndex, totalPages) {
+        const typeLabels = { narrative: '地の文ページ', character: 'セリフのページ' };
+        let html = '<div class="page-info-section">';
+        html += `<div class="page-info-section-title">ページ ${pageIndex + 1}/${totalPages}</div>`;
+        if (page.type) {
+            html += `<div class="page-info-row"><span class="page-info-label">種別:</span><span class="page-info-value">${typeLabels[page.type] || page.type}</span></div>`;
+        }
+        html += '</div>';
+        return html;
+    }
+
+    // ページ情報: 生成パラメータセクションHTML生成
+    function buildGenParamsHtml(genInfo) {
+        let html = '<div class="page-info-section">';
+        html += '<div class="page-info-section-title">生成パラメータ</div>';
+        if (genInfo.actionMode) html += `<div class="page-info-row"><span class="page-info-label">mode:</span><span class="page-info-value">${escapeHtml(genInfo.actionMode)}</span></div>`;
+        if (genInfo.characterId) {
+            const char = characters.find(c => c.character_id === genInfo.characterId);
+            const charDisplay = char?.name ? `${escapeHtml(char.name)}` : '';
+            const charIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.characterId)})</span>`;
+            html += `<div class="page-info-row"><span class="page-info-label">キャラクター:</span><span class="page-info-value">${charDisplay}${charIdDisplay}</span></div>`;
+            const profileText = char?.profile ? escapeHtml(char.profile) : 'なし';
+            html += `<div class="page-info-row"><span class="page-info-label">プロフィール:</span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${profileText}</span></div>`;
+            // パーソナリティ表示
+            if (char?.personality) {
+                const personality = personalities.find(p => p.personality_id === char.personality);
+                if (personality) {
+                    const persDisplay = `${escapeHtml(personality.name)}`;
+                    const persIdDisplay = ` <span style="color:#888">(${escapeHtml(char.personality)})</span>`;
+                    html += `<div class="page-info-row"><span class="page-info-label">性格:</span><span class="page-info-value">${persDisplay}${persIdDisplay}</span></div>`;
+                    // description編集可能行
+                    const persDescText = personality.description || '';
+                    html += `<div class="page-info-row" id="pers-desc-row">`;
+                    html += `<span class="page-info-label"></span>`;
+                    html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
+                    html += `<span id="pers-desc-display">${escapeHtml(persDescText) || '(なし)'}</span>`;
+                    html += ` <button id="pers-desc-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
+                    html += `</span></div>`;
+                    // 編集UI（初期非表示）
+                    html += `<div class="page-info-row" id="pers-desc-edit-row" style="display:none;">`;
+                    html += `<span class="page-info-label"></span>`;
+                    html += `<span class="page-info-value" style="width:100%;">`;
+                    html += `<input type="text" id="pers-desc-input" style="width:70%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(persDescText)}">`;
+                    html += ` <button id="pers-desc-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
+                    html += ` <button id="pers-desc-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
+                    html += `</span></div>`;
+                }
+            }
+        }
+        if (genInfo.placeId) {
+            const place = places.find(p => p.place_id === genInfo.placeId);
+            const placeDisplay = place?.name ? `${escapeHtml(place.name)}` : '';
+            const placeIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.placeId)})</span>`;
+            html += `<div class="page-info-row"><span class="page-info-label">場所:</span><span class="page-info-value">${placeDisplay}${placeIdDisplay}</span></div>`;
+        }
+        if (genInfo.actionId) {
+            const action = actions.find(a => a.action_id === genInfo.actionId);
+            const actionDisplay = action?.name ? `${escapeHtml(action.name)}` : '';
+            const actionIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.actionId)})</span>`;
+            html += `<div class="page-info-row"><span class="page-info-label">アクション:</span><span class="page-info-value">${actionDisplay}${actionIdDisplay}</span></div>`;
+        }
+        if (genInfo.costumeId) {
+            const costume = costumes.find(c => c.costume_id === genInfo.costumeId);
+            const costumeDisplay = costume?.name ? `${escapeHtml(costume.name)}` : '';
+            const costumeIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.costumeId)})</span>`;
+            html += `<div class="page-info-row"><span class="page-info-label">服装:</span><span class="page-info-value">${costumeDisplay}${costumeIdDisplay}</span></div>`;
+        }
+        if (genInfo.relationshipId) {
+            const relationship = relationships.find(r => r.relationship_id === genInfo.relationshipId);
+            const relationshipDisplay = relationship?.name ? `${escapeHtml(relationship.name)}` : '';
+            const relationshipIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.relationshipId)})</span>`;
+            html += `<div class="page-info-row"><span class="page-info-label">関係性:</span><span class="page-info-value">${relationshipDisplay}${relationshipIdDisplay}</span></div>`;
+            // description編集可能行
+            const descText = relationship?.description || '';
+            html += `<div class="page-info-row" id="rel-desc-row">`;
+            html += `<span class="page-info-label"></span>`;
+            html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
+            html += `<span id="rel-desc-display">${escapeHtml(descText)}</span>`;
+            html += ` <button id="rel-desc-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
+            html += `</span></div>`;
+            // 編集UI（初期非表示）
+            html += `<div class="page-info-row" id="rel-desc-edit-row" style="display:none;">`;
+            html += `<span class="page-info-label"></span>`;
+            html += `<span class="page-info-value" style="width:100%;">`;
+            html += `<input type="text" id="rel-desc-input" style="width:70%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(descText)}">`;
+            html += ` <button id="rel-desc-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
+            html += ` <button id="rel-desc-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
+            html += `</span></div>`;
+            // next_relationship_req編集可能行
+            const reqText = relationship?.next_relationship_req || '';
+            html += `<div class="page-info-row" id="rel-req-row">`;
+            html += `<span class="page-info-label">発展条件:</span>`;
+            html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
+            html += `<span id="rel-req-display">${escapeHtml(reqText) || '(なし)'}</span>`;
+            html += ` <button id="rel-req-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
+            html += `</span></div>`;
+            // 編集UI（初期非表示）
+            html += `<div class="page-info-row" id="rel-req-edit-row" style="display:none;">`;
+            html += `<span class="page-info-label">発展条件:</span>`;
+            html += `<span class="page-info-value" style="width:100%;">`;
+            html += `<input type="text" id="rel-req-input" style="width:60%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(reqText)}">`;
+            html += ` <button id="rel-req-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
+            html += ` <button id="rel-req-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
+            html += `</span></div>`;
+        }
+        html += '</div>';
+        return html;
+    }
+
     // ページ情報表示（テキスト非表示時の情報ボタン）
     function showPageInfo() {
         if (currentPageIndex < 0 || !pages[currentPageIndex]) {
@@ -1696,113 +1802,15 @@
         }
         const page = pages[currentPageIndex];
         const genInfo = page.genInfo;
-        const typeLabels = { narrative: '地の文ページ', character: 'セリフのページ' };
 
         let html = '';
 
         // 基本情報セクション
-        html += '<div class="page-info-section">';
-        html += `<div class="page-info-section-title">ページ ${currentPageIndex + 1}/${pages.length}</div>`;
-        if (page.type) {
-            html += `<div class="page-info-row"><span class="page-info-label">種別:</span><span class="page-info-value">${typeLabels[page.type] || page.type}</span></div>`;
-        }
-        html += '</div>';
+        html += buildBasicInfoHtml(page, currentPageIndex, pages.length);
 
         if (genInfo) {
             // 生成パラメータセクション
-            html += '<div class="page-info-section">';
-            html += '<div class="page-info-section-title">生成パラメータ</div>';
-            if (genInfo.actionMode) html += `<div class="page-info-row"><span class="page-info-label">mode:</span><span class="page-info-value">${escapeHtml(genInfo.actionMode)}</span></div>`;
-            if (genInfo.characterId) {
-                const char = characters.find(c => c.character_id === genInfo.characterId);
-                const charDisplay = char?.name ? `${escapeHtml(char.name)}` : '';
-                const charIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.characterId)})</span>`;
-                html += `<div class="page-info-row"><span class="page-info-label">キャラクター:</span><span class="page-info-value">${charDisplay}${charIdDisplay}</span></div>`;
-                const profileText = char?.profile ? escapeHtml(char.profile) : 'なし';
-                html += `<div class="page-info-row"><span class="page-info-label">プロフィール:</span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${profileText}</span></div>`;
-                // パーソナリティ表示
-                if (char?.personality) {
-                    const personality = personalities.find(p => p.personality_id === char.personality);
-                    if (personality) {
-                        const persDisplay = `${escapeHtml(personality.name)}`;
-                        const persIdDisplay = ` <span style="color:#888">(${escapeHtml(char.personality)})</span>`;
-                        html += `<div class="page-info-row"><span class="page-info-label">性格:</span><span class="page-info-value">${persDisplay}${persIdDisplay}</span></div>`;
-                        // description編集可能行
-                        const persDescText = personality.description || '';
-                        html += `<div class="page-info-row" id="pers-desc-row">`;
-                        html += `<span class="page-info-label"></span>`;
-                        html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
-                        html += `<span id="pers-desc-display">${escapeHtml(persDescText) || '(なし)'}</span>`;
-                        html += ` <button id="pers-desc-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
-                        html += `</span></div>`;
-                        // 編集UI（初期非表示）
-                        html += `<div class="page-info-row" id="pers-desc-edit-row" style="display:none;">`;
-                        html += `<span class="page-info-label"></span>`;
-                        html += `<span class="page-info-value" style="width:100%;">`;
-                        html += `<input type="text" id="pers-desc-input" style="width:70%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(persDescText)}">`;
-                        html += ` <button id="pers-desc-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
-                        html += ` <button id="pers-desc-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
-                        html += `</span></div>`;
-                    }
-                }
-            }
-            if (genInfo.placeId) {
-                const place = places.find(p => p.place_id === genInfo.placeId);
-                const placeDisplay = place?.name ? `${escapeHtml(place.name)}` : '';
-                const placeIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.placeId)})</span>`;
-                html += `<div class="page-info-row"><span class="page-info-label">場所:</span><span class="page-info-value">${placeDisplay}${placeIdDisplay}</span></div>`;
-            }
-            if (genInfo.actionId) {
-                const action = actions.find(a => a.action_id === genInfo.actionId);
-                const actionDisplay = action?.name ? `${escapeHtml(action.name)}` : '';
-                const actionIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.actionId)})</span>`;
-                html += `<div class="page-info-row"><span class="page-info-label">アクション:</span><span class="page-info-value">${actionDisplay}${actionIdDisplay}</span></div>`;
-            }
-            if (genInfo.costumeId) {
-                const costume = costumes.find(c => c.costume_id === genInfo.costumeId);
-                const costumeDisplay = costume?.name ? `${escapeHtml(costume.name)}` : '';
-                const costumeIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.costumeId)})</span>`;
-                html += `<div class="page-info-row"><span class="page-info-label">服装:</span><span class="page-info-value">${costumeDisplay}${costumeIdDisplay}</span></div>`;
-            }
-            if (genInfo.relationshipId) {
-                const relationship = relationships.find(r => r.relationship_id === genInfo.relationshipId);
-                const relationshipDisplay = relationship?.name ? `${escapeHtml(relationship.name)}` : '';
-                const relationshipIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.relationshipId)})</span>`;
-                html += `<div class="page-info-row"><span class="page-info-label">関係性:</span><span class="page-info-value">${relationshipDisplay}${relationshipIdDisplay}</span></div>`;
-                // description編集可能行
-                const descText = relationship?.description || '';
-                html += `<div class="page-info-row" id="rel-desc-row">`;
-                html += `<span class="page-info-label"></span>`;
-                html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
-                html += `<span id="rel-desc-display">${escapeHtml(descText)}</span>`;
-                html += ` <button id="rel-desc-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
-                html += `</span></div>`;
-                // 編集UI（初期非表示）
-                html += `<div class="page-info-row" id="rel-desc-edit-row" style="display:none;">`;
-                html += `<span class="page-info-label"></span>`;
-                html += `<span class="page-info-value" style="width:100%;">`;
-                html += `<input type="text" id="rel-desc-input" style="width:70%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(descText)}">`;
-                html += ` <button id="rel-desc-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
-                html += ` <button id="rel-desc-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
-                html += `</span></div>`;
-                // next_relationship_req編集可能行
-                const reqText = relationship?.next_relationship_req || '';
-                html += `<div class="page-info-row" id="rel-req-row">`;
-                html += `<span class="page-info-label">発展条件:</span>`;
-                html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
-                html += `<span id="rel-req-display">${escapeHtml(reqText) || '(なし)'}</span>`;
-                html += ` <button id="rel-req-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
-                html += `</span></div>`;
-                // 編集UI（初期非表示）
-                html += `<div class="page-info-row" id="rel-req-edit-row" style="display:none;">`;
-                html += `<span class="page-info-label">発展条件:</span>`;
-                html += `<span class="page-info-value" style="width:100%;">`;
-                html += `<input type="text" id="rel-req-input" style="width:60%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(reqText)}">`;
-                html += ` <button id="rel-req-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
-                html += ` <button id="rel-req-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
-                html += `</span></div>`;
-            }
-            html += '</div>';
+            html += buildGenParamsHtml(genInfo);
 
             // LLMプロンプト再現セクション
             html += '<div class="page-info-section">';
@@ -1998,53 +2006,6 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    }
-
-    // キャラクター画像生成（指定構図タグ版）
-    // 戻り値: { imageURL, imageGenInfo } または null
-    async function generateCharacterImageWithComposition(charAtLocation, place, actionIndex, compositionTag, promptPrefix = '') {
-        const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
-        if (!runwareApiKey) return null;
-
-        const character = charAtLocation?.character;
-        const costumeId = charAtLocation?.status?.costumeId;
-        const relationshipId = charAtLocation?.status?.relationshipId;
-
-        // モデル取得
-        const modelId = selectedModelId || getFirstModelId(models);
-        if (!modelId || !models[modelId]) return null;
-
-        // プロンプト構築（共通関数を使用）
-        const promptResult = buildImageGenPrompt(modelId, character, place, actionIndex, compositionTag, costumeId, relationshipId);
-        if (!promptResult) return null;
-
-        let { finalPrompt, negativePrompt, characterWithExtras } = promptResult;
-
-        // プレフィックスがあれば先頭に追加
-        if (promptPrefix) {
-            finalPrompt = promptPrefix + ', ' + finalPrompt;
-        }
-
-        showStatusImage();
-        const result = await generateImage(runwareApiKey, modelId, finalPrompt, {
-            negativePrompt: negativePrompt,
-            steps: models[modelId]?.steps || 20,
-            cfgScale: models[modelId]?.cfgScale || 7,
-            scheduler: models[modelId]?.scheduler || 'Default',
-            width: 1024,
-            height: 1024,
-            character: characterWithExtras
-        });
-        hideStatusImage();
-
-        return {
-            imageURL: result.imageURL,
-            imageGenInfo: {
-                modelId: modelId,
-                compositionTag: compositionTag,
-                seed: result.seed
-            }
-        };
     }
 
 </script>

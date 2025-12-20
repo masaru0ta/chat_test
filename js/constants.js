@@ -23,13 +23,19 @@ const STORAGE_KEYS = {
     TRANSITION_SELECTED_LLM_MODEL: 'transition_selected_llm_model',
     TRANSITION_CHARACTER_COUNT: 'transition_character_count',
     TRANSITION_LOCK_PASSWORD: 'transition_lock_password',
-    TRANSITION_SIDEBAR_COLLAPSED: 'transition_sidebar_collapsed'
+    TRANSITION_SIDEBAR_COLLAPSED: 'transition_sidebar_collapsed',
+    TRANSITION_GAS_LAST_UPDATED: 'transition_gas_last_updated'
 };
 
 // デフォルト値
 const DEFAULTS = {
     LOCK_PASSWORD: '8823',
-    TYPEWRITER_SPEED: 45
+    TYPEWRITER_SPEED: 45,
+    // キャラクター初期設定
+    RELATIONSHIP_PRIMARY: 'rel_001',
+    RELATIONSHIP_SECONDARY: 'rel_302',
+    COSTUME: 'cos_001',
+    USER_START_PLACE: '101号室 玄関'
 };
 
 // LLMモデル定義

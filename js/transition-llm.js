@@ -59,13 +59,6 @@ function createStreamChunkHandler(streamPageIndex, useAddDialogueMode, appendBas
             }
         }
 
-        // デバッグ：displayTextが空かどうか
-        if (!window._displayTextLogged && displayText) {
-            const elapsed = ((performance.now() - window._streamStartTime) / 1000).toFixed(3);
-            console.log(`[onStreamChunk] displayText取得 (${elapsed}秒):`, displayText.substring(0, 50) + '...');
-            window._displayTextLogged = true;
-        }
-
         // タイプライターにテキストを追加
         if (streamPageIndex >= 0) {
             // 移動時：タイプライターで表示
@@ -78,11 +71,6 @@ function createStreamChunkHandler(streamPageIndex, useAddDialogueMode, appendBas
             if (pageDiv) {
                 const textDiv = pageDiv.querySelector('.page-text > div');
                 if (textDiv) {
-                    if (!window._streamDisplayStarted) {
-                        const elapsed = ((performance.now() - window._streamStartTime) / 1000).toFixed(3);
-                        console.log(`[アクション] ページにテキスト追加開始 (${elapsed}秒)`);
-                        window._streamDisplayStarted = true;
-                    }
                     textDiv.innerHTML = appendBaseHtml + (appendBaseHtml ? '<br>' : '') + displayText.replace(/\n/g, '<br>');
                     // 自動スクロール
                     const pageText = pageDiv.querySelector('.page-text');
@@ -661,18 +649,10 @@ async function callLLM(apiKey, prompt, role, character = null, onChunk = null, s
         const decoder = new TextDecoder();
         let content = '';
         let buffer = '';
-        let firstChunk = true;
-        window._chunkLogCount = 0;
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-
-            if (firstChunk) {
-                window._streamStartTime = performance.now();
-                console.log('[LLM] ストリーム受信開始');
-                firstChunk = false;
-            }
 
             const decodedChunk = decoder.decode(value, { stream: true });
             buffer += decodedChunk;

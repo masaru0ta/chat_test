@@ -346,11 +346,11 @@ function toggleSidebar() {
         container.classList.remove('sidebar-collapsed');
         toggleBtn.textContent = '☰';
     }
-    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed ? 'yes' : 'no');
+    localStorage.setItem(STORAGE_KEYS.TRANSITION_SIDEBAR_COLLAPSED, sidebarCollapsed ? 'yes' : 'no');
 }
 
 function initSidebarState() {
-    const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    const saved = localStorage.getItem(STORAGE_KEYS.TRANSITION_SIDEBAR_COLLAPSED);
     if (saved === 'yes') {
         sidebarCollapsed = true;
         const container = document.getElementById('appContainer');
@@ -374,7 +374,7 @@ function closeSettings() {
 
 function toggleImageGen() {
     imageGenEnabled = !imageGenEnabled;
-    localStorage.setItem(IMAGE_GEN_ENABLED_KEY, imageGenEnabled ? 'on' : 'off');
+    localStorage.setItem(STORAGE_KEYS.TRANSITION_IMAGE_GEN_ENABLED, imageGenEnabled ? 'on' : 'off');
     updateImageGenButton();
 }
 
@@ -388,7 +388,7 @@ function updateImageGenButton() {
 
 function toggleLLMLog() {
     llmLogEnabled = !llmLogEnabled;
-    localStorage.setItem(LLM_LOG_ENABLED_KEY, llmLogEnabled ? 'on' : 'off');
+    localStorage.setItem(STORAGE_KEYS.TRANSITION_LLM_LOG_ENABLED, llmLogEnabled ? 'on' : 'off');
     updateLLMLogButton();
 }
 
@@ -405,14 +405,14 @@ function updateLLMLogButton() {
 function saveChatApiKey() {
     const key = document.getElementById('chatApiKey').value.trim();
     if (key) {
-        localStorage.setItem(CHAT_API_KEY, key);
+        localStorage.setItem(STORAGE_KEYS.TRANSITION_CHAT_API_KEY, key);
     }
 }
 
 function saveRunwareApiKey() {
     const key = document.getElementById('runwareApiKey').value.trim();
     if (key) {
-        localStorage.setItem(RUNWARE_API_KEY, key);
+        localStorage.setItem(STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY, key);
     }
 }
 
@@ -440,19 +440,19 @@ function updateModelSelect() {
 function onModelSelect() {
     const select = document.getElementById('modelSelect');
     selectedModelId = select.value;
-    localStorage.setItem(SELECTED_MODEL_KEY, selectedModelId);
+    localStorage.setItem(STORAGE_KEYS.TRANSITION_SELECTED_MODEL, selectedModelId);
     console.log('[画像モデル選択]', selectedModelId);
 }
 
 function onLLMModelSelect() {
     const select = document.getElementById('llmModelSelect');
     selectedLLMModelId = select.value;
-    localStorage.setItem(SELECTED_LLM_MODEL_KEY, selectedLLMModelId);
+    localStorage.setItem(STORAGE_KEYS.TRANSITION_SELECTED_LLM_MODEL, selectedLLMModelId);
     console.log('[LLMモデル選択]', selectedLLMModelId);
 }
 
 function initLLMModelSelect() {
-    const savedLLMModelId = localStorage.getItem(SELECTED_LLM_MODEL_KEY);
+    const savedLLMModelId = localStorage.getItem(STORAGE_KEYS.TRANSITION_SELECTED_LLM_MODEL);
     if (savedLLMModelId && LLM_MODELS[savedLLMModelId]) {
         selectedLLMModelId = savedLLMModelId;
     }
@@ -471,7 +471,7 @@ function onCharacterCountChange() {
     if (value > 10) value = 10;
     input.value = value;
     characterCount = value;
-    localStorage.setItem(CHARACTER_COUNT_KEY, characterCount);
+    localStorage.setItem(STORAGE_KEYS.TRANSITION_CHARACTER_COUNT, characterCount);
     updateCharacterStatusArray();
     renderCharacterSections();
     updateCharacterStatusDisplay();
@@ -479,7 +479,7 @@ function onCharacterCountChange() {
 }
 
 function initCharacterCount() {
-    const savedCount = localStorage.getItem(CHARACTER_COUNT_KEY);
+    const savedCount = localStorage.getItem(STORAGE_KEYS.TRANSITION_CHARACTER_COUNT);
     if (savedCount) {
         characterCount = parseInt(savedCount);
     }
