@@ -1183,3 +1183,29 @@ html, body {
     font-size: 0.85rem;
     color: #aaa;
 }
+
+/* グローバルステータス */
+.global-status {
+    display: none;
+    padding: 8px 15px;
+    font-size: 0.85rem;
+    text-align: center;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+}
+
+.global-status.active {
+    display: block;
+}
+
+.global-status.status-ok {
+    color: #8f8;
+}
+
+.global-status.status-loading {
+    color: #ff8;
+}
+
+.global-status.status-error {
+    color: #f88;
+}

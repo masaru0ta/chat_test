@@ -8,10 +8,20 @@
  * @param {string} type - タイプ ('ok', 'error', 'loading')
  */
 function showStatus(msg, type = 'ok') {
+    // 設定モーダル内のステータス
     const el = document.getElementById('status');
-    if (!el) return;
-    el.textContent = msg;
-    el.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
+    if (el) {
+        el.textContent = msg;
+        el.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
+    }
+
+    // グローバルステータス
+    const globalEl = document.getElementById('globalStatus');
+    if (globalEl) {
+        globalEl.textContent = msg;
+        const typeClass = type === 'error' ? 'status-error' : type === 'loading' ? 'status-loading' : 'status-ok';
+        globalEl.className = msg ? `global-status active ${typeClass}` : 'global-status';
+    }
 }
 
 /**
