@@ -278,7 +278,6 @@
                 costumes = data.costumes || [];
                 personalities = data.personalities || [];
                 promptTemplates = data.promptTemplates || {};
-                updateAllSelects();
                 updateModelSelect();
                 if (actions.length > 0) {
                     addSystemMessage(`キャッシュから復元: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
@@ -591,7 +590,6 @@
                 promptTemplates = parsePromptTemplates(promptData);
 
                 saveCachedData();
-                updateAllSelects();
                 updateModelSelect();
 
                 localStorage.setItem(STORAGE_KEYS.TRANSITION_GAS_LAST_UPDATED, gasUpdated);
@@ -671,7 +669,6 @@
             promptTemplates = parsePromptTemplates(promptData);
 
             saveCachedData();
-            updateAllSelects();
             updateModelSelect();
 
             showStatus(`読込完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
@@ -679,10 +676,6 @@
             console.error(error);
             showStatus('エラー: ' + error.message, 'error');
         }
-    }
-
-    function updateAllSelects() {
-        // プルダウン削除済み - 何もしない
     }
 
     async function executeAction(actionIndex) {
