@@ -1544,6 +1544,9 @@
                 const charDisplay = char?.name ? `${escapeHtml(char.name)}` : '';
                 const charIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.characterId)})</span>`;
                 html += `<div class="page-info-row"><span class="page-info-label">キャラクター:</span><span class="page-info-value">${charDisplay}${charIdDisplay}</span></div>`;
+                if (char?.profile) {
+                    html += `<div class="page-info-row"><span class="page-info-label"></span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${escapeHtml(char.profile)}</span></div>`;
+                }
             }
             if (genInfo.placeId) {
                 const place = places.find(p => p.place_id === genInfo.placeId);
