@@ -1116,6 +1116,69 @@
         };
     }
 
+    // ストリームページのセットアップ
+    function setupStreamPage(movePageIndex, currentPlace) {
+        let streamPageIndex = -1;
+        let useAddDialogueMode = false;  // アクション時は最後のページに追記
+        let appendBaseHtml = '';  // アクション時の追記ベースHTML
+
+        if (movePageIndex >= 0) {
+            // 移動時：既存のプレースホルダーページを使用
+            streamPageIndex = movePageIndex;
+        } else {
+            // アクション時：最後のページに追記モード
+            useAddDialogueMode = true;
+            // 現在の最後のページのHTMLを保存
+            if (pages.length > 0) {
+                const lastPageIndex = pages.length - 1;
+                const pageView = document.getElementById('page-view');
+                const pageDiv = pageView.querySelector(`.page-content[data-page-index="${lastPageIndex}"]`);
+                if (pageDiv) {
+                    const textDiv = pageDiv.querySelector('.page-text > div');
+                    if (textDiv) {
+                        appendBaseHtml = textDiv.innerHTML;
+                    }
+                }
+            }
+        }
+
+        // ストリーミング用タイプライター開始（移動時のみ）
+        if (streamPageIndex >= 0) {
+            startTypewriter(streamPageIndex);
+        }
+
+        return { streamPageIndex, useAddDialogueMode, appendBaseHtml };
+    }
+
+    // 移動時のプレースホルダーページを作成
+    function createMovePagePlaceholder(newPlace, genInfo) {
+        const placeImage = newPlace.image || null;
+        genInfo.placeId = newPlace.place_id;
+
+        // 移動先のキャラクターを取得
+        const newPlaceIndex = places.findIndex(p => p.place_id === newPlace.place_id);
+        for (const status of characterStatus) {
+            if (status.placeIndex === newPlaceIndex && status.characterIndex >= 0) {
+                const charAtNewPlace = characters[status.characterIndex];
+                genInfo.characterId = charAtNewPlace?.character_id || null;
+                genInfo.relationshipId = status.relationshipId || null;
+                genInfo.costumeId = status.costumeId || null;
+                break;
+            }
+        }
+
+        // 移動先のデフォルトアクションを取得
+        if (newPlace.default_action) {
+            genInfo.actionId = newPlace.default_action;
+        }
+
+        const pageIndex = addPage1(placeImage, `${newPlace.name}に移動...`, genInfo);
+        // ストリーミングで更新するのでshowPageからのタイプライター起動を防ぐ
+        pages[pageIndex].typewriterCompleted = true;
+        goToLatestPage();
+        return pageIndex;
+    }
+
     // ページ生成メイン処理
     // companion: 一緒に移動するキャラクター（移動時のみ使用）
     async function generatePages(actionMode, userInput, previousPlace, newPlace, companion = null) {
@@ -1150,33 +1213,9 @@
         let genInfo = createGenInfo(actionMode, charAtLocation, currentPlace);
 
         // 移動時は即座にプレースホルダーページを作成
-        let movePageIndex = -1;
-        if (actionMode === 'move' && newPlace) {
-            const placeImage = newPlace.image || null;
-            genInfo.placeId = newPlace.place_id;
-
-            // 移動先のキャラクターを取得
-            const newPlaceIndex = places.findIndex(p => p.place_id === newPlace.place_id);
-            for (const status of characterStatus) {
-                if (status.placeIndex === newPlaceIndex && status.characterIndex >= 0) {
-                    const charAtNewPlace = characters[status.characterIndex];
-                    genInfo.characterId = charAtNewPlace?.character_id || null;
-                    genInfo.relationshipId = status.relationshipId || null;
-                    genInfo.costumeId = status.costumeId || null;
-                    break;
-                }
-            }
-
-            // 移動先のデフォルトアクションを取得
-            if (newPlace.default_action) {
-                genInfo.actionId = newPlace.default_action;
-            }
-
-            movePageIndex = addPage1(placeImage, `${newPlace.name}に移動...`, genInfo);
-            // ストリーミングで更新するのでshowPageからのタイプライター起動を防ぐ
-            pages[movePageIndex].typewriterCompleted = true;
-            goToLatestPage();
-        }
+        const movePageIndex = (actionMode === 'move' && newPlace)
+            ? createMovePagePlaceholder(newPlace, genInfo)
+            : -1;
 
         // char_page_count を取得（アクション実行時のみ）
         const currentAction = (actionMode === 'action_select' || actionMode === 'action_with_speech') && currentState.actionIndex >= 0
@@ -1203,36 +1242,8 @@
         // 画像生成を非同期に開始（複数ページの場合は後で個別に生成）
         const imagePromise = charPageCount >= 2 ? null : startImageGenerationAsync(charAtLocation, currentPlace);
 
-        // ストリーム用のページを先に作成
-        const placeImage = currentPlace?.image || null;
-        let streamPageIndex = -1;
-        let useAddDialogueMode = false;  // アクション時は最後のページに追記
-        let appendBaseHtml = '';  // アクション時の追記ベースHTML
-
-        if (movePageIndex >= 0) {
-            // 移動時：既存のプレースホルダーページを使用
-            streamPageIndex = movePageIndex;
-        } else {
-            // アクション時：最後のページに追記モード
-            useAddDialogueMode = true;
-            // 現在の最後のページのHTMLを保存
-            if (pages.length > 0) {
-                const lastPageIndex = pages.length - 1;
-                const pageView = document.getElementById('page-view');
-                const pageDiv = pageView.querySelector(`.page-content[data-page-index="${lastPageIndex}"]`);
-                if (pageDiv) {
-                    const textDiv = pageDiv.querySelector('.page-text > div');
-                    if (textDiv) {
-                        appendBaseHtml = textDiv.innerHTML;
-                    }
-                }
-            }
-        }
-
-        // ストリーミング用タイプライター開始（移動時のみ）
-        if (streamPageIndex >= 0) {
-            startTypewriter(streamPageIndex);
-        }
+        // ストリームページのセットアップ
+        const { streamPageIndex, useAddDialogueMode, appendBaseHtml } = setupStreamPage(movePageIndex, currentPlace);
 
         // ストリーム受信時のコールバック生成
         const onStreamChunk = createStreamChunkHandler(streamPageIndex, useAddDialogueMode, appendBaseHtml);
