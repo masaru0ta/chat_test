@@ -1571,6 +1571,9 @@
                 if (relationship?.description) {
                     html += `<div class="page-info-row"><span class="page-info-label"></span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${escapeHtml(relationship.description)}</span></div>`;
                 }
+                if (relationship?.next_relationship_req) {
+                    html += `<div class="page-info-row"><span class="page-info-label">発展条件:</span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${escapeHtml(relationship.next_relationship_req)}</span></div>`;
+                }
             }
             html += '</div>';
 
