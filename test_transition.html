@@ -1150,6 +1150,26 @@
         return { streamPageIndex, useAddDialogueMode, appendBaseHtml };
     }
 
+    // 地の文をページに表示
+    async function displayNarrative(narrative, streamPageIndex, useAddDialogueMode) {
+        if (streamPageIndex >= 0) {
+            // 移動時：タイプライターで表示
+            appendToTypewriter(narrative);
+            await waitForTypewriter();
+            // タイプライター完了後、fullTextを更新してフラグを立てる
+            if (pages[streamPageIndex]) {
+                pages[streamPageIndex].fullText = narrative;
+                pages[streamPageIndex].typewriterCompleted = true;
+            }
+        } else if (useAddDialogueMode && narrative && pages.length > 0) {
+            // アクション時：ストリームで既に表示済み、データのみ更新
+            const lastPageIndex = pages.length - 1;
+            const lastPage = pages[lastPageIndex];
+            lastPage.text += (lastPage.text ? '\n' : '') + narrative;
+            lastPage.fullText = lastPage.text;
+        }
+    }
+
     // 移動時のプレースホルダーページを作成
     function createMovePagePlaceholder(newPlace, genInfo) {
         const placeImage = newPlace.image || null;
@@ -1286,22 +1306,7 @@
         }
 
         // 最終的な地の文を表示
-        if (streamPageIndex >= 0) {
-            // 移動時：タイプライターで表示
-            appendToTypewriter(narrative);
-            await waitForTypewriter();
-            // タイプライター完了後、fullTextを更新してフラグを立てる
-            if (pages[streamPageIndex]) {
-                pages[streamPageIndex].fullText = narrative;
-                pages[streamPageIndex].typewriterCompleted = true;
-            }
-        } else if (useAddDialogueMode && narrative && pages.length > 0) {
-            // アクション時：ストリームで既に表示済み、データのみ更新
-            const lastPageIndex = pages.length - 1;
-            const lastPage = pages[lastPageIndex];
-            lastPage.text += (lastPage.text ? '\n' : '') + narrative;
-            lastPage.fullText = lastPage.text;
-        }
+        await displayNarrative(narrative, streamPageIndex, useAddDialogueMode);
 
         // 関係性変化の処理
         updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo);
