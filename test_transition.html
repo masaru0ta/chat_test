@@ -46,8 +46,6 @@
 </div>
 
 <div class="app-container" id="appContainer">
-    <!-- 旧サイドバートグル（統合バーに移動） -->
-    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="サイドバー開閉" style="display:none;">☰</button>
     <!-- サイドバー -->
     <div class="sidebar">
         <div class="sidebar-content">
@@ -224,9 +222,7 @@
     ];
 
     // 状態変数
-    let currentCommandType = 'speech';
     let chatHistory = [];
-    let actionHistory = [];
     let pages = [];
     let currentPageIndex = -1;
     let characterCount = 2;
@@ -362,11 +358,11 @@
             return;
         }
 
-        addCommandMessage(currentCommandType, text);
+        addCommandMessage('speech', text);
         input.value = '';
 
         // ページ生成
-        await generatePages(currentCommandType, text, null, null);
+        await generatePages('speech', text, null, null);
     }
 
     // Visual Viewport対応（モバイルキーボード表示時・折り畳みスマホ対応）
@@ -708,15 +704,6 @@
                 updateCharacterStatusDisplay();
             }
         }
-
-        // 履歴に追加
-        actionHistory.push({
-            timestamp: new Date().toISOString(),
-            fromAction: prevAction?.action_id || null,
-            toAction: action.action_id,
-            character: charAtLocation?.character?.name || null,
-            place: userState.placeIndex >= 0 ? places[userState.placeIndex]?.name : null
-        });
 
         // ページ生成（アクション実行）
         // 入力フィールドに発言があれば action_with_speech、なければ action_select
@@ -1622,7 +1609,6 @@
                 userState: userState,
                 currentState: currentState,
                 currentPageIndex: currentPageIndex,
-                actionHistory: actionHistory,
                 chatHistory: chatHistory
             };
             localStorage.setItem('transition_game_save', JSON.stringify(saveData));
@@ -1650,7 +1636,6 @@
             characterStatus = saveData.characterStatus || [];
             userState = saveData.userState || { placeIndex: -1 };
             currentState = saveData.currentState || { characterIndex: -1, placeIndex: -1, actionIndex: -1 };
-            actionHistory = saveData.actionHistory || [];
             chatHistory = saveData.chatHistory || [];
 
             // ページを復元（DOM再構築）

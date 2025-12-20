@@ -39,34 +39,6 @@ html, body {
     opacity: 0;
 }
 
-/* サイドバートグルボタン */
-.sidebar-toggle {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    z-index: 1000;
-    background: #333;
-    border: 1px solid #444;
-    color: #fff;
-    width: 36px;
-    height: 36px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    transition: left 0.3s ease, background 0.2s;
-}
-
-.sidebar-toggle:hover {
-    background: #4a9eff;
-}
-
-.app-container:not(.sidebar-collapsed) .sidebar-toggle {
-    left: 310px;
-}
-
 .sidebar-header {
     padding: 15px;
     background: #222;

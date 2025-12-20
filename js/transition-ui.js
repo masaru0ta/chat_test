@@ -338,13 +338,10 @@ function updateMoveModeButton() {
 function toggleSidebar() {
     sidebarCollapsed = !sidebarCollapsed;
     const container = document.getElementById('appContainer');
-    const toggleBtn = document.getElementById('sidebarToggle');
     if (sidebarCollapsed) {
         container.classList.add('sidebar-collapsed');
-        toggleBtn.textContent = '▶';
     } else {
         container.classList.remove('sidebar-collapsed');
-        toggleBtn.textContent = '☰';
     }
     localStorage.setItem(STORAGE_KEYS.TRANSITION_SIDEBAR_COLLAPSED, sidebarCollapsed ? 'yes' : 'no');
 }
@@ -354,9 +351,7 @@ function initSidebarState() {
     if (saved === 'yes') {
         sidebarCollapsed = true;
         const container = document.getElementById('appContainer');
-        const toggleBtn = document.getElementById('sidebarToggle');
         container.classList.add('sidebar-collapsed');
-        toggleBtn.textContent = '▶';
     }
 }
 
