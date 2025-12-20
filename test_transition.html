@@ -558,6 +558,8 @@
         const baseUrl = localStorage.getItem(STORAGE_KEYS.GAS_URL);
         if (!baseUrl) return;
 
+        showStatus('GASデータをチェック中...', 'loading');
+
         try {
             const meta = await fetchGasMeta(baseUrl);
             const gasUpdated = meta.lastUpdated;
@@ -568,11 +570,12 @@
             // GASが新しい場合、全データを取得
             if (!localUpdated || new Date(gasUpdated) > new Date(localUpdated)) {
                 console.log('[Sync] GASが新しいため全データを同期します');
+                showStatus('GASから同期中...', 'loading');
 
                 // 設定を取得
                 await loadSettingsFromGas();
 
-                // 全データを取得（サイレントモード）
+                // 全データを取得
                 const [modelData, characterData, placeData, actionData, relationshipData, costumeData, promptData] = await Promise.all([
                     fetchGasData(baseUrl, 'model'),
                     fetchGasData(baseUrl, 'character'),
@@ -597,11 +600,14 @@
 
                 localStorage.setItem(GAS_LAST_UPDATED_KEY, gasUpdated);
                 console.log('[Sync] 同期完了:', characters.length, 'キャラ,', places.length, '場所,', actions.length, 'アクション');
+                showStatus(`GAS同期完了: ${characters.length}キャラ, ${places.length}場所, ${actions.length}アクション`);
             } else {
                 console.log('[Sync] ローカルデータは最新です');
+                showStatus('ローカルデータは最新です');
             }
         } catch (error) {
             console.log('[Sync] 同期チェックをスキップ:', error.message);
+            showStatus('');
         }
     }
 
