@@ -1184,28 +1184,42 @@ html, body {
     color: #aaa;
 }
 
-/* グローバルステータス */
-.global-status {
-    display: none;
-    padding: 8px 15px;
-    font-size: 0.85rem;
+/* トースト通知 */
+.toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid #444;
+    color: #fff;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    max-width: 80%;
     text-align: center;
-    background: #1a1a1a;
-    border-bottom: 1px solid #333;
 }
 
-.global-status.active {
-    display: block;
+.toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
 }
 
-.global-status.status-ok {
+.toast.status-ok {
+    border-color: #4a4;
     color: #8f8;
 }
 
-.global-status.status-loading {
+.toast.status-loading {
+    border-color: #aa4;
     color: #ff8;
 }
 
-.global-status.status-error {
+.toast.status-error {
+    border-color: #a44;
     color: #f88;
 }

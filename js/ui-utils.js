@@ -2,6 +2,9 @@
  * UI共通ユーティリティ
  */
 
+// トースト非表示タイマー
+let toastTimer = null;
+
 /**
  * ステータスメッセージを表示
  * @param {string} msg - 表示するメッセージ
@@ -15,12 +18,29 @@ function showStatus(msg, type = 'ok') {
         el.className = type === 'error' ? 'status-err' : type === 'loading' ? 'status-loading' : 'status-ok';
     }
 
-    // グローバルステータス
-    const globalEl = document.getElementById('globalStatus');
-    if (globalEl) {
-        globalEl.textContent = msg;
-        const typeClass = type === 'error' ? 'status-error' : type === 'loading' ? 'status-loading' : 'status-ok';
-        globalEl.className = msg ? `global-status active ${typeClass}` : 'global-status';
+    // トースト表示
+    const toast = document.getElementById('toast');
+    if (toast) {
+        // 既存のタイマーをクリア
+        if (toastTimer) {
+            clearTimeout(toastTimer);
+            toastTimer = null;
+        }
+
+        if (msg) {
+            toast.textContent = msg;
+            const typeClass = type === 'error' ? 'status-error' : type === 'loading' ? 'status-loading' : 'status-ok';
+            toast.className = `toast show ${typeClass}`;
+
+            // loading以外は5秒後に非表示
+            if (type !== 'loading') {
+                toastTimer = setTimeout(() => {
+                    toast.className = 'toast';
+                }, 5000);
+            }
+        } else {
+            toast.className = 'toast';
+        }
     }
 }
 
