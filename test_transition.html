@@ -297,6 +297,7 @@
     const SELECTED_MODEL_KEY = STORAGE_KEYS.TRANSITION_SELECTED_MODEL;
     const SELECTED_LLM_MODEL_KEY = STORAGE_KEYS.TRANSITION_SELECTED_LLM_MODEL;
     const SIDEBAR_COLLAPSED_KEY = STORAGE_KEYS.TRANSITION_SIDEBAR_COLLAPSED;
+    const GAS_LAST_UPDATED_KEY = 'transition_gas_last_updated';
 
     // 移動実行
     async function executeMove(placeIndex) {
@@ -538,10 +539,42 @@
             const result = await saveGasData(baseUrl, 'settings', settings);
             console.log('[Settings] 保存結果:', result);
 
+            // 保存後、GASの更新日時を取得してローカルに保存
+            const meta = await fetchGasMeta(baseUrl);
+            if (meta.lastUpdated) {
+                localStorage.setItem(GAS_LAST_UPDATED_KEY, meta.lastUpdated);
+                console.log('[Settings] 更新日時を保存:', meta.lastUpdated);
+            }
+
             showStatus('設定を保存しました');
         } catch (error) {
             console.error('[Settings] 保存エラー:', error);
             showStatus('保存エラー: ' + error.message, 'error');
+        }
+    }
+
+    // 起動時にGAS設定の更新をチェック
+    async function checkAndSyncSettings() {
+        const baseUrl = localStorage.getItem(STORAGE_KEYS.GAS_URL);
+        if (!baseUrl) return;
+
+        try {
+            const meta = await fetchGasMeta(baseUrl);
+            const gasUpdated = meta.lastUpdated;
+            const localUpdated = localStorage.getItem(GAS_LAST_UPDATED_KEY);
+
+            console.log('[Settings] GAS更新日時:', gasUpdated, 'ローカル:', localUpdated);
+
+            // GASが新しい場合、設定を取得
+            if (!localUpdated || new Date(gasUpdated) > new Date(localUpdated)) {
+                console.log('[Settings] GASの設定が新しいため同期します');
+                await loadSettingsFromGas();
+                localStorage.setItem(GAS_LAST_UPDATED_KEY, gasUpdated);
+            } else {
+                console.log('[Settings] ローカル設定は最新です');
+            }
+        } catch (error) {
+            console.log('[Settings] 同期チェックをスキップ:', error.message);
         }
     }
 
@@ -573,6 +606,8 @@
         loadCachedData();
         startInitialSetup();
         initKeyboardNavigation();
+        // GAS設定の同期チェック（非同期）
+        checkAndSyncSettings();
     });
 
     async function loadAllFromGas() {

@@ -18,6 +18,20 @@ async function fetchGasData(baseUrl, sheet) {
 }
 
 /**
+ * GASからメタデータ（最終更新日時）を取得
+ * @param {string} baseUrl - GASのベースURL
+ * @returns {Promise<Object>} { lastUpdated: ISO日時文字列 }
+ */
+async function fetchGasMeta(baseUrl) {
+    const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'meta=true';
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`meta: HTTP ${response.status}`);
+    }
+    return await response.json();
+}
+
+/**
  * GASにデータを保存
  * @param {string} baseUrl - GASのベースURL
  * @param {string} sheet - シート名
