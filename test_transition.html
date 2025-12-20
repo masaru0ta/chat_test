@@ -1139,7 +1139,7 @@
 
         // 生成情報を収集するオブジェクト（IDのみ保持、名前は表示時に取得）
         let genInfo = {
-            actionType: actionType,
+            actionMode: actionType,
             characterId: charAtLocation?.character?.character_id || null,
             placeId: currentPlace?.place_id || null,
             actionId: currentState.actionIndex >= 0 ? actions[currentState.actionIndex]?.action_id : null,
@@ -1538,7 +1538,7 @@
             // 生成パラメータセクション
             html += '<div class="page-info-section">';
             html += '<div class="page-info-section-title">生成パラメータ</div>';
-            if (genInfo.actionType) html += `<div class="page-info-row"><span class="page-info-label">アクション種別:</span><span class="page-info-value">${escapeHtml(genInfo.actionType)}</span></div>`;
+            if (genInfo.actionMode) html += `<div class="page-info-row"><span class="page-info-label">アクション種別:</span><span class="page-info-value">${escapeHtml(genInfo.actionMode)}</span></div>`;
             if (genInfo.characterId) {
                 const char = characters.find(c => c.character_id === genInfo.characterId);
                 const charDisplay = char?.name ? `${escapeHtml(char.name)}` : '';
@@ -1610,7 +1610,7 @@
                 currentState.actionIndex = actionIndex;
 
                 const result = buildCombinedPrompt(
-                    genInfo.actionType,
+                    genInfo.actionMode,
                     '',  // userInputは保持していないので空
                     null,  // previousPlace
                     place,  // newPlace (移動時)
