@@ -6,21 +6,61 @@
     <title>Image Generator (詳細設定)</title>
     <link rel="stylesheet" href="css/common.css">
     <style>
+        /* 固定ヘッダーバー */
+        .fixed-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .fixed-header .btn-back {
+            background: #333;
+            color: #ccc;
+            border: 1px solid #555;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        .fixed-header .btn-back:hover {
+            background: #444;
+            color: #fff;
+        }
+
+        .fixed-header .header-spacer {
+            flex: 1;
+        }
+
+        .fixed-header .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .fixed-header .btn {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
         /* ページ固有スタイル */
-        .container { max-width: 1200px; }
+        .container {
+            max-width: 1200px;
+            padding-top: 60px; /* 固定ヘッダー分の余白 */
+        }
 
         #status { margin-top: 10px; }
 
         .btn-generate { font-size: 16px; padding: 12px 30px; }
 
         .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 900px) {
-            .main-content { grid-template-columns: 1fr; }
+            display: block;
         }
 
         .panel {
@@ -513,9 +553,25 @@
 </head>
 <body>
 
+<!-- 固定ヘッダーバー -->
+<div class="fixed-header">
+    <button class="btn btn-back" onclick="closeOrBack()">戻る</button>
+    <div class="header-spacer"></div>
+    <div class="header-buttons">
+        <button class="btn btn-generate" onclick="handleGenerateImage()" id="generateBtn">画像生成</button>
+        <button class="btn btn-save-action" onclick="saveAllToGas()">GASに保存</button>
+    </div>
+</div>
+
 <div class="container">
-    <a href="javascript:void(0)" onclick="closeOrBack()" class="back-link">&larr; ゲームに戻る</a>
-    <h1>Image Generator (詳細設定)</h1>
+    <!-- 生成結果（上部） -->
+    <div class="panel result-panel" style="margin-bottom: 20px;">
+        <h2>生成結果</h2>
+        <div id="result-container">
+            <div class="result-placeholder">画像を生成してください</div>
+        </div>
+        <div id="generation-info" class="generation-info" style="display: none;"></div>
+    </div>
 
     <!-- URLパラメータ表示 -->
     <div class="param-info" id="paramInfo" style="display: none;">
@@ -605,17 +661,6 @@
                 <span id="negativePreview" style="color: #e74c3c;">--</span>
             </div>
 
-        </div>
-
-        <div class="panel result-panel">
-            <h2>生成結果</h2>
-            <div style="margin-bottom: 15px; text-align: center;">
-                <button class="btn btn-generate" onclick="handleGenerateImage()" id="generateBtn">画像生成</button>
-            </div>
-            <div id="result-container">
-                <div class="result-placeholder">画像を生成してください</div>
-            </div>
-            <div id="generation-info" class="generation-info" style="display: none;"></div>
         </div>
     </div>
 
@@ -1283,9 +1328,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="edit-actions">
-                        <button class="btn btn-save-char" onclick="saveCharacterToGas()">GASに保存</button>
-                    </div>
                 </div>
             </div>
         `;
@@ -1506,9 +1548,6 @@
                     <label>プロンプト</label>
                     <textarea id="edit-action-prompt" onchange="updateActionField('prompt', this.value)">${escapeHtml(action.prompt || '')}</textarea>
                 </div>
-            </div>
-            <div class="edit-actions">
-                <button class="btn btn-save-action" onclick="saveActionToGas()">GASに保存</button>
             </div>
 
             <!-- 構図セクション -->
@@ -1821,9 +1860,6 @@
                     <textarea id="edit-place-additional" onchange="updatePlaceField('additionalTag', this.value)">${escapeHtml(place.additionalTag || '')}</textarea>
                 </div>
             </div>
-            <div class="edit-actions">
-                <button class="btn btn-save-place" onclick="savePlaceToGas()">GASに保存</button>
-            </div>
         `;
 
         // セレクトボックスの値を設定
@@ -1886,6 +1922,92 @@
             } else {
                 showStatus('サーバーエラー: ' + result.message, 'error');
             }
+        } catch (error) {
+            console.error(error);
+            showStatus('保存エラー: ' + error.message, 'error');
+        }
+    }
+
+    // 全データをGASに保存
+    async function saveAllToGas() {
+        const baseUrl = document.getElementById('gasUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        const hasData = characters.length > 0 || actions.length > 0 || places.length > 0;
+        if (!hasData) {
+            alert('保存するデータがありません');
+            return;
+        }
+
+        showStatus('保存中...', 'loading');
+
+        try {
+            const results = [];
+
+            // キャラクターデータを保存
+            if (characters.length > 0) {
+                const charData = characters.map(char => ({
+                    character_id: char.character_id || '',
+                    name: char.name || '',
+                    series: char.series || '',
+                    tag: char.tag || '',
+                    profile: char.profile || '',
+                    uniform1: char.uniform1 || '',
+                    uniform2: char.uniform2 || '',
+                    'additional tag': char.additionalTag || '',
+                    cast: char.cast || '',
+                    personality: char.personality || '',
+                    image: char.image || ''
+                }));
+                const charResult = await saveGasData(baseUrl, 'character', charData);
+                results.push(`キャラ: ${charResult.status}`);
+            }
+
+            // アクションデータを保存
+            if (actions.length > 0) {
+                const actionData = actions.map(action => {
+                    const row = {
+                        'action_id': action.action_id,
+                        'action name': action.name,
+                        'prompt': action.prompt,
+                        'action_type': action.action_type,
+                        'pre-action': action.pre_action,
+                        'public-action': action.public_action,
+                        'next-action': action.next_action,
+                        'char_page_count': action.char_page_count,
+                        'effect': action.effect,
+                        'agent': action.agent
+                    };
+                    action.compositions.forEach(comp => {
+                        row[comp.name + ' quality'] = comp.quality === '未評価' ? '' : comp.quality;
+                        row[comp.name + ' tag'] = comp.tag || '';
+                    });
+                    return row;
+                });
+                const actionResult = await saveGasData(baseUrl, 'action', actionData);
+                results.push(`アクション: ${actionResult.status}`);
+            }
+
+            // 場所データを保存
+            if (places.length > 0) {
+                const placeData = places.map(place => ({
+                    'place_id': place.place_id || '',
+                    'name': place.name || '',
+                    'tag': place.tag || '',
+                    'additional tag': place.additionalTag || '',
+                    'place_type': place.place_type || '',
+                    'root_place': place.root_place || '',
+                    'default action': place.default_action || '',
+                    'image': place.image || ''
+                }));
+                const placeResult = await saveGasData(baseUrl, 'place', placeData);
+                results.push(`場所: ${placeResult.status}`);
+            }
+
+            showStatus('保存完了: ' + results.join(', '));
         } catch (error) {
             console.error(error);
             showStatus('保存エラー: ' + error.message, 'error');
