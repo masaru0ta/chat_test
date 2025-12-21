@@ -160,6 +160,36 @@
                 container-type: inline-size;
                 padding-right: 10px;
             }
+
+            /* 2ペイン時: ヘッダーサムネイルを非表示、左ペイン結果を表示 */
+            .fixed-header .header-thumbnail {
+                display: none;
+            }
+
+            .left-pane-result {
+                display: block;
+            }
+        }
+
+        /* 左ペイン生成結果エリア（デフォルト非表示） */
+        .left-pane-result {
+            display: none;
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .left-pane-result img {
+            width: 100%;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .left-pane-result .result-placeholder {
+            color: #666;
+            text-align: center;
+            padding: 40px 20px;
         }
 
         .panel {
@@ -663,6 +693,10 @@
 <div class="container">
     <div class="two-pane-container">
         <div class="left-pane">
+            <!-- 2ペイン時の生成結果表示エリア -->
+            <div id="left-pane-result" class="left-pane-result">
+                <div class="result-placeholder">生成結果がここに表示されます</div>
+            </div>
             <div class="main-content">
                 <div class="panel">
                     <h2>生成設定</h2>
@@ -1254,7 +1288,9 @@
         btn.textContent = '生成中...';
 
         const resultContainer = document.getElementById('result-container');
+        const leftPaneResult = document.getElementById('left-pane-result');
         resultContainer.innerHTML = '<div class="thumbnail-placeholder">...</div>';
+        leftPaneResult.innerHTML = '<div class="result-placeholder">生成中...</div>';
 
         try {
             const result = await generateImage(apiKey, modelId, finalPrompt, {
@@ -1269,10 +1305,12 @@
             });
 
             resultContainer.innerHTML = `<img src="${result.imageURL}" alt="Generated Image" title="Seed: ${result.seed}">`;
+            leftPaneResult.innerHTML = `<img src="${result.imageURL}" alt="Generated Image" title="Seed: ${result.seed}" onclick="window.open('${result.imageURL}', '_blank')">`;
 
         } catch (error) {
             console.error(error);
             resultContainer.innerHTML = `<div class="thumbnail-placeholder" style="color: #e74c3c;">!</div>`;
+            leftPaneResult.innerHTML = '<div class="result-placeholder" style="color: #e74c3c;">生成エラー</div>';
         } finally {
             btn.disabled = false;
             btn.textContent = '生成';
