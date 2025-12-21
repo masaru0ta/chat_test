@@ -143,17 +143,26 @@ function parseActionsWithCompositions(rawData) {
         COMPOSITION_KEYS.forEach(key => {
             const qualityKey = key + ' quality';
             const tagKey = key + ' tag';
-            const quality = item[qualityKey] || '';
+            const rawQuality = item[qualityKey] || '';
             const tag = item[tagKey] || '';
 
-            // NG以外は全て追加（品質・タグ未設定でも選択可能）
-            if (quality !== 'NG') {
-                action.compositions.push({
-                    name: key,
-                    tag: tag,
-                    quality: quality  // 生の値をそのまま保存
-                });
+            // quality値を正規化
+            let quality = '未評価';
+            if (rawQuality === 'NG' || rawQuality === 'ng') {
+                quality = 'NG';
+            } else if (rawQuality === 'best' || rawQuality === 'Best') {
+                quality = 'best';
+            } else if (rawQuality === 'good' || rawQuality === 'Good') {
+                quality = 'good';
             }
+
+            // 全ての構図を追加（NGも含む、編集可能にするため）
+            action.compositions.push({
+                name: key,
+                tag: tag,
+                quality: quality,
+                enabled: quality !== 'NG'
+            });
         });
 
         return action;
