@@ -1554,6 +1554,10 @@
             const finalPrompt = buildFinalPrompt(prompt, characterWithExtras);
             const negativePrompt = buildNegativePrompt();
 
+            // seedも構図プレビューと同様に取得
+            let seed = parseInt(document.getElementById('seed').value);
+            if (seed === -1) seed = undefined;
+
             const result = await generateImage(apiKey, modelId, finalPrompt, {
                 negativePrompt: negativePrompt,
                 steps: model.steps || 20,
@@ -1561,6 +1565,7 @@
                 scheduler: model.scheduler || 'Default',
                 width: 1024,
                 height: 1024,
+                seed: seed,
                 character: characterWithExtras
             });
 
