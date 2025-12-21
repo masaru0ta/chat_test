@@ -2157,20 +2157,29 @@
         imageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
 
         // 現在の選択を保存
+        const savedCharacter = document.getElementById('character').value;
         const savedPlace = document.getElementById('place').value;
         const savedAction = document.getElementById('action').value;
         const savedComposition = document.getElementById('composition').value;
         const savedCustomPrompt = document.getElementById('customPrompt').value;
 
         try {
-            // 選択した場所、actions[0]、front view に設定
-            document.getElementById('action').value = actions.length > 0 ? '0' : '';
+            // chr_024、act_037、front view に設定
+            const charIndex = characters.findIndex(c => c.character_id === 'chr_024');
+            if (charIndex >= 0) {
+                document.getElementById('character').value = charIndex;
+            }
 
-            // front view の構図インデックスを取得して設定
-            if (actions.length > 0 && actions[0].compositions) {
-                const frontViewIndex = actions[0].compositions.findIndex(c => c.name === 'front view');
-                if (frontViewIndex >= 0) {
-                    document.getElementById('composition').value = frontViewIndex;
+            const actionIndex = actions.findIndex(a => a.action_id === 'act_037');
+            if (actionIndex >= 0) {
+                document.getElementById('action').value = actionIndex;
+
+                // front view の構図インデックスを取得して設定
+                if (actions[actionIndex].compositions) {
+                    const frontViewIndex = actions[actionIndex].compositions.findIndex(c => c.name === 'front view');
+                    if (frontViewIndex >= 0) {
+                        document.getElementById('composition').value = frontViewIndex;
+                    }
                 }
             }
 
@@ -2211,6 +2220,7 @@
             imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
         } finally {
             // 選択を復元
+            document.getElementById('character').value = savedCharacter;
             document.getElementById('place').value = savedPlace;
             document.getElementById('action').value = savedAction;
             document.getElementById('composition').value = savedComposition;
