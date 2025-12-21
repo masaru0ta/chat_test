@@ -266,20 +266,6 @@
             text-decoration: underline;
         }
 
-        .param-info {
-            background: #1a2a1a;
-            border: 1px solid #2a4a2a;
-            border-radius: 4px;
-            padding: 10px;
-            margin-bottom: 15px;
-            font-size: 0.85rem;
-            color: #8f8;
-        }
-
-        .param-info strong {
-            color: #afa;
-        }
-
         /* キャラクター編集セクション */
         .character-edit-section {
             margin-top: 30px;
@@ -664,11 +650,6 @@
 </div>
 
 <div class="container">
-    <!-- URLパラメータ表示 -->
-    <div class="param-info" id="paramInfo" style="display: none;">
-        <strong>遷移パラメータ:</strong> <span id="paramDisplay"></span>
-    </div>
-
     <div class="two-pane-container">
         <div class="left-pane">
             <div class="main-content">
@@ -856,29 +837,11 @@
         // キャッシュからデータを読み込み
         loadCachedData();
 
-        // URLパラメータ表示
-        displayUrlParams();
-
         // シードがあれば設定
         if (initialParams.seed) {
             document.getElementById('seed').value = initialParams.seed;
         }
     });
-
-    // URLパラメータを表示
-    function displayUrlParams() {
-        const params = [];
-        if (initialParams.characterId) params.push(`キャラ=${initialParams.characterId}`);
-        if (initialParams.placeId) params.push(`場所=${initialParams.placeId}`);
-        if (initialParams.actionId) params.push(`アクション=${initialParams.actionId}`);
-        if (initialParams.costumeId) params.push(`服装=${initialParams.costumeId}`);
-        if (initialParams.relationshipId) params.push(`関係性=${initialParams.relationshipId}`);
-
-        if (params.length > 0) {
-            document.getElementById('paramInfo').style.display = 'block';
-            document.getElementById('paramDisplay').textContent = params.join(', ');
-        }
-    }
 
     // キャッシュデータを読み込み
     function loadCachedData() {
