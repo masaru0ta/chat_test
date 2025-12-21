@@ -135,6 +135,28 @@
             display: block;
         }
 
+        /* 2ペインレイアウト（横幅が広い場合） */
+        .two-pane-container {
+            display: block;
+        }
+
+        @media (min-width: 1024px) {
+            .two-pane-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+
+            .left-pane, .right-pane {
+                min-width: 0;
+            }
+
+            .right-pane {
+                max-height: calc(100vh - 100px);
+                overflow-y: auto;
+            }
+        }
+
         .panel {
             background: #1a1a1a;
             border-radius: 8px;
@@ -647,9 +669,11 @@
         <strong>遷移パラメータ:</strong> <span id="paramDisplay"></span>
     </div>
 
-    <div class="main-content">
-        <div class="panel">
-            <h2>生成設定</h2>
+    <div class="two-pane-container">
+        <div class="left-pane">
+            <div class="main-content">
+                <div class="panel">
+                    <h2>生成設定</h2>
 
             <div class="form-group">
                 <label>モデル</label>
@@ -730,30 +754,34 @@
                 <span id="negativePreview" style="color: #e74c3c;">--</span>
             </div>
 
+                </div>
+            </div>
         </div>
-    </div>
 
-    <!-- キャラクター編集セクション -->
-    <div class="character-edit-section" id="characterEditSection">
-        <h2>キャラクター詳細編集</h2>
-        <div id="characterEditContent">
-            <div class="no-character-message">キャラクターを選択してください</div>
-        </div>
-    </div>
+        <div class="right-pane">
+            <!-- キャラクター編集セクション -->
+            <div class="character-edit-section" id="characterEditSection">
+                <h2>キャラクター詳細編集</h2>
+                <div id="characterEditContent">
+                    <div class="no-character-message">キャラクターを選択してください</div>
+                </div>
+            </div>
 
-    <!-- アクション編集セクション -->
-    <div class="action-edit-section" id="actionEditSection">
-        <h2>アクション詳細編集</h2>
-        <div id="actionEditContent">
-            <div class="no-action-message">アクションを選択してください</div>
-        </div>
-    </div>
+            <!-- アクション編集セクション -->
+            <div class="action-edit-section" id="actionEditSection">
+                <h2>アクション詳細編集</h2>
+                <div id="actionEditContent">
+                    <div class="no-action-message">アクションを選択してください</div>
+                </div>
+            </div>
 
-    <!-- 場所編集セクション -->
-    <div class="place-edit-section" id="placeEditSection">
-        <h2>場所詳細編集</h2>
-        <div id="placeEditContent">
-            <div class="no-place-message">場所を選択してください</div>
+            <!-- 場所編集セクション -->
+            <div class="place-edit-section" id="placeEditSection">
+                <h2>場所詳細編集</h2>
+                <div id="placeEditContent">
+                    <div class="no-place-message">場所を選択してください</div>
+                </div>
+            </div>
         </div>
     </div>
 
