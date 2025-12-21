@@ -1651,7 +1651,7 @@
     }
 
     // ページ情報: 画像生成テストへの遷移リンク
-    function buildImageGenLinkHtml(genInfo) {
+    function buildImageGenLinkHtml(genInfo, imageUrl) {
         if (!genInfo) return '';
 
         // URLパラメータを構築
@@ -1662,6 +1662,7 @@
         if (genInfo.costumeId) params.set('costumeId', genInfo.costumeId);
         if (genInfo.relationshipId) params.set('relationshipId', genInfo.relationshipId);
         if (genInfo.imageGenInfo?.seed) params.set('seed', genInfo.imageGenInfo.seed);
+        if (imageUrl) params.set('imageUrl', imageUrl);
 
         const url = `image_gen_setting.html?${params.toString()}`;
 
@@ -1701,7 +1702,7 @@
             html += buildImageGenSectionHtml(genInfo, objects);
 
             // 画像生成テストへの遷移ボタン
-            html += buildImageGenLinkHtml(genInfo);
+            html += buildImageGenLinkHtml(genInfo, page.image);
         } else {
             html += '<div class="page-info-section"><div style="color:#888">(生成情報なし)</div></div>';
         }

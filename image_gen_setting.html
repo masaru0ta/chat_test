@@ -877,7 +877,8 @@
         costumeId: urlParams.get('costumeId'),
         relationshipId: urlParams.get('relationshipId'),
         compositionIndex: urlParams.get('compositionIndex'),
-        seed: urlParams.get('seed')
+        seed: urlParams.get('seed'),
+        imageUrl: urlParams.get('imageUrl')
     };
 
     // 初期化
@@ -1008,6 +1009,14 @@
             if (relIndex >= 0) {
                 document.getElementById('relationship').value = relIndex;
             }
+        }
+
+        // URLパラメータから渡された画像を表示
+        if (initialParams.imageUrl) {
+            const resultContainer = document.getElementById('result-container');
+            const leftPaneResult = document.getElementById('left-pane-result');
+            resultContainer.innerHTML = `<img src="${initialParams.imageUrl}" alt="Generated Image">`;
+            leftPaneResult.innerHTML = `<img src="${initialParams.imageUrl}" alt="Generated Image" onclick="window.open('${initialParams.imageUrl}', '_blank')">`;
         }
 
         updatePromptPreview();
