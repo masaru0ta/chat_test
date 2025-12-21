@@ -1300,11 +1300,6 @@
 
     // ヘッダー拡大/縮小トグル
     function toggleHeaderExpand(event) {
-        // 画像クリック時は新しいタブで開く処理をスキップ
-        if (event && event.target.tagName === 'IMG') {
-            event.stopPropagation();
-            return;
-        }
         const header = document.getElementById('fixedHeader');
         const expandedContainer = document.getElementById('expanded-image-container');
         const isExpanding = !header.classList.contains('expanded');
@@ -1313,13 +1308,22 @@
             // 展開時: サムネイルの画像を大きく表示
             const thumbnailImg = document.querySelector('#result-container img');
             if (thumbnailImg) {
-                expandedContainer.innerHTML = `<img src="${thumbnailImg.src}" alt="生成結果">`;
+                expandedContainer.innerHTML = `<img src="${thumbnailImg.src}" alt="生成結果" onclick="openImageInNewTab(event)">`;
             } else {
                 expandedContainer.innerHTML = '<div class="no-image-message">画像がありません</div>';
             }
         }
 
         header.classList.toggle('expanded');
+    }
+
+    // 展開された大きな画像を新しいタブで開く
+    function openImageInNewTab(event) {
+        event.stopPropagation();
+        const img = event.target;
+        if (img && img.src) {
+            window.open(img.src, '_blank');
+        }
     }
 
     // キャラクター編集UIを更新
