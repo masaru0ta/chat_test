@@ -464,6 +464,51 @@
         .btn-save-action:hover {
             background: #3a5a3a;
         }
+
+        /* 場所編集セクション */
+        .place-edit-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+
+        .place-edit-section h2 {
+            color: #4a9eff;
+            font-size: 1.1rem;
+            margin: 0 0 15px 0;
+        }
+
+        .place-fields-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .tag-field {
+            grid-column: 1 / -1;
+        }
+
+        .tag-field textarea {
+            min-height: 60px;
+        }
+
+        .no-place-message {
+            color: #888;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .btn-save-place {
+            background: #2a4a2a;
+            color: #8f8;
+            border: 1px solid #4a4;
+        }
+
+        .btn-save-place:hover {
+            background: #3a5a3a;
+        }
     </style>
 </head>
 <body>
@@ -497,7 +542,7 @@
 
             <div class="form-group">
                 <label>場所</label>
-                <select id="place" onchange="updatePromptPreview()">
+                <select id="place" onchange="onPlaceChange()">
                     <option value="">（なし）</option>
                 </select>
             </div>
@@ -587,6 +632,14 @@
         <h2>アクション詳細編集</h2>
         <div id="actionEditContent">
             <div class="no-action-message">アクションを選択してください</div>
+        </div>
+    </div>
+
+    <!-- 場所編集セクション -->
+    <div class="place-edit-section" id="placeEditSection">
+        <h2>場所詳細編集</h2>
+        <div id="placeEditContent">
+            <div class="no-place-message">場所を選択してください</div>
         </div>
     </div>
 
@@ -793,6 +846,7 @@
         updatePromptPreview();
         updateCharacterEditUI();
         updateActionEditUI();
+        updatePlaceEditUI();
     }
 
     // 設定を保存
@@ -1689,6 +1743,143 @@
             });
 
             const result = await saveGasData(baseUrl, 'action', gasData);
+
+            if (result.status === 'success') {
+                showStatus('保存成功: ' + result.message);
+            } else {
+                showStatus('サーバーエラー: ' + result.message, 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showStatus('保存エラー: ' + error.message, 'error');
+        }
+    }
+
+    // 場所選択時
+    function onPlaceChange() {
+        updatePromptPreview();
+        updatePlaceEditUI();
+    }
+
+    // 場所編集UIを更新
+    function updatePlaceEditUI() {
+        const placeIdx = document.getElementById('place').value;
+        const container = document.getElementById('placeEditContent');
+
+        if (placeIdx === '' || !places[placeIdx]) {
+            container.innerHTML = '<div class="no-place-message">場所を選択してください</div>';
+            return;
+        }
+
+        const place = places[placeIdx];
+
+        // ルート場所選択肢を構築（自分自身を除外）
+        const rootPlaceOptions = places
+            .filter(p => p.place_id !== place.place_id)
+            .map(p => `<option value="${p.place_id}">${p.name} [${p.place_id}]</option>`)
+            .join('');
+
+        // デフォルトアクション選択肢を構築
+        const actionOptions = actions.map(a =>
+            `<option value="${a.action_id}">${a.name} [${a.action_id}]</option>`
+        ).join('');
+
+        container.innerHTML = `
+            <div class="place-fields-grid">
+                <div class="field-row">
+                    <label>Place ID</label>
+                    <span class="field-id">${place.place_id || '(未設定)'}</span>
+                </div>
+                <div class="field-row">
+                    <label>場所名</label>
+                    <input type="text" id="edit-place-name" value="${escapeHtml(place.name || '')}" onchange="updatePlaceField('name', this.value)">
+                </div>
+                <div class="field-row">
+                    <label>場所タイプ</label>
+                    <input type="text" id="edit-place-type" value="${escapeHtml(place.place_type || '')}" onchange="updatePlaceField('place_type', this.value)">
+                </div>
+                <div class="field-row">
+                    <label>ルート場所</label>
+                    <select id="edit-root-place" onchange="updatePlaceField('root_place', this.value)">
+                        <option value="">無し</option>
+                        ${rootPlaceOptions}
+                    </select>
+                </div>
+                <div class="field-row">
+                    <label>デフォルトアクション</label>
+                    <select id="edit-default-action" onchange="updatePlaceField('default_action', this.value)">
+                        <option value="">無し</option>
+                        ${actionOptions}
+                    </select>
+                </div>
+                <div class="field-row tag-field">
+                    <label>場所タグ</label>
+                    <textarea id="edit-place-tag" onchange="updatePlaceField('tag', this.value)">${escapeHtml(place.tag || '')}</textarea>
+                </div>
+                <div class="field-row tag-field">
+                    <label>追加タグ</label>
+                    <textarea id="edit-place-additional" onchange="updatePlaceField('additionalTag', this.value)">${escapeHtml(place.additionalTag || '')}</textarea>
+                </div>
+            </div>
+            <div class="edit-actions">
+                <button class="btn btn-save-place" onclick="savePlaceToGas()">GASに保存</button>
+            </div>
+        `;
+
+        // セレクトボックスの値を設定
+        document.getElementById('edit-root-place').value = place.root_place || '';
+        document.getElementById('edit-default-action').value = place.default_action || '';
+    }
+
+    // 場所フィールドを更新
+    function updatePlaceField(field, value) {
+        const placeIdx = document.getElementById('place').value;
+        if (placeIdx === '' || !places[placeIdx]) return;
+
+        places[placeIdx][field] = value;
+        saveCachedData();
+
+        // 名前が変わった場合はセレクトボックスも更新
+        if (field === 'name') {
+            updatePlaceSelect();
+            document.getElementById('place').value = placeIdx;
+        }
+
+        // タグが変わった場合はプロンプトプレビューを更新
+        if (field === 'tag' || field === 'additionalTag') {
+            updatePromptPreview();
+        }
+    }
+
+    // 場所をGASに保存
+    async function savePlaceToGas() {
+        const baseUrl = document.getElementById('gasUrl').value.trim();
+        if (!baseUrl) {
+            alert('GAS URLを入力してください');
+            return;
+        }
+
+        if (places.length === 0) {
+            alert('保存する場所データがありません');
+            return;
+        }
+
+        showStatus('保存中...', 'loading');
+
+        try {
+            // 場所データをGAS形式に変換
+            const gasData = places.map(place => ({
+                'place_id': place.place_id || '',
+                'name': place.name || '',
+                'tag': place.tag || '',
+                'additional tag': place.additionalTag || '',
+                'place_type': place.place_type || '',
+                'root_place': place.root_place || '',
+                'default action': place.default_action || '',
+                'image': place.image || ''
+            }));
+
+            const result = await saveGasData(baseUrl, 'place', gasData);
 
             if (result.status === 'success') {
                 showStatus('保存成功: ' + result.message);
