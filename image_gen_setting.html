@@ -1526,37 +1526,36 @@
         const imageDiv = document.getElementById('edit-char-image');
         imageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
 
+        // 現在の選択を保存
+        const savedPlace = document.getElementById('place').value;
+        const savedAction = document.getElementById('action').value;
+        const savedComposition = document.getElementById('composition').value;
+        const savedCustomPrompt = document.getElementById('customPrompt').value;
+
         try {
-            // 標準画像用プロンプト構築（構図プレビューと同じ仕様）
-            const place = places[0] || {};
-            const action = actions[0] || {};
-            const compositionTag = getFrontViewTag(action);
+            // places[0], actions[0], front view に設定
+            document.getElementById('place').value = places.length > 0 ? '0' : '';
+            document.getElementById('action').value = actions.length > 0 ? '0' : '';
 
-            // costume/relationship の情報を追加（構図プレビューと同様）
-            const costume = getSelectedObject('costume', costumes);
-            const relationship = getSelectedObject('relationship', relationships);
-            const characterWithExtras = {
-                ...char,
-                clothes: costume?.tag || '',
-                camel: costume?.camel_tag || '',
-                expression: relationship?.expression || ''
-            };
+            // front view の構図インデックスを取得して設定
+            if (actions.length > 0 && actions[0].compositions) {
+                const frontViewIndex = actions[0].compositions.findIndex(c => c.name === 'front view');
+                if (frontViewIndex >= 0) {
+                    document.getElementById('composition').value = frontViewIndex;
+                }
+            }
 
-            const promptParts = [
-                model.qualityPositive || '',
-                char.tag || '',
-                place.tag || '',
-                action.prompt || '',
-                compositionTag,
-                place.additionalTag || '',
-                char.additionalTag || ''
-            ].filter(p => p);
+            // カスタムプロンプトをクリア
+            document.getElementById('customPrompt').value = '';
 
-            const prompt = cleanPrompt(promptParts.join(', '));
+            // 構図プレビューと全く同じ方法でプロンプト構築
+            const prompt = buildPrompt();
+            const characterWithExtras = getSelectedCharacterWithExtras();
             const finalPrompt = buildFinalPrompt(prompt, characterWithExtras);
+            const negativePrompt = buildNegativePrompt();
 
             const result = await generateImage(apiKey, modelId, finalPrompt, {
-                negativePrompt: model.qualityNegative || '',
+                negativePrompt: negativePrompt,
                 steps: model.steps || 20,
                 cfgScale: model.cfgScale || 7,
                 scheduler: model.scheduler || 'Default',
@@ -1576,6 +1575,13 @@
         } catch (error) {
             console.error(error);
             imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+        } finally {
+            // 選択を復元
+            document.getElementById('place').value = savedPlace;
+            document.getElementById('action').value = savedAction;
+            document.getElementById('composition').value = savedComposition;
+            document.getElementById('customPrompt').value = savedCustomPrompt;
+            updatePromptPreview();
         }
     }
 
