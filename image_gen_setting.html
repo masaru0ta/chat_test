@@ -126,10 +126,6 @@
             transition: padding-top 0.3s ease;
         }
 
-        /* ヘッダー展開時のコンテナ余白調整 */
-        body.header-expanded .container {
-            padding-top: 80vh; /* 展開画像分の余白 */
-        }
 
         #status { margin-top: 10px; }
 
@@ -1308,6 +1304,7 @@
     function toggleHeaderExpand(event) {
         const header = document.getElementById('fixedHeader');
         const expandedContainer = document.getElementById('expanded-image-container');
+        const container = document.querySelector('.container');
         const isExpanding = !header.classList.contains('expanded');
 
         if (isExpanding) {
@@ -1322,6 +1319,16 @@
 
         header.classList.toggle('expanded');
         document.body.classList.toggle('header-expanded');
+
+        // ヘッダー高さに合わせてコンテナの余白を調整
+        requestAnimationFrame(() => {
+            if (header.classList.contains('expanded')) {
+                const headerHeight = header.offsetHeight;
+                container.style.paddingTop = (headerHeight + 10) + 'px';
+            } else {
+                container.style.paddingTop = '60px';
+            }
+        });
     }
 
     // 展開された大きな画像を新しいタブで開く
