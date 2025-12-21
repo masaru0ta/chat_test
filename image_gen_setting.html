@@ -35,6 +35,76 @@
             color: #fff;
         }
 
+        .fixed-header .header-thumbnail {
+            width: 50px;
+            height: 50px;
+            background: #111;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .fixed-header .header-thumbnail img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: all 0.3s ease;
+        }
+
+        .fixed-header .thumbnail-placeholder {
+            color: #555;
+            font-size: 0.75rem;
+        }
+
+        /* 拡大時のスタイル */
+        .fixed-header.expanded {
+            flex-direction: column;
+            padding: 10px 20px 15px 20px;
+        }
+
+        .fixed-header.expanded .header-row {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* 展開画像エリア（通常時は非表示） */
+        .fixed-header .expanded-image {
+            display: none;
+        }
+
+        .fixed-header.expanded .expanded-image {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .fixed-header.expanded .expanded-image img {
+            max-width: 90vw;
+            max-height: 70vh;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .fixed-header.expanded .expanded-image .no-image-message {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .fixed-header .header-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
         .fixed-header .header-spacer {
             flex: 1;
         }
@@ -554,25 +624,22 @@
 <body>
 
 <!-- 固定ヘッダーバー -->
-<div class="fixed-header">
-    <button class="btn btn-back" onclick="closeOrBack()">戻る</button>
-    <div class="header-spacer"></div>
-    <div class="header-buttons">
-        <button class="btn btn-generate" onclick="handleGenerateImage()" id="generateBtn">画像生成</button>
-        <button class="btn btn-save-action" onclick="saveAllToGas()">GASに保存</button>
+<div class="fixed-header" id="fixedHeader">
+    <div class="header-row">
+        <button class="btn btn-back" onclick="closeOrBack()">戻る</button>
+        <div id="result-container" class="header-thumbnail" onclick="toggleHeaderExpand(event)">
+            <div class="thumbnail-placeholder">--</div>
+        </div>
+        <div class="header-spacer"></div>
+        <div class="header-buttons">
+            <button class="btn btn-generate" onclick="handleGenerateImage()" id="generateBtn">生成</button>
+            <button class="btn btn-save-action" onclick="saveAllToGas()">保存</button>
+        </div>
     </div>
+    <div id="expanded-image-container" class="expanded-image"></div>
 </div>
 
 <div class="container">
-    <!-- 生成結果（上部） -->
-    <div class="panel result-panel" style="margin-bottom: 20px;">
-        <h2>生成結果</h2>
-        <div id="result-container">
-            <div class="result-placeholder">画像を生成してください</div>
-        </div>
-        <div id="generation-info" class="generation-info" style="display: none;"></div>
-    </div>
-
     <!-- URLパラメータ表示 -->
     <div class="param-info" id="paramInfo" style="display: none;">
         <strong>遷移パラメータ:</strong> <span id="paramDisplay"></span>
@@ -1183,9 +1250,7 @@
         btn.textContent = '生成中...';
 
         const resultContainer = document.getElementById('result-container');
-        resultContainer.innerHTML = '<div class="result-placeholder">生成中...</div>';
-
-        const startTime = Date.now();
+        resultContainer.innerHTML = '<div class="thumbnail-placeholder">...</div>';
 
         try {
             const result = await generateImage(apiKey, modelId, finalPrompt, {
@@ -1199,35 +1264,14 @@
                 character: characterWithExtras
             });
 
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-
-            resultContainer.innerHTML = `<img src="${result.imageURL}" alt="Generated Image" onclick="window.open('${result.imageURL}', '_blank')">`;
-
-            const infoDiv = document.getElementById('generation-info');
-            infoDiv.style.display = 'block';
-
-            // 選択情報を表示
-            const charName = getSelectedData('character', characters, 'name') || 'なし';
-            const placeName = getSelectedData('place', places, 'name') || 'なし';
-            const actionName = getSelectedData('action', actions, 'name') || 'なし';
-            const costumeName = getSelectedData('costume', costumes, 'name') || 'なし';
-            const relName = getSelectedData('relationship', relationships, 'name') || 'なし';
-
-            infoDiv.innerHTML = `
-                <div><strong>モデル:</strong> ${model?.name || modelId}</div>
-                <div><strong>キャラ:</strong> ${charName} | <strong>場所:</strong> ${placeName}</div>
-                <div><strong>アクション:</strong> ${actionName} | <strong>服装:</strong> ${costumeName}</div>
-                <div><strong>関係性:</strong> ${relName}</div>
-                <div><strong>Seed:</strong> ${result.seed} | <strong>Steps:</strong> ${steps} | <strong>CFG:</strong> ${cfgScale}</div>
-                <div><strong>生成時間:</strong> ${elapsed}秒</div>
-            `;
+            resultContainer.innerHTML = `<img src="${result.imageURL}" alt="Generated Image" onclick="window.open('${result.imageURL}', '_blank')" title="Seed: ${result.seed}">`;
 
         } catch (error) {
             console.error(error);
-            resultContainer.innerHTML = `<div class="result-placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+            resultContainer.innerHTML = `<div class="thumbnail-placeholder" style="color: #e74c3c;">!</div>`;
         } finally {
             btn.disabled = false;
-            btn.textContent = '画像生成';
+            btn.textContent = '生成';
         }
     }
 
@@ -1252,6 +1296,30 @@
         } else {
             history.back();
         }
+    }
+
+    // ヘッダー拡大/縮小トグル
+    function toggleHeaderExpand(event) {
+        // 画像クリック時は新しいタブで開く処理をスキップ
+        if (event && event.target.tagName === 'IMG') {
+            event.stopPropagation();
+            return;
+        }
+        const header = document.getElementById('fixedHeader');
+        const expandedContainer = document.getElementById('expanded-image-container');
+        const isExpanding = !header.classList.contains('expanded');
+
+        if (isExpanding) {
+            // 展開時: サムネイルの画像を大きく表示
+            const thumbnailImg = document.querySelector('#result-container img');
+            if (thumbnailImg) {
+                expandedContainer.innerHTML = `<img src="${thumbnailImg.src}" alt="生成結果">`;
+            } else {
+                expandedContainer.innerHTML = '<div class="no-image-message">画像がありません</div>';
+            }
+        }
+
+        header.classList.toggle('expanded');
     }
 
     // キャラクター編集UIを更新
