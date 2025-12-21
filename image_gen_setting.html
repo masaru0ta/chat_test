@@ -756,6 +756,19 @@
 
                 </div>
             </div>
+
+            <div class="settings-bar" style="margin-top: 20px;">
+                <div class="settings-row">
+                    <label>GAS URL:</label>
+                    <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec">
+                    <button class="btn btn-primary" onclick="loadAllFromGas()">GASから読み込み</button>
+                </div>
+                <div class="settings-row">
+                    <label>Runware API Key:</label>
+                    <input type="password" id="apiKey" placeholder="Runware API Keyを入力">
+                </div>
+                <div id="status"></div>
+            </div>
         </div>
 
         <div class="right-pane">
@@ -783,19 +796,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="settings-bar" style="margin-top: 20px;">
-        <div class="settings-row">
-            <label>GAS URL:</label>
-            <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/xxxxxx/exec">
-            <button class="btn btn-primary" onclick="loadAllFromGas()">GASから読み込み</button>
-        </div>
-        <div class="settings-row">
-            <label>Runware API Key:</label>
-            <input type="password" id="apiKey" placeholder="Runware API Keyを入力">
-        </div>
-        <div id="status"></div>
     </div>
 </div>
 
