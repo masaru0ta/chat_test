@@ -123,6 +123,12 @@
         .container {
             max-width: 1200px;
             padding-top: 60px; /* 固定ヘッダー分の余白 */
+            transition: padding-top 0.3s ease;
+        }
+
+        /* ヘッダー展開時のコンテナ余白調整 */
+        body.header-expanded .container {
+            padding-top: 80vh; /* 展開画像分の余白 */
         }
 
         #status { margin-top: 10px; }
@@ -1315,6 +1321,7 @@
         }
 
         header.classList.toggle('expanded');
+        document.body.classList.toggle('header-expanded');
     }
 
     // 展開された大きな画像を新しいタブで開く
