@@ -1527,10 +1527,20 @@
         imageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
 
         try {
-            // 標準画像用プロンプト構築（setting_character.htmlと同様）
+            // 標準画像用プロンプト構築（構図プレビューと同じ仕様）
             const place = places[0] || {};
             const action = actions[0] || {};
             const compositionTag = getFrontViewTag(action);
+
+            // costume/relationship の情報を追加（構図プレビューと同様）
+            const costume = getSelectedObject('costume', costumes);
+            const relationship = getSelectedObject('relationship', relationships);
+            const characterWithExtras = {
+                ...char,
+                clothes: costume?.tag || '',
+                camel: costume?.camel_tag || '',
+                expression: relationship?.expression || ''
+            };
 
             const promptParts = [
                 model.qualityPositive || '',
@@ -1538,13 +1548,12 @@
                 place.tag || '',
                 action.prompt || '',
                 compositionTag,
-                char.uniform1 || '',
                 place.additionalTag || '',
                 char.additionalTag || ''
             ].filter(p => p);
 
             const prompt = cleanPrompt(promptParts.join(', '));
-            const finalPrompt = buildFinalPrompt(prompt, char);
+            const finalPrompt = buildFinalPrompt(prompt, characterWithExtras);
 
             const result = await generateImage(apiKey, modelId, finalPrompt, {
                 negativePrompt: model.qualityNegative || '',
@@ -1553,7 +1562,7 @@
                 scheduler: model.scheduler || 'Default',
                 width: 1024,
                 height: 1024,
-                character: char
+                character: characterWithExtras
             });
 
             // 画像URLを保存
