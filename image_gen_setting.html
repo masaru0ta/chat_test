@@ -2040,41 +2040,56 @@
             `<option value="${a.action_id}">${a.name} [${a.action_id}]</option>`
         ).join('');
 
+        const imageUrl = place.image || '';
+
         container.innerHTML = `
-            <div class="place-fields-grid">
-                <div class="field-row">
-                    <label>Place ID</label>
-                    <span class="field-id">${place.place_id || '(未設定)'}</span>
+            <div class="edit-layout">
+                <div class="edit-image-section">
+                    <div class="edit-image-area" id="edit-place-image">
+                        ${imageUrl
+                            ? `<img src="${imageUrl}" alt="${escapeHtml(place.name)}" onclick="window.open('${imageUrl}', '_blank')">`
+                            : '<div class="placeholder">画像未設定</div>'
+                        }
+                    </div>
+                    <button class="btn btn-generate" onclick="generatePlaceImage()">標準画像生成</button>
                 </div>
-                <div class="field-row">
-                    <label>場所名</label>
-                    <input type="text" id="edit-place-name" value="${escapeHtml(place.name || '')}" onchange="updatePlaceField('name', this.value)">
-                </div>
-                <div class="field-row">
-                    <label>場所タイプ</label>
-                    <input type="text" id="edit-place-type" value="${escapeHtml(place.place_type || '')}" onchange="updatePlaceField('place_type', this.value)">
-                </div>
-                <div class="field-row">
-                    <label>ルート場所</label>
-                    <select id="edit-root-place" onchange="updatePlaceField('root_place', this.value)">
-                        <option value="">無し</option>
-                        ${rootPlaceOptions}
-                    </select>
-                </div>
-                <div class="field-row">
-                    <label>デフォルトアクション</label>
-                    <select id="edit-default-action" onchange="updatePlaceField('default_action', this.value)">
-                        <option value="">無し</option>
-                        ${actionOptions}
-                    </select>
-                </div>
-                <div class="field-row tag-field">
-                    <label>場所タグ</label>
-                    <textarea id="edit-place-tag" onchange="updatePlaceField('tag', this.value)">${escapeHtml(place.tag || '')}</textarea>
-                </div>
-                <div class="field-row tag-field">
-                    <label>追加タグ</label>
-                    <textarea id="edit-place-additional" onchange="updatePlaceField('additionalTag', this.value)">${escapeHtml(place.additionalTag || '')}</textarea>
+                <div class="edit-fields-section">
+                    <div class="place-fields-grid">
+                        <div class="field-row">
+                            <label>Place ID</label>
+                            <span class="field-id">${place.place_id || '(未設定)'}</span>
+                        </div>
+                        <div class="field-row">
+                            <label>場所名</label>
+                            <input type="text" id="edit-place-name" value="${escapeHtml(place.name || '')}" onchange="updatePlaceField('name', this.value)">
+                        </div>
+                        <div class="field-row">
+                            <label>場所タイプ</label>
+                            <input type="text" id="edit-place-type" value="${escapeHtml(place.place_type || '')}" onchange="updatePlaceField('place_type', this.value)">
+                        </div>
+                        <div class="field-row">
+                            <label>ルート場所</label>
+                            <select id="edit-root-place" onchange="updatePlaceField('root_place', this.value)">
+                                <option value="">無し</option>
+                                ${rootPlaceOptions}
+                            </select>
+                        </div>
+                        <div class="field-row">
+                            <label>デフォルトアクション</label>
+                            <select id="edit-default-action" onchange="updatePlaceField('default_action', this.value)">
+                                <option value="">無し</option>
+                                ${actionOptions}
+                            </select>
+                        </div>
+                        <div class="field-row tag-field">
+                            <label>場所タグ</label>
+                            <textarea id="edit-place-tag" onchange="updatePlaceField('tag', this.value)">${escapeHtml(place.tag || '')}</textarea>
+                        </div>
+                        <div class="field-row tag-field">
+                            <label>追加タグ</label>
+                            <textarea id="edit-place-additional" onchange="updatePlaceField('additionalTag', this.value)">${escapeHtml(place.additionalTag || '')}</textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -2100,6 +2115,94 @@
 
         // タグが変わった場合はプロンプトプレビューを更新
         if (field === 'tag' || field === 'additionalTag') {
+            updatePromptPreview();
+        }
+    }
+
+    // 場所の標準画像を生成
+    async function generatePlaceImage() {
+        const placeIdx = document.getElementById('place').value;
+        if (placeIdx === '' || !places[placeIdx]) {
+            alert('場所を選択してください');
+            return;
+        }
+
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+            alert('Runware API Keyを入力してください');
+            return;
+        }
+
+        const modelId = document.getElementById('model').value;
+        if (!modelId || !models[modelId]) {
+            alert('モデルを選択してください');
+            return;
+        }
+
+        const place = places[placeIdx];
+        const model = models[modelId];
+        const imageDiv = document.getElementById('edit-place-image');
+        imageDiv.innerHTML = '<div class="placeholder">生成中...</div>';
+
+        // 現在の選択を保存
+        const savedPlace = document.getElementById('place').value;
+        const savedAction = document.getElementById('action').value;
+        const savedComposition = document.getElementById('composition').value;
+        const savedCustomPrompt = document.getElementById('customPrompt').value;
+
+        try {
+            // 選択した場所、actions[0]、front view に設定
+            document.getElementById('action').value = actions.length > 0 ? '0' : '';
+
+            // front view の構図インデックスを取得して設定
+            if (actions.length > 0 && actions[0].compositions) {
+                const frontViewIndex = actions[0].compositions.findIndex(c => c.name === 'front view');
+                if (frontViewIndex >= 0) {
+                    document.getElementById('composition').value = frontViewIndex;
+                }
+            }
+
+            // カスタムプロンプトをクリア
+            document.getElementById('customPrompt').value = '';
+
+            // 構図プレビューと全く同じ方法でプロンプト構築
+            const prompt = buildPrompt();
+            const characterWithExtras = getSelectedCharacterWithExtras();
+            const finalPrompt = buildFinalPrompt(prompt, characterWithExtras);
+            const negativePrompt = buildNegativePrompt();
+
+            // seedも構図プレビューと同様に取得
+            let seed = parseInt(document.getElementById('seed').value);
+            if (seed === -1) seed = undefined;
+
+            const result = await generateImage(apiKey, modelId, finalPrompt, {
+                negativePrompt: negativePrompt,
+                steps: model.steps || 20,
+                cfgScale: model.cfgScale || 7,
+                scheduler: model.scheduler || 'Default',
+                width: 1024,
+                height: 1024,
+                seed: seed,
+                character: characterWithExtras
+            });
+
+            // 画像URLを保存
+            places[placeIdx].image = result.imageURL;
+            saveCachedData();
+
+            // 画像を表示
+            imageDiv.innerHTML = `<img src="${result.imageURL}" alt="${escapeHtml(place.name)}" onclick="window.open('${result.imageURL}', '_blank')">`;
+            showStatus('場所の標準画像を生成しました');
+
+        } catch (error) {
+            console.error(error);
+            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+        } finally {
+            // 選択を復元
+            document.getElementById('place').value = savedPlace;
+            document.getElementById('action').value = savedAction;
+            document.getElementById('composition').value = savedComposition;
+            document.getElementById('customPrompt').value = savedCustomPrompt;
             updatePromptPreview();
         }
     }
@@ -2160,9 +2263,10 @@
             return;
         }
 
-        // Runware画像があるか確認
+        // Runware画像があるか確認（キャラクターと場所）
         const runwareChars = characters.filter(char => isRunwareUrl(char.image));
-        if (runwareChars.length > 0 && !imageUploadUrl) {
+        const runwarePlaces = places.filter(place => isRunwareUrl(place.image));
+        if ((runwareChars.length > 0 || runwarePlaces.length > 0) && !imageUploadUrl) {
             alert('Runware画像をアップロードするには「画像アップロードGAS URL」を入力してください');
             return;
         }
@@ -2192,6 +2296,29 @@
                         } catch (error) {
                             console.error(`${char.name}の画像アップロード失敗:`, error);
                             results.push(`画像エラー: ${char.name}`);
+                        }
+                    }
+                }
+            }
+
+            // Runware場所画像をGASにアップロード
+            if (runwarePlaces.length > 0) {
+                for (let i = 0; i < places.length; i++) {
+                    const place = places[i];
+                    if (isRunwareUrl(place.image)) {
+                        showStatus(`場所画像アップロード中: ${place.name}`, 'loading');
+                        try {
+                            const base64Data = await imageUrlToBase64(place.image);
+                            const safeName = (place.name || 'place').replace(/[\/\\:*?"<>|,\s]+/g, '_').replace(/^_+|_+$/g, '');
+                            const filename = `place_${safeName}.png`;
+                            const oldFileId = null;
+
+                            const gasUrl = await uploadImageToGas(imageUploadUrl, base64Data, filename, oldFileId);
+                            places[i].image = gasUrl;
+                            saveCachedData();
+                        } catch (error) {
+                            console.error(`${place.name}の画像アップロード失敗:`, error);
+                            results.push(`画像エラー: ${place.name}`);
                         }
                     }
                 }
