@@ -1650,6 +1650,29 @@
         return html;
     }
 
+    // ページ情報: 画像生成テストへの遷移リンク
+    function buildImageGenLinkHtml(genInfo) {
+        if (!genInfo) return '';
+
+        // URLパラメータを構築
+        const params = new URLSearchParams();
+        if (genInfo.characterId) params.set('characterId', genInfo.characterId);
+        if (genInfo.placeId) params.set('placeId', genInfo.placeId);
+        if (genInfo.actionId) params.set('actionId', genInfo.actionId);
+        if (genInfo.costumeId) params.set('costumeId', genInfo.costumeId);
+        if (genInfo.relationshipId) params.set('relationshipId', genInfo.relationshipId);
+        if (genInfo.imageGenInfo?.seed) params.set('seed', genInfo.imageGenInfo.seed);
+
+        const url = `image_gen_setting.html?${params.toString()}`;
+
+        let html = '<div class="page-info-section" style="text-align:center; padding-top:15px; border-top:1px solid #444;">';
+        html += `<a href="${url}" target="_blank" class="btn" style="display:inline-block; padding:10px 20px; background:#2a4a6a; color:#8cf; border:1px solid #4a6a8a; border-radius:4px; text-decoration:none; font-size:0.9rem;">`;
+        html += '画像生成テスト &rarr;';
+        html += '</a>';
+        html += '</div>';
+        return html;
+    }
+
     // ページ情報表示（テキスト非表示時の情報ボタン）
     function showPageInfo() {
         if (currentPageIndex < 0 || !pages[currentPageIndex]) {
@@ -1676,6 +1699,9 @@
 
             // 画像生成セクション
             html += buildImageGenSectionHtml(genInfo, objects);
+
+            // 画像生成テストへの遷移ボタン
+            html += buildImageGenLinkHtml(genInfo);
         } else {
             html += '<div class="page-info-section"><div style="color:#888">(生成情報なし)</div></div>';
         }
