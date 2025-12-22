@@ -872,6 +872,7 @@
     let relationships = [];
     let costumes = [];
     let personalities = [];
+    let promptTemplates = {};
     let compositionImages = {}; // アクションID -> { 構図名: imageUrl }
 
     // URLパラメータから初期値を取得
@@ -925,6 +926,7 @@
                 relationships = data.relationships || [];
                 costumes = data.costumes || [];
                 personalities = data.personalities || [];
+                promptTemplates = data.promptTemplates || {};
 
                 updateAllSelects();
                 applyInitialParams();
@@ -944,7 +946,7 @@
     // キャッシュデータを保存
     function saveCachedData() {
         localStorage.setItem(CACHE_KEY, JSON.stringify({
-            models, characters, places, actions, relationships, costumes, personalities
+            models, characters, places, actions, relationships, costumes, personalities, promptTemplates
         }));
         localStorage.setItem(COMPOSITION_IMAGES_KEY, JSON.stringify(compositionImages));
     }
