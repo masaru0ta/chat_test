@@ -832,7 +832,10 @@
 
             <!-- 場所編集セクション -->
             <div class="place-edit-section" id="placeEditSection">
-                <h2>場所詳細編集</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h2 style="margin: 0;">場所詳細編集</h2>
+                    <button class="btn" onclick="copyAndCreateNewPlace()" style="padding: 5px 10px; font-size: 0.85rem; background: #2a4a6a; color: #8cf; border: 1px solid #4a6a8a;">コピーして新規場所作成</button>
+                </div>
                 <div id="placeEditContent">
                     <div class="no-place-message">場所を選択してください</div>
                 </div>
@@ -2093,6 +2096,61 @@
     function onPlaceChange() {
         updatePromptPreview();
         updatePlaceEditUI();
+    }
+
+    // コピーして新規場所作成
+    function copyAndCreateNewPlace() {
+        const placeIdx = document.getElementById('place').value;
+        if (placeIdx === '' || !places[placeIdx]) {
+            alert('コピー元の場所を選択してください');
+            return;
+        }
+
+        const sourcePlace = places[placeIdx];
+
+        // 既存のplc_xxx形式のIDから最大番号を取得
+        let maxNum = 0;
+        places.forEach(place => {
+            const match = (place.place_id || '').match(/^plc_(\d+)$/);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (num > maxNum) maxNum = num;
+            }
+        });
+
+        // 新しいIDを生成
+        const newId = 'plc_' + String(maxNum + 1).padStart(3, '0');
+
+        // 選択中の場所をコピーして新規作成
+        const newPlace = {
+            place_id: newId,
+            name: sourcePlace.name + ' (コピー)',
+            tag: sourcePlace.tag || '',
+            additionalTag: sourcePlace.additionalTag || '',
+            place_type: sourcePlace.place_type || '',
+            root_place: sourcePlace.root_place || '',
+            default_action: sourcePlace.default_action || '',
+            image: ''  // 画像はコピーしない
+        };
+
+        // 配列に追加
+        places.push(newPlace);
+        saveCachedData();
+
+        // ドロップダウンを更新
+        const placeSelect = document.getElementById('place');
+        const newIndex = places.length - 1;
+        const option = document.createElement('option');
+        option.value = newIndex;
+        option.textContent = `${newPlace.name} [${newPlace.place_id}]`;
+        placeSelect.appendChild(option);
+
+        // 新規場所を選択
+        placeSelect.value = newIndex;
+        updatePlaceEditUI();
+        updatePromptPreview();
+
+        showStatus(`${sourcePlace.name} をコピーして ${newId} を作成しました`);
     }
 
     // 場所編集UIを更新
