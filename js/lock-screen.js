@@ -7,6 +7,10 @@
 // ローカル定数
 const LOCK_PASSWORD_KEY = STORAGE_KEYS.TRANSITION_LOCK_PASSWORD;
 const DEFAULT_LOCK_PASSWORD = DEFAULTS.LOCK_PASSWORD;
+const LOCK_GRACE_PERIOD = 60 * 1000; // 1分間は自動ロックしない
+
+// 最後の操作時刻
+let lastInteractionTime = Date.now();
 
 /**
  * 保存されたロックパスワードを取得
@@ -48,6 +52,23 @@ function showLockScreen() {
  */
 function hideLockScreen() {
     document.getElementById('lockScreen').classList.add('hidden');
+}
+
+/**
+ * 最後の操作時刻を更新
+ */
+function updateLastInteraction() {
+    lastInteractionTime = Date.now();
+}
+
+/**
+ * 自動ロック（猶予期間内は表示しない）
+ */
+function autoLockScreen() {
+    const elapsed = Date.now() - lastInteractionTime;
+    if (elapsed >= LOCK_GRACE_PERIOD) {
+        showLockScreen();
+    }
 }
 
 /**
@@ -119,21 +140,21 @@ function initLockScreen() {
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && !isFirstLoad) {
-            showLockScreen();
+            autoLockScreen();
         }
     });
 
     // モバイル：アプリ切り替えからの復帰
     window.addEventListener('pageshow', (e) => {
         if (e.persisted && !isFirstLoad) {
-            showLockScreen();
+            autoLockScreen();
         }
     });
 
     // モバイル：ウィンドウフォーカス時
     window.addEventListener('focus', () => {
         if (!isFirstLoad) {
-            showLockScreen();
+            autoLockScreen();
         }
     });
 
@@ -141,6 +162,11 @@ function initLockScreen() {
     setTimeout(() => {
         isFirstLoad = false;
     }, 1000);
+
+    // ユーザー操作を追跡（最後の操作時刻を更新）
+    ['click', 'touchstart', 'keydown'].forEach(eventType => {
+        document.addEventListener(eventType, updateLastInteraction, { passive: true });
+    });
 
     // 設定画面のパスワード欄に現在値を表示
     const lockPasswordInput = document.getElementById('lockPasswordInput');
