@@ -45,16 +45,47 @@ async function generateImage(apiKey, modelId, prompt, options = {}) {
         requestBody.negativePrompt = options.negativePrompt;
     }
 
-    const response = await fetch(API_CONFIG.RUNWARE_BASE, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify([requestBody])
-    });
+    let response;
+    try {
+        response = await fetch(API_CONFIG.RUNWARE_BASE, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify([requestBody])
+        });
+    } catch (networkError) {
+        console.error('[Runware] ネットワークエラー:', networkError);
+        throw new Error('ネットワークエラー: APIに接続できませんでした');
+    }
 
-    const result = await response.json();
+    let result;
+    try {
+        result = await response.json();
+    } catch (parseError) {
+        console.error('[Runware] レスポンス解析エラー:', parseError);
+        throw new Error(`APIエラー (${response.status}): レスポンスを解析できませんでした`);
+    }
+
+    // HTTPステータスコードエラー（422など）
+    if (!response.ok) {
+        console.error('[Runware] HTTPエラー:', response.status, result);
+
+        // エラーメッセージを抽出
+        let errorMessage = '';
+        if (result.errors && Array.isArray(result.errors)) {
+            errorMessage = result.errors.map(e => e.message || e.error || JSON.stringify(e)).join(', ');
+        } else if (result.error) {
+            errorMessage = result.error.message || result.error;
+        } else if (result.message) {
+            errorMessage = result.message;
+        } else {
+            errorMessage = `HTTPエラー ${response.status}`;
+        }
+
+        throw new Error(errorMessage);
+    }
 
     if (result.data && result.data.length > 0 && result.data[0].imageURL) {
         console.log('[Runware] 画像URL:', result.data[0].imageURL);
@@ -65,7 +96,8 @@ async function generateImage(apiKey, modelId, prompt, options = {}) {
         };
     } else if (result.errors) {
         console.error('[Runware] エラー:', result.errors);
-        throw new Error(result.errors.map(e => e.message).join(', '));
+        const errorMessage = result.errors.map(e => e.message || e.error || JSON.stringify(e)).join(', ');
+        throw new Error(errorMessage);
     } else {
         console.error('[Runware] 不明なエラー:', result);
         throw new Error('画像の生成に失敗しました');
