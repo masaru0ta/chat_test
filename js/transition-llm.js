@@ -274,11 +274,18 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
         // パーソナリティ情報
         let personalityPart = '';
         let personalityDescPart = '';
+        let personalityStagePart = '';
         if (char.personality && typeof personalities !== 'undefined') {
             const personality = personalities.find(p => p.personality_id === char.personality);
             if (personality) {
                 personalityPart = personality.name || '';
                 personalityDescPart = personality.description || '';
+                // 関係性stageに応じたstage説明を取得
+                const stageNum = relationship?.stage ? parseInt(relationship.stage) : null;
+                if (stageNum >= 1 && stageNum <= 4) {
+                    const stageField = `stage_${stageNum}`;
+                    personalityStagePart = personality[stageField] || '';
+                }
             }
         }
 
@@ -289,6 +296,7 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
             profile: profilePart,
             personality: personalityPart,
             personality_description: personalityDescPart,
+            personality_stage: personalityStagePart,
             relationship: relationshipText,
             relationship_memo: relationshipMemo,
             next_relationship_req: nextRelationshipReq,
@@ -384,11 +392,18 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
         // パーソナリティ情報
         let personalityPart = '';
         let personalityDescPart = '';
+        let personalityStagePart = '';
         if (char.personality && typeof personalities !== 'undefined') {
             const personality = personalities.find(p => p.personality_id === char.personality);
             if (personality) {
                 personalityPart = personality.name || '';
                 personalityDescPart = personality.description || '';
+                // 関係性stageに応じたstage説明を取得
+                const stageNum = relationship?.stage ? parseInt(relationship.stage) : null;
+                if (stageNum >= 1 && stageNum <= 4) {
+                    const stageField = `stage_${stageNum}`;
+                    personalityStagePart = personality[stageField] || '';
+                }
             }
         }
 
@@ -398,6 +413,7 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
             profile: profilePart,
             personality: personalityPart,
             personality_description: personalityDescPart,
+            personality_stage: personalityStagePart,
             relationship: relationshipText,
             relationship_memo: relationshipMemo,
             next_relationship_req: nextRelationshipReq,
