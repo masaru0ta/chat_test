@@ -1518,28 +1518,36 @@
                 const persIdDisplay = ` <span style="color:#888">(${escapeHtml(char.personality)})</span>`;
                 html += `<div class="page-info-row"><span class="page-info-label">性格:</span><span class="page-info-value">${persDisplay}${persIdDisplay}</span></div>`;
 
-                // 関係性のstageに応じた説明を取得
+                // description表示（常に表示）
+                const descText = personality.description || '';
+                html += `<div class="page-info-row">`;
+                html += `<span class="page-info-label"></span>`;
+                html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">${escapeHtml(descText) || '(なし)'}</span>`;
+                html += `</div>`;
+
+                // 関係性のstageに応じた説明（stage 1-4の場合のみ表示）
                 const relationship = genInfo.relationshipId ? relationships.find(r => r.relationship_id === genInfo.relationshipId) : null;
                 const stageNum = relationship?.stage ? parseInt(relationship.stage) : null;
-                const stageField = (stageNum >= 1 && stageNum <= 4) ? `stage_${stageNum}` : 'description';
-                const stageLabel = (stageNum >= 1 && stageNum <= 4) ? `stage_${stageNum}` : 'description';
-                const persDescText = personality[stageField] || '';
+                if (stageNum >= 1 && stageNum <= 4) {
+                    const stageField = `stage_${stageNum}`;
+                    const persStageText = personality[stageField] || '';
 
-                // stage説明編集可能行
-                html += `<div class="page-info-row" id="pers-stage-row">`;
-                html += `<span class="page-info-label"><span style="color:#888; font-size:0.8rem;">(${stageLabel})</span></span>`;
-                html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
-                html += `<span id="pers-stage-display">${escapeHtml(persDescText) || '(なし)'}</span>`;
-                html += ` <button id="pers-stage-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
-                html += `</span></div>`;
-                // 編集UI（初期非表示）
-                html += `<div class="page-info-row" id="pers-stage-edit-row" style="display:none;">`;
-                html += `<span class="page-info-label"><span style="color:#888; font-size:0.8rem;">(${stageLabel})</span></span>`;
-                html += `<span class="page-info-value" style="width:100%;">`;
-                html += `<input type="text" id="pers-stage-input" data-field="${stageField}" style="width:70%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(persDescText)}">`;
-                html += ` <button id="pers-stage-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
-                html += ` <button id="pers-stage-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
-                html += `</span></div>`;
+                    // stage説明編集可能行
+                    html += `<div class="page-info-row" id="pers-stage-row">`;
+                    html += `<span class="page-info-label"><span style="color:#888; font-size:0.8rem;">(${stageField})</span></span>`;
+                    html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
+                    html += `<span id="pers-stage-display">${escapeHtml(persStageText) || '(なし)'}</span>`;
+                    html += ` <button id="pers-stage-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
+                    html += `</span></div>`;
+                    // 編集UI（初期非表示）
+                    html += `<div class="page-info-row" id="pers-stage-edit-row" style="display:none;">`;
+                    html += `<span class="page-info-label"><span style="color:#888; font-size:0.8rem;">(${stageField})</span></span>`;
+                    html += `<span class="page-info-value" style="width:100%;">`;
+                    html += `<input type="text" id="pers-stage-input" data-field="${stageField}" style="width:70%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(persStageText)}">`;
+                    html += ` <button id="pers-stage-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
+                    html += ` <button id="pers-stage-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
+                    html += `</span></div>`;
+                }
             }
         }
         html += '</div>';
@@ -1725,11 +1733,13 @@
         if (genInfo?.characterId) {
             const char = characters.find(c => c.character_id === genInfo.characterId);
             if (char?.personality) {
-                // 関係性のstageに応じたフィールド名を取得
+                // 関係性のstageに応じたフィールド名を取得（stage 1-4の場合のみ編集UI設定）
                 const relationship = genInfo.relationshipId ? relationships.find(r => r.relationship_id === genInfo.relationshipId) : null;
                 const stageNum = relationship?.stage ? parseInt(relationship.stage) : null;
-                const stageField = (stageNum >= 1 && stageNum <= 4) ? `stage_${stageNum}` : 'description';
-                setupFieldEditor('pers-stage', personalities, 'personality_id', char.personality, stageField, 'personality', '(なし)');
+                if (stageNum >= 1 && stageNum <= 4) {
+                    const stageField = `stage_${stageNum}`;
+                    setupFieldEditor('pers-stage', personalities, 'personality_id', char.personality, stageField, 'personality', '(なし)');
+                }
             }
         }
     }
