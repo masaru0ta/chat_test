@@ -123,28 +123,66 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
     if (dialogueOnly && charAtLocation) {
         const charName = charAtLocation.character.name;
         const char = charAtLocation.character;
-        let prompt = '';
-
-        // キャラクター情報
-        prompt += `【会話相手】${charName}`;
-        if (char.series) prompt += `（${char.series}）`;
-        if (char.profile) prompt += `\nプロフィール: ${char.profile}`;
 
         // 関係性情報
         const { relationshipText, relationshipMemo, nextRelationshipReq, relationship } = buildRelationshipInfoPrompt(charAtLocation);
-        if (relationshipText) prompt += `\n${relationshipText}`;
-        if (relationshipMemo) prompt += `\n${relationshipMemo}`;
-        if (nextRelationshipReq) prompt += `\n${nextRelationshipReq}`;
+
+        // 各パーツを構築（llm_007と同じ形式）
+        const seriesPart = char.series ? `（${char.series}）` : '';
+        const profilePart = char.profile ? `プロフィール: ${char.profile}` : '';
 
         // 服装情報
+        let costumePart = '';
         const charCostumeId = charAtLocation.status?.costumeId;
         if (charCostumeId && typeof costumes !== 'undefined') {
             const costume = costumes.find(c => c.costume_id === charCostumeId);
             if (costume) {
-                prompt += `\n現在の服装: ${costume.name}`;
+                costumePart = `現在の服装: ${costume.name}`;
             }
         }
 
+        // アクション情報
+        let actionPart = '';
+        const charActionIdx = charAtLocation.status?.actionIndex ?? -1;
+        if (charActionIdx >= 0 && actions[charActionIdx]) {
+            const charAction = actions[charActionIdx];
+            actionPart = `現在の行動: ${charAction.name}`;
+        }
+
+        // パーソナリティ情報
+        let personalityPart = '';
+        let personalityDescPart = '';
+        let personalityStagePart = '';
+        if (char.personality && typeof personalities !== 'undefined') {
+            const personality = personalities.find(p => p.personality_id === char.personality);
+            if (personality) {
+                personalityPart = personality.name || '';
+                personalityDescPart = personality.description || '';
+                // 関係性stageに応じたstage説明を取得
+                const stageNum = relationship?.stage ? parseInt(relationship.stage) : null;
+                if (stageNum >= 1 && stageNum <= 4) {
+                    const stageField = `stage_${stageNum}`;
+                    personalityStagePart = personality[stageField] || '';
+                }
+            }
+        }
+
+        // llm_007 テンプレートでキャラクター情報を構築
+        const characterInfo = requirePromptTemplate('llm_007', {
+            name: charName,
+            series: seriesPart,
+            profile: profilePart,
+            personality: personalityPart,
+            personality_description: personalityDescPart,
+            personality_stage: personalityStagePart,
+            relationship: relationshipText,
+            relationship_memo: relationshipMemo,
+            next_relationship_req: nextRelationshipReq,
+            costume: costumePart,
+            action: actionPart
+        });
+
+        let prompt = characterInfo;
         prompt += `\n\n主人公「${userInput}」\n`;
 
         // 出力フォーマット（必須）
