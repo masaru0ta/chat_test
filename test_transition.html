@@ -1477,10 +1477,6 @@
             const relationshipDisplay = relationship?.name ? `${escapeHtml(relationship.name)}` : '';
             const relationshipIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.relationshipId)})</span>`;
             html += `<div class="page-info-row"><span class="page-info-label">関係性:</span><span class="page-info-value">${relationshipDisplay}${relationshipIdDisplay}</span></div>`;
-            // stage表示
-            if (relationship?.stage) {
-                html += `<div class="page-info-row"><span class="page-info-label">ステージ:</span><span class="page-info-value" style="color:#aaa;">${escapeHtml(relationship.stage)}</span></div>`;
-            }
             // description編集可能行
             const descText = relationship?.description || '';
             html += `<div class="page-info-row" id="rel-desc-row">`;
@@ -1497,6 +1493,10 @@
             html += ` <button id="rel-desc-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
             html += ` <button id="rel-desc-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
             html += `</span></div>`;
+            // stage表示
+            if (relationship?.stage) {
+                html += `<div class="page-info-row"><span class="page-info-label">ステージ:</span><span class="page-info-value" style="color:#aaa;">${escapeHtml(relationship.stage)}</span></div>`;
+            }
             // next_relationship_req編集可能行
             const reqText = relationship?.next_relationship_req || '';
             html += `<div class="page-info-row" id="rel-req-row">`;
