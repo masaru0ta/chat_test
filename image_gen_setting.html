@@ -821,7 +821,10 @@
 
             <!-- アクション編集セクション -->
             <div class="action-edit-section" id="actionEditSection">
-                <h2>アクション詳細編集</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h2 style="margin: 0;">アクション詳細編集</h2>
+                    <button class="btn" onclick="createNewAction()" style="padding: 5px 10px; font-size: 0.85rem;">新規アクション作成</button>
+                </div>
                 <div id="actionEditContent">
                     <div class="no-action-message">アクションを選択してください</div>
                 </div>
@@ -1707,6 +1710,61 @@
             console.error(error);
             showStatus('保存エラー: ' + error.message, 'error');
         }
+    }
+
+    // 新規アクション作成
+    function createNewAction() {
+        // 既存のact_xxx形式のIDから最大番号を取得
+        let maxNum = 0;
+        actions.forEach(action => {
+            const match = (action.action_id || '').match(/^act_(\d+)$/);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (num > maxNum) maxNum = num;
+            }
+        });
+
+        // 新しいIDを生成
+        const newId = 'act_' + String(maxNum + 1).padStart(3, '0');
+
+        // 新規アクションを作成（全ての構図を含む）
+        const newAction = {
+            action_id: newId,
+            name: '新規アクション',
+            prompt: '',
+            action_type: '',
+            pre_action: '',
+            public_action: '',
+            next_action: '',
+            char_page_count: '',
+            effect: '',
+            agent: '',
+            compositions: COMPOSITION_KEYS.map(key => ({
+                name: key,
+                tag: '',
+                quality: '未評価',
+                enabled: true
+            }))
+        };
+
+        // 配列に追加
+        actions.push(newAction);
+        saveCachedData();
+
+        // ドロップダウンを更新
+        const actionSelect = document.getElementById('action');
+        const newIndex = actions.length - 1;
+        const option = document.createElement('option');
+        option.value = newIndex;
+        option.textContent = `${newAction.name} [${newAction.action_id}]`;
+        actionSelect.appendChild(option);
+
+        // 新規アクションを選択
+        actionSelect.value = newIndex;
+        updateActionEditUI();
+        updatePromptPreview();
+
+        showStatus(`新規アクション ${newId} を作成しました`);
     }
 
     // アクション編集UIを更新
