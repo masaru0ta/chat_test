@@ -823,7 +823,7 @@
             <div class="action-edit-section" id="actionEditSection">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h2 style="margin: 0;">アクション詳細編集</h2>
-                    <button class="btn" onclick="createNewAction()" style="padding: 5px 10px; font-size: 0.85rem; background: #2a4a6a; color: #8cf; border: 1px solid #4a6a8a;">新規アクション作成</button>
+                    <button class="btn" onclick="copyAndCreateNewAction()" style="padding: 5px 10px; font-size: 0.85rem; background: #2a4a6a; color: #8cf; border: 1px solid #4a6a8a;">コピーして新規アクション作成</button>
                 </div>
                 <div id="actionEditContent">
                     <div class="no-action-message">アクションを選択してください</div>
@@ -1712,8 +1712,16 @@
         }
     }
 
-    // 新規アクション作成
-    function createNewAction() {
+    // コピーして新規アクション作成
+    function copyAndCreateNewAction() {
+        const actionIdx = document.getElementById('action').value;
+        if (actionIdx === '' || !actions[actionIdx]) {
+            alert('コピー元のアクションを選択してください');
+            return;
+        }
+
+        const sourceAction = actions[actionIdx];
+
         // 既存のact_xxx形式のIDから最大番号を取得
         let maxNum = 0;
         actions.forEach(action => {
@@ -1727,23 +1735,23 @@
         // 新しいIDを生成
         const newId = 'act_' + String(maxNum + 1).padStart(3, '0');
 
-        // 新規アクションを作成（全ての構図を含む）
+        // 選択中のアクションをコピーして新規作成
         const newAction = {
             action_id: newId,
-            name: '新規アクション',
-            prompt: '',
-            action_type: '',
-            pre_action: '',
-            public_action: '',
-            next_action: '',
-            char_page_count: '',
-            effect: '',
-            agent: '',
-            compositions: COMPOSITION_KEYS.map(key => ({
-                name: key,
-                tag: '',
-                quality: '未評価',
-                enabled: true
+            name: sourceAction.name + ' (コピー)',
+            prompt: sourceAction.prompt || '',
+            action_type: sourceAction.action_type || '',
+            pre_action: sourceAction.pre_action || '',
+            public_action: sourceAction.public_action || '',
+            next_action: sourceAction.next_action || '',
+            char_page_count: sourceAction.char_page_count || '',
+            effect: sourceAction.effect || '',
+            agent: sourceAction.agent || '',
+            compositions: sourceAction.compositions.map(comp => ({
+                name: comp.name,
+                tag: comp.tag || '',
+                quality: comp.quality || '未評価',
+                enabled: comp.enabled !== false
             }))
         };
 
@@ -1764,7 +1772,7 @@
         updateActionEditUI();
         updatePromptPreview();
 
-        showStatus(`新規アクション ${newId} を作成しました`);
+        showStatus(`${sourceAction.name} をコピーして ${newId} を作成しました`);
     }
 
     // アクション編集UIを更新
