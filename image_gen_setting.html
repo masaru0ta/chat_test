@@ -1343,8 +1343,10 @@
 
         } catch (error) {
             console.error(error);
+            const errorMsg = translateApiError(error.message);
             resultContainer.innerHTML = `<div class="thumbnail-placeholder" style="color: #e74c3c;">!</div>`;
-            leftPaneResult.innerHTML = '<div class="result-placeholder" style="color: #e74c3c;">生成エラー</div>';
+            leftPaneResult.innerHTML = `<div class="result-placeholder" style="color: #e74c3c;">${escapeHtml(errorMsg)}</div>`;
+            showStatus(errorMsg, 'error');
         } finally {
             btn.disabled = false;
             btn.textContent = '生成';
@@ -1501,6 +1503,40 @@
         return div.innerHTML;
     }
 
+    // APIエラーメッセージを日本語に変換
+    function translateApiError(message) {
+        if (!message) return '不明なエラー';
+
+        // よくあるエラーパターンを日本語に変換
+        if (message.includes('sexual content involving minors')) {
+            return 'コンテンツポリシー違反: 未成年に関する不適切なコンテンツが検出されました';
+        }
+        if (message.includes('safety policies') || message.includes('content policy')) {
+            return 'コンテンツポリシー違反: 安全性ポリシーに違反するプロンプトが検出されました';
+        }
+        if (message.includes('Request blocked')) {
+            return 'リクエストがブロックされました: プロンプトがポリシーに違反しています';
+        }
+        if (message.includes('Invalid API key') || message.includes('Unauthorized')) {
+            return 'APIキーが無効です';
+        }
+        if (message.includes('Rate limit') || message.includes('Too many requests')) {
+            return 'リクエスト制限: しばらく待ってから再試行してください';
+        }
+        if (message.includes('insufficient') || message.includes('credits') || message.includes('balance')) {
+            return 'クレジット不足: アカウントの残高を確認してください';
+        }
+        if (message.includes('network') || message.includes('Network')) {
+            return 'ネットワークエラー: 接続を確認してください';
+        }
+        if (message.includes('timeout') || message.includes('Timeout')) {
+            return 'タイムアウト: リクエストがタイムアウトしました';
+        }
+
+        // 変換できない場合は元のメッセージを返す
+        return message;
+    }
+
     // キャラクターフィールドを更新
     function updateCharacterField(field, value) {
         const charIdx = document.getElementById('character').value;
@@ -1597,7 +1633,8 @@
 
         } catch (error) {
             console.error(error);
-            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+            const errorMsg = translateApiError(error.message);
+            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">${escapeHtml(errorMsg)}</div>`;
         } finally {
             // 選択を復元
             document.getElementById('place').value = savedPlace;
@@ -2035,7 +2072,8 @@
 
         } catch (error) {
             console.error(error);
-            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー</div>`;
+            const errorMsg = translateApiError(error.message);
+            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c; font-size: 0.8rem;">${escapeHtml(errorMsg)}</div>`;
         }
     }
 
@@ -2341,7 +2379,8 @@
 
         } catch (error) {
             console.error(error);
-            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">エラー: ${error.message}</div>`;
+            const errorMsg = translateApiError(error.message);
+            imageDiv.innerHTML = `<div class="placeholder" style="color: #e74c3c;">${escapeHtml(errorMsg)}</div>`;
         } finally {
             // 選択を復元
             document.getElementById('character').value = savedCharacter;
