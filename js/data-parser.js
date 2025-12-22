@@ -290,7 +290,11 @@ function parsePersonalities(rawData) {
         return {
             personality_id: personalityId,
             name: item.name || '',
-            description: item.description || ''
+            description: item.description || '',
+            stage_1: item['stage_1'] || '',
+            stage_2: item['stage_2'] || '',
+            stage_3: item['stage_3'] || '',
+            stage_4: item['stage_4'] || ''
         };
     });
 }
