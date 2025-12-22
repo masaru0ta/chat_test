@@ -224,7 +224,8 @@ function parseRelationships(rawData) {
             private: item['private'] || '',
             semi_private: item['semi_private'] || '',
             expression: item['expression'] || '',
-            hustle: item['hustle'] || ''
+            hustle: item['hustle'] || '',
+            stage: item['stage'] || ''
         };
     });
 }
