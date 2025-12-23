@@ -46,13 +46,16 @@ function requirePromptTemplate(key, vars = {}) {
  */
 function createStreamChunkHandler(streamPageIndex, useAddDialogueMode, appendBaseHtml) {
     return (accumulatedText) => {
-        // 【地の文】タグがあればその内容を抽出、なければ全体を表示
+        // 【導入】または【地の文】タグがあればその内容を抽出、なければ全体を表示
         let displayText = accumulatedText;
+        const introMatch = accumulatedText.match(/【導入】\s*([\s\S]*?)(?=【|$)/);
         const narrativeMatch = accumulatedText.match(/【地の文】\s*([\s\S]*?)(?=【|$)/);
-        if (narrativeMatch) {
+        if (introMatch) {
+            displayText = introMatch[1].trim();
+        } else if (narrativeMatch) {
             displayText = narrativeMatch[1].trim();
         } else {
-            // まだ【地の文】が来ていない場合、【で始まる部分は除外
+            // まだタグが来ていない場合、【で始まる部分は除外
             const firstTag = accumulatedText.indexOf('【');
             if (firstTag > 0) {
                 displayText = accumulatedText.substring(0, firstTag).trim();
@@ -544,7 +547,7 @@ function parseCombinedResponse(response, charAtLocation) {
 
 /**
  * 複数セリフレスポンスをパース（llm_014用）
- * 【セリフ1】【セリフ2】...形式から配列に変換
+ * 【導入】【ページ1】【ページ2】...形式から配列に変換
  */
 function parseMultipleDialogues(response, charAtLocation, expectedCount) {
     let narrative = '';
@@ -552,18 +555,28 @@ function parseMultipleDialogues(response, charAtLocation, expectedCount) {
     let newRelationshipName = null;
     let relationshipMemo = null;
 
-    // 【地の文】セクションを抽出
+    // 【導入】セクションを抽出（従来の【地の文】にも対応）
+    const introMatch = response.match(/【導入】\s*([\s\S]*?)(?=【|$)/);
     const narrativeMatch = response.match(/【地の文】\s*([\s\S]*?)(?=【|$)/);
-    if (narrativeMatch) {
+    if (introMatch) {
+        narrative = cleanNarrative(introMatch[1].trim());
+    } else if (narrativeMatch) {
         narrative = cleanNarrative(narrativeMatch[1].trim());
     }
 
-    // 【セリフN】形式でセリフを抽出
+    // 【ページN】形式でセリフを抽出（従来の【セリフN】にも対応）
     for (let i = 1; i <= expectedCount; i++) {
-        const dialogueRegex = new RegExp(`【セリフ${i}】\\s*([\\s\\S]*?)(?=【|$)`);
-        const dialogueMatch = response.match(dialogueRegex);
-        if (dialogueMatch) {
-            dialogues.push(dialogueMatch[1].trim());
+        const pageRegex = new RegExp(`【ページ${i}】\\s*([\\s\\S]*?)(?=【|$)`);
+        const pageMatch = response.match(pageRegex);
+        if (pageMatch) {
+            dialogues.push(pageMatch[1].trim());
+        } else {
+            // 従来形式へのフォールバック
+            const dialogueRegex = new RegExp(`【セリフ${i}】\\s*([\\s\\S]*?)(?=【|$)`);
+            const dialogueMatch = response.match(dialogueRegex);
+            if (dialogueMatch) {
+                dialogues.push(dialogueMatch[1].trim());
+            }
         }
     }
 

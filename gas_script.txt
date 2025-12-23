@@ -1,7 +1,7 @@
 // ▼ ここにコピーしたIDを貼り付けてください ▼
 const SPREADSHEET_ID = '1pkQRmrP4IIqN-SmfZCIFuPmhurLob-UAGDlDnEMxGaU';
 // デフォルトのシート名（パラメータがない場合はこれを使用）
-const DEFAULT_SHEET_NAME = 'action'; 
+const DEFAULT_SHEET_NAME = 'action';
 
 /**
  * 共通のシート取得関数
@@ -21,15 +21,15 @@ function getSheet(sheetName) {
 function doGet(e) {
   // メタデータのみ返す（最終更新日時）
   if (e.parameter.meta === 'true') {
-    const file = DriveApp.getFileById(SPREADSHEET_ID);
-    const driveUpdated = file.getLastUpdated();
+    var file = DriveApp.getFileById(SPREADSHEET_ID);
+    var driveUpdated = file.getLastUpdated();
 
     // API経由の更新日時を取得
-    const apiUpdatedStr = PropertiesService.getScriptProperties().getProperty('lastUpdated');
-    const apiUpdated = apiUpdatedStr ? new Date(apiUpdatedStr) : null;
+    var apiUpdatedStr = PropertiesService.getScriptProperties().getProperty('lastUpdated');
+    var apiUpdated = apiUpdatedStr ? new Date(apiUpdatedStr) : null;
 
     // 新しい方を返す
-    const lastUpdated = (apiUpdated && apiUpdated > driveUpdated) ? apiUpdated : driveUpdated;
+    var lastUpdated = (apiUpdated && apiUpdated > driveUpdated) ? apiUpdated : driveUpdated;
 
     return ContentService.createTextOutput(JSON.stringify({
       lastUpdated: lastUpdated.toISOString()
@@ -37,10 +37,10 @@ function doGet(e) {
   }
 
   // パラメータからシート名を取得。指定がなければ DEFAULT_SHEET_NAME を使用
-  const sheetName = e.parameter.sheet || DEFAULT_SHEET_NAME;
+  var sheetName = e.parameter.sheet || DEFAULT_SHEET_NAME;
 
-  const sheet = getSheet(sheetName);
-  
+  var sheet = getSheet(sheetName);
+
   if (!sheet) {
     return ContentService.createTextOutput(JSON.stringify({
       error: "Sheet not found",
@@ -50,18 +50,18 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
   }
 
-  const rows = sheet.getDataRange().getValues();
-  
+  var rows = sheet.getDataRange().getValues();
+
   if (rows.length === 0) {
     return ContentService.createTextOutput(JSON.stringify([]))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  const headers = rows.shift();
-  
-  const data = rows.map(row => {
-    let obj = {};
-    headers.forEach((header, i) => {
+  var headers = rows.shift();
+
+  var data = rows.map(function(row) {
+    var obj = {};
+    headers.forEach(function(header, i) {
       if (header) obj[header] = row[i];
     });
     return obj;
@@ -74,47 +74,83 @@ function doGet(e) {
 /**
  * 書き込み (POST)
  * URLパラメータ 'sheet' でシート名を指定可能にする
+ * action=update で単一フィールド更新モード
  */
 function doPost(e) {
   try {
-    // 修正: パラメータからシート名を取得。指定がなければ DEFAULT_SHEET_NAME を使用
-    const sheetName = e.parameter.sheet || DEFAULT_SHEET_NAME; 
-    
-    const sheet = getSheet(sheetName); // 動的に取得したシート名を使用
-    
+    var sheetName = e.parameter.sheet || DEFAULT_SHEET_NAME;
+    var sheet = getSheet(sheetName);
+
     if (!sheet) {
       return ContentService.createTextOutput(JSON.stringify({
         status: 'error',
-        message: `Sheet not found: ${sheetName}`
+        message: 'Sheet not found: ' + sheetName
       })).setMimeType(ContentService.MimeType.JSON);
     }
-    
-    // 行数チェック
-    const lastRow = sheet.getLastRow();
-    const currentDataCount = lastRow > 1 ? lastRow - 1 : 0;
-        
-    // データ解析
-    const parsedData = JSON.parse(e.postData.contents);
-    const dataList = Array.isArray(parsedData) ? parsedData : [parsedData];
-    
-    // ▼ ここから修正 ▼
-    const IS_LOG_SHEET = sheetName === 'llm_req_log';
+
+    // 単一フィールド更新モード
+    if (e.parameter.action === 'update') {
+      var updateData = JSON.parse(e.postData.contents);
+      var updateHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      var idColIndex = updateHeaders.indexOf(updateData.idField) + 1;
+      var fieldColIndex = updateHeaders.indexOf(updateData.fieldName) + 1;
+
+      if (idColIndex <= 0) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'ID column not found: ' + updateData.idField
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      if (fieldColIndex <= 0) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'Field column not found: ' + updateData.fieldName
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var updateLastRow = sheet.getLastRow();
+      if (updateLastRow > 1) {
+        var idValues = sheet.getRange(2, idColIndex, updateLastRow - 1, 1).getValues();
+        for (var i = 0; i < idValues.length; i++) {
+          if (idValues[i][0] === updateData.idValue) {
+            sheet.getRange(i + 2, fieldColIndex).setValue(updateData.fieldValue);
+            PropertiesService.getScriptProperties().setProperty('lastUpdated', new Date().toISOString());
+            return ContentService.createTextOutput(JSON.stringify({
+              status: 'success',
+              message: 'Updated ' + updateData.fieldName + ' for ' + updateData.idValue
+            })).setMimeType(ContentService.MimeType.JSON);
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Record not found: ' + updateData.idValue
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 通常の全体書き込みモード
+    var lastRow = sheet.getLastRow();
+    var currentDataCount = lastRow > 1 ? lastRow - 1 : 0;
+
+    var parsedData = JSON.parse(e.postData.contents);
+    var dataList = Array.isArray(parsedData) ? parsedData : [parsedData];
+
+    var IS_LOG_SHEET = sheetName === 'llm_req_log';
 
     // 安全装置（llm_req_log の場合のみ制限を解除）
     if (!IS_LOG_SHEET && dataList.length < currentDataCount) {
       return ContentService.createTextOutput(JSON.stringify({
         status: 'error',
-        message: `Safety Check Failed: Received ${dataList.length} rows, but sheet has ${currentDataCount} rows. Update aborted.`
+        message: 'Safety Check Failed: Received ' + dataList.length + ' rows, but sheet has ' + currentDataCount + ' rows. Update aborted.'
       })).setMimeType(ContentService.MimeType.JSON);
     }
-    // ▲ ここまで修正 ▲
 
     // ヘッダー取得
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
     // 書き込み用データ作成
-    const newRows = dataList.map(item => {
-      return headers.map(header => {
+    var newRows = dataList.map(function(item) {
+      return headers.map(function(header) {
         return item[header] !== undefined ? item[header] : '';
       });
     });
@@ -136,11 +172,13 @@ function doPost(e) {
 
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
-      message: `Replaced all data. Old: ${currentDataCount}, New: ${newRows.length}${IS_LOG_SHEET ? ' (Log sheet override allowed)' : ''}`
+      message: 'Replaced all data. Old: ' + currentDataCount + ', New: ' + newRows.length + (IS_LOG_SHEET ? ' (Log sheet override allowed)' : '')
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }

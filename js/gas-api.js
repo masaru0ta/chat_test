@@ -49,3 +49,30 @@ async function saveGasData(baseUrl, sheet, data) {
     });
     return await response.json();
 }
+
+/**
+ * GASの単一フィールドを更新
+ * @param {string} baseUrl - GASのベースURL
+ * @param {string} sheet - シート名
+ * @param {string} idField - ID列名
+ * @param {string} idValue - 更新対象のID値
+ * @param {string} fieldName - 更新するフィールド名
+ * @param {string} fieldValue - 新しい値
+ * @returns {Promise<Object>} レスポンス
+ */
+async function updateGasField(baseUrl, sheet, idField, idValue, fieldName, fieldValue) {
+    const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'sheet=' + sheet + '&action=update';
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify({
+            idField: idField,
+            idValue: idValue,
+            fieldName: fieldName,
+            fieldValue: fieldValue
+        })
+    });
+    return await response.json();
+}

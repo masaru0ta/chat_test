@@ -1058,10 +1058,18 @@
         const imagePromise = charPageCount >= 2 ? null : startImageGenerationAsync(charAtLocation, currentPlace);
 
         // ストリームページのセットアップ
-        const { streamPageIndex, useAddDialogueMode, appendBaseHtml } = setupStreamPage(movePageIndex, currentPlace);
+        let streamPageIndex = -1;
+        let useAddDialogueMode = false;
+        let onStreamChunk = null;
 
-        // ストリーム受信時のコールバック生成
-        const onStreamChunk = createStreamChunkHandler(streamPageIndex, useAddDialogueMode, appendBaseHtml);
+        if (charPageCount < 2) {
+            // 通常モード：ストリーム表示を有効化
+            const streamSetup = setupStreamPage(movePageIndex, currentPlace);
+            streamPageIndex = streamSetup.streamPageIndex;
+            useAddDialogueMode = streamSetup.useAddDialogueMode;
+            onStreamChunk = createStreamChunkHandler(streamPageIndex, useAddDialogueMode, streamSetup.appendBaseHtml);
+        }
+        // 複数ページモードではストリーム表示しない
 
         // 複数ページモードの場合、画像生成を先に開始（LLMと並列実行）
         let imagePromises = [];
@@ -1101,7 +1109,24 @@
         }
 
         // 最終的な地の文を表示
-        await displayNarrative(narrative, streamPageIndex, useAddDialogueMode);
+        if (charPageCount >= 2 && narrative && pages.length > 0) {
+            // 複数ページモード：最後のページにテキストを追加
+            const lastPageIndex = pages.length - 1;
+            const lastPage = pages[lastPageIndex];
+            lastPage.text += (lastPage.text ? '\n' : '') + narrative;
+            lastPage.fullText = lastPage.text;
+            // DOM更新
+            const pageView = document.getElementById('page-view');
+            const pageDiv = pageView.querySelector(`.page-content[data-page-index="${lastPageIndex}"]`);
+            if (pageDiv) {
+                const textDiv = pageDiv.querySelector('.page-text > div');
+                if (textDiv) {
+                    textDiv.innerHTML = lastPage.text.replace(/\n/g, '<br>');
+                }
+            }
+        } else {
+            await displayNarrative(narrative, streamPageIndex, useAddDialogueMode);
+        }
 
         // 関係性変化の処理
         updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo);
@@ -1375,6 +1400,11 @@
         };
     }
 
+    // フィールド名のマッピング（ローカル→GAS）
+    const fieldNameMapping = {
+        action: { name: 'action name' }
+    };
+
     // 汎用フィールド編集ハンドラ（ページ情報パネル用）
     function setupFieldEditor(prefix, dataArray, idField, targetId, fieldName, sheetName, emptyText = '') {
         const editBtn = document.getElementById(`${prefix}-edit-btn`);
@@ -1413,7 +1443,10 @@
 
             showStatus('保存中...', 'loading');
             try {
-                await saveGasData(gasUrl, sheetName, dataArray);
+                // GAS用のフィールド名に変換
+                const gasFieldName = fieldNameMapping[sheetName]?.[fieldName] || fieldName;
+                // 単一フィールド更新API
+                await updateGasField(gasUrl, sheetName, idField, targetId, gasFieldName, newValue);
                 saveCachedData();
                 showStatus('保存しました', 'ok');
                 display.textContent = newValue || emptyText;
@@ -1463,7 +1496,20 @@
             const action = actions.find(a => a.action_id === genInfo.actionId);
             const actionDisplay = action?.name ? `${escapeHtml(action.name)}` : '';
             const actionIdDisplay = ` <span style="color:#888">(${escapeHtml(genInfo.actionId)})</span>`;
-            html += `<div class="page-info-row"><span class="page-info-label">アクション:</span><span class="page-info-value">${actionDisplay}${actionIdDisplay}</span></div>`;
+            html += `<div class="page-info-row" id="action-name-row">`;
+            html += `<span class="page-info-label">アクション:</span>`;
+            html += `<span class="page-info-value">`;
+            html += `<span id="action-name-display">${actionDisplay}</span>${actionIdDisplay}`;
+            html += ` <button id="action-name-edit-btn" style="font-size:0.7rem; padding:1px 6px; margin-left:8px; cursor:pointer;">編集</button>`;
+            html += `</span></div>`;
+            // 編集UI（初期非表示）
+            html += `<div class="page-info-row" id="action-name-edit-row" style="display:none;">`;
+            html += `<span class="page-info-label">アクション:</span>`;
+            html += `<span class="page-info-value" style="width:100%;">`;
+            html += `<input type="text" id="action-name-input" style="width:60%; font-size:0.85rem; padding:2px 4px;" value="${escapeHtml(action?.name || '')}">`;
+            html += ` <button id="action-name-save-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">決定</button>`;
+            html += ` <button id="action-name-cancel-btn" style="font-size:0.7rem; padding:2px 8px; cursor:pointer;">取消</button>`;
+            html += `</span></div>`;
         }
         if (genInfo.costumeId) {
             const costume = costumes.find(c => c.costume_id === genInfo.costumeId);
@@ -1736,6 +1782,9 @@
         document.getElementById('pageInfoPanel').classList.add('active');
 
         // フィールドエディタ設定
+        if (genInfo?.actionId) {
+            setupFieldEditor('action-name', actions, 'action_id', genInfo.actionId, 'name', 'action');
+        }
         if (genInfo?.relationshipId) {
             setupFieldEditor('rel-desc', relationships, 'relationship_id', genInfo.relationshipId, 'description', 'relationship');
             setupFieldEditor('rel-req', relationships, 'relationship_id', genInfo.relationshipId, 'next_relationship_req', 'relationship', '(なし)');
