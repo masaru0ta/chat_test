@@ -214,7 +214,13 @@ function openMoveMenu() {
             hasTogetherDestination = true;
             const item = document.createElement('div');
             item.className = 'move-menu-item move-menu-subitem';
-            item.innerHTML = `<div class="place-name">${place.name}</div>`;
+            const placeImg = place.image ? `<img src="${place.image}" class="place-thumb" alt="${place.name}">` : '<div class="place-thumb-empty"></div>';
+            item.innerHTML = `
+                ${placeImg}
+                <div class="place-details">
+                    <div class="place-name">${place.name}</div>
+                </div>
+            `;
             item.onclick = () => selectMoveDestination(index, true);
             listEl.appendChild(item);
         });
@@ -239,9 +245,13 @@ function openMoveMenu() {
             const item = document.createElement('div');
             item.className = 'move-menu-item move-menu-subitem';
             const charNames = charsHere.map(name => `<span class="char-name">${name}</span>`).join(', ');
+            const placeImg = place.image ? `<img src="${place.image}" class="place-thumb" alt="${place.name}">` : '<div class="place-thumb-empty"></div>';
             item.innerHTML = `
-                <div class="place-name">${place.name}</div>
-                <div class="place-info">${charNames} がいる</div>
+                ${placeImg}
+                <div class="place-details">
+                    <div class="place-name">${place.name}</div>
+                    <div class="place-info">${charNames} がいる</div>
+                </div>
             `;
             item.onclick = () => selectMoveDestination(placeIndex, false);
             listEl.appendChild(item);

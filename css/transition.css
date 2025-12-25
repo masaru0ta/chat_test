@@ -519,6 +519,30 @@ html, body {
     cursor: pointer;
     color: #fff;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.move-menu-item .place-thumb {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.move-menu-item .place-thumb-empty {
+    width: 60px;
+    height: 60px;
+    background: #1a1a1a;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.move-menu-item .place-details {
+    flex: 1;
+    min-width: 0;
 }
 
 .move-menu-item:hover {
