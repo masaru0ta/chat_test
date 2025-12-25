@@ -301,6 +301,8 @@ function openActionMenu() {
     const relationship = companion?.relationship;
 
     actions.forEach((action, index) => {
+        // agent=character のアクションはユーザー行為選択画面には表示しない
+        if (action.agent === 'character') return;
         // 関係性に基づいてアクションが実行可能か判定
         if (!canPerformAction(relationship, action.req_stage)) return;
 
