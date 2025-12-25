@@ -601,7 +601,15 @@ function parseCombinedResponse(response, charAtLocation) {
         relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
     }
 
-    return { narrative, dialogue, newRelationshipName, relationshipMemo };
+    // 【行動】セクションを抽出（最初の行のみ）
+    let characterAction = null;
+    const actionMatch = response.match(/【行動】\s*([\s\S]*?)(?=【|$)/);
+    if (actionMatch) {
+        const lines = actionMatch[1].trim().split('\n').filter(l => l.trim());
+        characterAction = lines[0]?.trim() || null;
+    }
+
+    return { narrative, dialogue, newRelationshipName, relationshipMemo, characterAction };
 }
 
 /**
@@ -659,7 +667,15 @@ function parseMultipleDialogues(response, charAtLocation, expectedCount) {
         relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
     }
 
-    return { narrative, dialogues, newRelationshipName, relationshipMemo };
+    // 【行動】セクションを抽出（最初の行のみ）
+    let characterAction = null;
+    const actionMatch = response.match(/【行動】\s*([\s\S]*?)(?=【|$)/);
+    if (actionMatch) {
+        const lines = actionMatch[1].trim().split('\n').filter(l => l.trim());
+        characterAction = lines[0]?.trim() || null;
+    }
+
+    return { narrative, dialogues, newRelationshipName, relationshipMemo, characterAction };
 }
 
 /**

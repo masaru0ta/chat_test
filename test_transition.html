@@ -1154,19 +1154,21 @@
         console.log('[LLM] レスポンス:', response);
 
         // 複数ページモードかどうかでパース方法を分岐
-        let narrative, dialogue, dialogues, newRelationshipName, relationshipMemo;
+        let narrative, dialogue, dialogues, newRelationshipName, relationshipMemo, characterAction;
         if (charPageCount >= 2 && charAtLocation) {
             const parsed = parseMultipleDialogues(response, charAtLocation, charPageCount);
             narrative = parsed.narrative;
             dialogues = parsed.dialogues;
             newRelationshipName = parsed.newRelationshipName;
             relationshipMemo = parsed.relationshipMemo;
+            characterAction = parsed.characterAction;
         } else {
             const parsed = parseCombinedResponse(response, charAtLocation);
             narrative = parsed.narrative;
             dialogue = parsed.dialogue;
             newRelationshipName = parsed.newRelationshipName;
             relationshipMemo = parsed.relationshipMemo;
+            characterAction = parsed.characterAction;
         }
 
         // 最終的な地の文を表示
@@ -1221,6 +1223,18 @@
                 genInfo.imageGenInfo = imageResult?.imageGenInfo || null;
                 addPage2(charAtLocation.character.name, charImage, dialogue, genInfo);
                 updatePageStatus();
+            }
+
+            // キャラクター行動があればボタン表示
+            if (characterAction) {
+                console.log('[アクションモード] 行動検索:', characterAction);
+                const matchingAction = actions.find(a => a.name === characterAction);
+                if (matchingAction) {
+                    console.log('[アクションモード] アクション発見:', matchingAction.action_id);
+                    addCharacterActionButton(matchingAction, charAtLocation);
+                } else {
+                    console.warn('[アクションモード] 行動が見つかりません:', characterAction);
+                }
             }
         }
 
