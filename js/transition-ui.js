@@ -129,18 +129,18 @@ function getPlacesWithCharacters() {
         // root_place制限チェック
         if (!canMoveToPlace(userState.placeIndex, place)) return;
 
-        // この場所にいるキャラクター
+        // この場所にいるキャラクター（オブジェクトで保持）
         const charsHere = [];
         characterStatus.forEach((status) => {
             if (status.placeIndex === placeIndex && status.characterIndex >= 0) {
                 const char = characters[status.characterIndex];
-                if (char) charsHere.push(char.name);
+                if (char) charsHere.push(char);
             }
         });
 
         // キャラクターがいる場所のみ追加
         if (charsHere.length > 0) {
-            result.push({ place, placeIndex, characters: charsHere });
+            result.push({ place, placeIndex, chars: charsHere });
         }
     });
     return result;
@@ -241,13 +241,17 @@ function openMoveMenu() {
 
     const placesWithChars = getPlacesWithCharacters();
     if (placesWithChars.length > 0) {
-        placesWithChars.forEach(({ place, placeIndex, characters: charsHere }) => {
+        placesWithChars.forEach(({ place, placeIndex, chars }) => {
             const item = document.createElement('div');
             item.className = 'move-menu-item move-menu-subitem';
-            const charNames = charsHere.map(name => `<span class="char-name">${name}</span>`).join(', ');
+            const charNames = chars.map(c => `<span class="char-name">${c.name}</span>`).join(', ');
             const placeImg = place.image ? `<img src="${place.image}" class="place-thumb" alt="${place.name}">` : '<div class="place-thumb-empty"></div>';
+            const charImgs = chars.map(c => c.image ? `<img src="${c.image}" class="char-thumb" alt="${c.name}">` : '').join('');
             item.innerHTML = `
-                ${placeImg}
+                <div class="move-thumbs">
+                    ${placeImg}
+                    ${charImgs}
+                </div>
                 <div class="place-details">
                     <div class="place-name">${place.name}</div>
                     <div class="place-info">${charNames} がいる</div>

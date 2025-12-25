@@ -540,6 +540,21 @@ html, body {
     flex-shrink: 0;
 }
 
+.move-menu-item .move-thumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.move-menu-item .char-thumb {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #4a9eff;
+}
+
 .move-menu-item .place-details {
     flex: 1;
     min-width: 0;
