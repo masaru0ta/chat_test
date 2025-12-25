@@ -1611,8 +1611,9 @@
             const relationship = relationships.find(r => r.relationship_id === genInfo.relationshipId);
             const place = places.find(p => p.place_id === genInfo.placeId);
             const currentStage = parseInt(relationship?.stage, 10) || 0;
-            const placeReqStage = parseInt(place?.req_stage, 10) || 0;
-            const maxAllowedStage = Math.min(currentStage, placeReqStage);
+            const placeReqStageRaw = parseInt(place?.req_stage, 10);
+            // place.req_stageが空/無効なら制限なし（currentStageをそのまま使用）
+            const maxAllowedStage = isNaN(placeReqStageRaw) ? currentStage : Math.min(currentStage, placeReqStageRaw);
             const charActions = actions.filter(action => {
                 if (action.agent !== 'character') return false;
                 const reqStage = parseInt(action.req_stage, 10);
@@ -1621,8 +1622,22 @@
             });
             if (charActions.length > 0) {
                 html += `<div class="page-info-row" style="margin-top:8px;"><span class="page-info-label" style="color:#8af;">${escapeHtml(char.name)}が実行可能:</span></div>`;
-                charActions.forEach(action => {
-                    html += `<div class="page-info-row"><span class="page-info-label"></span><span class="page-info-value" style="color:#aaa; font-size:0.85rem;">・${escapeHtml(action.name)}</span></div>`;
+                charActions.forEach((action, idx) => {
+                    const prefix = `char-action-${idx}`;
+                    html += `<div class="page-info-row" id="${prefix}-row">`;
+                    html += `<span class="page-info-label"></span>`;
+                    html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
+                    html += `・<span id="${prefix}-display">${escapeHtml(action.name)}</span>`;
+                    html += ` <button id="${prefix}-edit-btn" style="font-size:0.65rem; padding:0px 4px; margin-left:4px; cursor:pointer;">編集</button>`;
+                    html += `</span></div>`;
+                    // 編集UI（初期非表示）
+                    html += `<div class="page-info-row" id="${prefix}-edit-row" style="display:none;">`;
+                    html += `<span class="page-info-label"></span>`;
+                    html += `<span class="page-info-value" style="width:100%;">`;
+                    html += `<input type="text" id="${prefix}-input" style="width:60%; font-size:0.8rem; padding:2px 4px;" value="${escapeHtml(action.name)}">`;
+                    html += ` <button id="${prefix}-save-btn" style="font-size:0.65rem; padding:1px 6px; cursor:pointer;">決定</button>`;
+                    html += ` <button id="${prefix}-cancel-btn" style="font-size:0.65rem; padding:1px 6px; cursor:pointer;">取消</button>`;
+                    html += `</span></div>`;
                 });
             }
         }
@@ -1821,6 +1836,24 @@
                     const stageField = `stage_${stageNum}`;
                     setupFieldEditor('pers-stage', personalities, 'personality_id', char.personality, stageField, 'personality', '(なし)');
                 }
+            }
+            // キャラクター実行可能アクションの編集ハンドラ設定
+            if (genInfo.relationshipId && genInfo.placeId) {
+                const relationship = relationships.find(r => r.relationship_id === genInfo.relationshipId);
+                const place = places.find(p => p.place_id === genInfo.placeId);
+                const currentStage = parseInt(relationship?.stage, 10) || 0;
+                const placeReqStageRaw = parseInt(place?.req_stage, 10);
+                const maxAllowedStage = isNaN(placeReqStageRaw) ? currentStage : Math.min(currentStage, placeReqStageRaw);
+                const charActions = actions.filter(action => {
+                    if (action.agent !== 'character') return false;
+                    const reqStage = parseInt(action.req_stage, 10);
+                    if (isNaN(reqStage)) return false;
+                    return reqStage <= maxAllowedStage;
+                });
+                charActions.forEach((action, idx) => {
+                    const prefix = `char-action-${idx}`;
+                    setupFieldEditor(prefix, actions, 'action_id', action.action_id, 'name', 'action');
+                });
             }
         }
     }
