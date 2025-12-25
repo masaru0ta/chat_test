@@ -212,7 +212,6 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
         const dialogueInstruction = requirePromptTemplate('llm_002', { name: charName });
 
         prompt += `\n${dialogueInstruction}`;
-        prompt += `\n【地の文】必要な場合のみ、セリフの後の状況や動作を1行で記載（不要なら省略）`;
 
         // 関係性進展条件がある場合のみ判定を追加（必須）
         if (relationship && relationship.next_relationship_req) {
