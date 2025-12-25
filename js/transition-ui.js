@@ -126,6 +126,8 @@ function getPlacesWithCharacters() {
         // req_stageが空または無効な場所はスキップ
         const placeReqStage = parseInt(place.req_stage, 10);
         if (isNaN(placeReqStage)) return;
+        // root_place制限チェック
+        if (!canMoveToPlace(userState.placeIndex, place)) return;
 
         // この場所にいるキャラクター
         const charsHere = [];
@@ -142,6 +144,28 @@ function getPlacesWithCharacters() {
         }
     });
     return result;
+}
+
+/**
+ * 現在地から指定場所に移動可能かどうか判定（root_place制限）
+ * @param {number} currentPlaceIndex - 現在の場所インデックス
+ * @param {Object} destPlace - 移動先の場所オブジェクト
+ * @returns {boolean} 移動可能かどうか
+ */
+function canMoveToPlace(currentPlaceIndex, destPlace) {
+    // root_placeが設定されていなければ制限なし
+    if (!destPlace.root_place) return true;
+
+    const currentPlace = places[currentPlaceIndex];
+    if (!currentPlace) return false;
+
+    // 現在地がroot_place自体の場合は移動可能
+    if (currentPlace.place_id === destPlace.root_place) return true;
+
+    // 現在地が同じroot_placeを持つ場合は移動可能
+    if (currentPlace.root_place === destPlace.root_place) return true;
+
+    return false;
 }
 
 function openMoveMenu() {
@@ -184,6 +208,8 @@ function openMoveMenu() {
                 status.characterIndex !== companion.status.characterIndex
             );
             if (hasOtherCharacter) return;
+            // root_place制限チェック
+            if (!canMoveToPlace(userState.placeIndex, place)) return;
 
             hasTogetherDestination = true;
             const item = document.createElement('div');
