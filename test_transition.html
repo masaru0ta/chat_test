@@ -1628,6 +1628,7 @@
                     html += `<span class="page-info-label"></span>`;
                     html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
                     html += `・<span id="${prefix}-display">${escapeHtml(action.name)}</span>`;
+                    html += ` <span style="color:#888; font-size:0.75rem;">(${escapeHtml(action.action_id)})</span>`;
                     html += ` <button id="${prefix}-edit-btn" style="font-size:0.65rem; padding:0px 4px; margin-left:4px; cursor:pointer;">編集</button>`;
                     html += `</span></div>`;
                     // 編集UI（初期非表示）
