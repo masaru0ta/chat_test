@@ -858,7 +858,7 @@
         // req_stage=1（全員アクセス可能）の場所を取得
         const publicPlaces = places
             .map((place, index) => ({ place, index }))
-            .filter(item => item.place.req_stage === '1');
+            .filter(item => String(item.place.req_stage) === '1');
 
         if (publicPlaces.length < characterCount) {
             addSystemMessage(`req_stage=1の場所が${characterCount}つ以上必要です。`);
