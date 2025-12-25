@@ -1782,7 +1782,7 @@
             action_id: newId,
             name: sourceAction.name + ' (コピー)',
             prompt: sourceAction.prompt || '',
-            action_type: sourceAction.action_type || '',
+            req_stage: sourceAction.req_stage || '',
             pre_action: sourceAction.pre_action || '',
             public_action: sourceAction.public_action || '',
             next_action: sourceAction.next_action || '',
@@ -1845,8 +1845,8 @@
                     <input type="text" id="edit-action-name" value="${escapeHtml(action.name || '')}" onchange="updateActionField('name', this.value)">
                 </div>
                 <div class="field-row">
-                    <label>アクションタイプ</label>
-                    <input type="text" id="edit-action-type" value="${escapeHtml(action.action_type || '')}" onchange="updateActionField('action_type', this.value)">
+                    <label>必要stage</label>
+                    <input type="text" id="edit-req-stage" value="${escapeHtml(action.req_stage || '')}" onchange="updateActionField('req_stage', this.value)">
                 </div>
                 <div class="field-row">
                     <label>前提アクション</label>
@@ -2101,7 +2101,7 @@
                     'action_id': action.action_id,
                     'action name': action.name,
                     'prompt': action.prompt,
-                    'action_type': action.action_type,
+                    'req_stage': action.req_stage,
                     'pre-action': action.pre_action,
                     'public-action': action.public_action,
                     'next-action': action.next_action,
@@ -2544,7 +2544,7 @@
                         'action_id': action.action_id,
                         'action name': action.name,
                         'prompt': action.prompt,
-                        'action_type': action.action_type,
+                        'req_stage': action.req_stage,
                         'pre-action': action.pre_action,
                         'public-action': action.public_action,
                         'next-action': action.next_action,

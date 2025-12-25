@@ -130,7 +130,7 @@ function parseActionsWithCompositions(rawData) {
             action_id: actionId,
             name: item['action name'] || '',
             prompt: item.prompt || '',
-            action_type: item['action_type'] || '',
+            req_stage: item['req_stage'] || '',
             pre_action: item['pre-action'] || '',
             public_action: item['public-action'] || '',
             next_action: item['next-action'] || '',

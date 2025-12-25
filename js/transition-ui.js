@@ -264,12 +264,16 @@ function getAgentLabel(agent, companion) {
  * @param {string} accessLevel - アクセスレベル (public/semi_private/private)
  * @returns {boolean} 実行可能かどうか
  */
-function canPerformAction(relationship, accessLevel) {
-    if (!accessLevel) return false;
-    if (accessLevel === 'public') return true;
-    if (accessLevel === 'semi_private' && relationship?.semi_private === 'ok') return true;
-    if (accessLevel === 'private' && relationship?.private === 'ok') return true;
-    return false;
+function canPerformAction(relationship, reqStage) {
+    // req_stageが空なら全員実行可能
+    if (!reqStage) return true;
+    // req_stageを数値に変換
+    const requiredStage = parseInt(reqStage, 10);
+    if (isNaN(requiredStage)) return true;
+    // 関係性のstageを取得
+    const currentStage = parseInt(relationship?.stage, 10) || 0;
+    // currentStage >= requiredStage なら実行可能
+    return currentStage >= requiredStage;
 }
 
 function openActionMenu() {
@@ -295,7 +299,7 @@ function openActionMenu() {
 
     actions.forEach((action, index) => {
         // 関係性に基づいてアクションが実行可能か判定
-        if (!canPerformAction(relationship, action.action_type)) return;
+        if (!canPerformAction(relationship, action.req_stage)) return;
 
         const item = document.createElement('div');
         item.className = 'action-menu-item';
