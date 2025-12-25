@@ -787,6 +787,55 @@
         container.appendChild(button);
     }
 
+    // キャラクター行動ボタンを追加
+    function addCharacterActionButton(action, charAtLocation) {
+        if (pages.length === 0) return;
+
+        const lastPageIndex = pages.length - 1;
+        const page = pages[lastPageIndex];
+
+        // タイプライター完了後にボタンを追加
+        if (page && !page.typewriterCompleted) {
+            setTypewriterCompleteCallback(() => {
+                appendCharacterActionButtonToPage(lastPageIndex, action, charAtLocation);
+            });
+        } else {
+            appendCharacterActionButtonToPage(lastPageIndex, action, charAtLocation);
+        }
+    }
+
+    // ページにキャラクター行動ボタンを追加
+    function appendCharacterActionButtonToPage(pageIndex, action, charAtLocation) {
+        const container = getOrCreateButtonContainer(pageIndex);
+        if (!container) return;
+
+        // 既存のキャラ行動ボタンがあれば削除
+        const existingBtn = container.querySelector('.char-action-button');
+        if (existingBtn) existingBtn.remove();
+
+        const charName = charAtLocation?.character?.name || '';
+        const button = document.createElement('button');
+        button.className = 'char-action-button';
+        button.dataset.actionId = action.action_id;
+        button.textContent = `${charName}▶ ${action.name}`;
+        button.style.cssText = 'padding:8px 24px; background:#4a2a6a; color:#c8f; border:1px solid #6a4a8a; border-radius:4px; cursor:pointer; font-size:0.9rem; margin-left:8px;';
+        button.onmouseover = () => button.style.background = '#5a3a7a';
+        button.onmouseout = () => button.style.background = '#4a2a6a';
+
+        button.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            button.remove();
+            if (container.children.length === 0) container.remove();
+            const actionId = button.dataset.actionId;
+            const actionIdx = actions.findIndex(a => a.action_id === actionId);
+            if (actionIdx >= 0) {
+                await executeAction(actionIdx);
+            }
+        });
+
+        container.appendChild(button);
+    }
+
     // 会話モード処理
     async function handleConversationMode(chatApiKey, charAtLocation, currentPlace, userInput) {
         // ユーザーの発言を追加
@@ -801,7 +850,7 @@
         console.log('[会話モード] レスポンス:', response);
 
         // 関係性変化の判定を抽出
-        const { dialogue: parsedDialogue, narrative, newRelationshipName, relationshipMemo } = parseConversationResponse(response, charAtLocation);
+        const { dialogue: parsedDialogue, narrative, newRelationshipName, relationshipMemo, characterAction } = parseConversationResponse(response, charAtLocation);
 
         // 関係性変化の処理
         updateCharacterRelationship(charAtLocation, newRelationshipName, relationshipMemo);
@@ -814,6 +863,16 @@
         // 地の文があれば追加
         if (narrative) {
             addDialogue('', narrative);
+        }
+
+        // キャラクター行動があればボタン表示
+        if (characterAction) {
+            const matchingAction = actions.find(a => a.name === characterAction);
+            if (matchingAction) {
+                addCharacterActionButton(matchingAction, charAtLocation);
+            } else {
+                console.warn('[会話モード] 行動が見つかりません:', characterAction);
+            }
         }
     }
 

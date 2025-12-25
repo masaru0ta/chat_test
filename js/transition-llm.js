@@ -711,7 +711,14 @@ function parseConversationResponse(response, charAtLocation) {
         relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
     }
 
-    return { dialogue, narrative, newRelationshipName, relationshipMemo };
+    // 【行動】セクションを抽出
+    let characterAction = null;
+    const actionMatch = response.match(/【行動】\s*([\s\S]*?)(?=【|$)/);
+    if (actionMatch) {
+        characterAction = actionMatch[1].trim();
+    }
+
+    return { dialogue, narrative, newRelationshipName, relationshipMemo, characterAction };
 }
 
 // ========== LLM API呼び出し ==========
