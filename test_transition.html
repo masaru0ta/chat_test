@@ -867,8 +867,10 @@
 
         // キャラクター行動があればボタン表示
         if (characterAction) {
+            console.log('[会話モード] 行動検索:', characterAction, '登録アクション:', actions.map(a => a.name).slice(0, 10));
             const matchingAction = actions.find(a => a.name === characterAction);
             if (matchingAction) {
+                console.log('[会話モード] アクション発見:', matchingAction.action_id);
                 addCharacterActionButton(matchingAction, charAtLocation);
             } else {
                 console.warn('[会話モード] 行動が見つかりません:', characterAction);

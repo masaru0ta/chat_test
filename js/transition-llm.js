@@ -711,11 +711,13 @@ function parseConversationResponse(response, charAtLocation) {
         relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
     }
 
-    // 【行動】セクションを抽出
+    // 【行動】セクションを抽出（最初の行のみ）
     let characterAction = null;
     const actionMatch = response.match(/【行動】\s*([\s\S]*?)(?=【|$)/);
     if (actionMatch) {
-        characterAction = actionMatch[1].trim();
+        const lines = actionMatch[1].trim().split('\n').filter(l => l.trim());
+        characterAction = lines[0]?.trim() || null;
+        console.log('[parseConversation] 行動抽出:', characterAction);
     }
 
     return { dialogue, narrative, newRelationshipName, relationshipMemo, characterAction };
