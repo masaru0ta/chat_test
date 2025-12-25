@@ -2167,7 +2167,7 @@
             name: sourcePlace.name + ' (コピー)',
             tag: sourcePlace.tag || '',
             additionalTag: sourcePlace.additionalTag || '',
-            place_type: sourcePlace.place_type || '',
+            req_stage: sourcePlace.req_stage || '',
             root_place: sourcePlace.root_place || '',
             default_action: sourcePlace.default_action || '',
             image: ''  // 画像はコピーしない
@@ -2240,8 +2240,8 @@
                             <input type="text" id="edit-place-name" value="${escapeHtml(place.name || '')}" onchange="updatePlaceField('name', this.value)">
                         </div>
                         <div class="field-row">
-                            <label>場所タイプ</label>
-                            <input type="text" id="edit-place-type" value="${escapeHtml(place.place_type || '')}" onchange="updatePlaceField('place_type', this.value)">
+                            <label>必要stage</label>
+                            <input type="text" id="edit-req-stage" value="${escapeHtml(place.req_stage || '')}" onchange="updatePlaceField('req_stage', this.value)">
                         </div>
                         <div class="field-row">
                             <label>ルート場所</label>
@@ -2416,7 +2416,7 @@
                 'name': place.name || '',
                 'tag': place.tag || '',
                 'additional tag': place.additionalTag || '',
-                'place_type': place.place_type || '',
+                'req_stage': place.req_stage || '',
                 'root_place': place.root_place || '',
                 'default action': place.default_action || '',
                 'image': place.image || ''
@@ -2569,7 +2569,7 @@
                     'name': place.name || '',
                     'tag': place.tag || '',
                     'additional tag': place.additionalTag || '',
-                    'place_type': place.place_type || '',
+                    'req_stage': place.req_stage || '',
                     'root_place': place.root_place || '',
                     'default action': place.default_action || '',
                     'image': place.image || ''

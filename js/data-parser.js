@@ -94,7 +94,7 @@ function parsePlaces(rawData) {
             name: item.name || '',
             tag: item.tag || '',
             additionalTag: item['additional tag'] || '',
-            place_type: item['place_type'] || '',
+            req_stage: item['req_stage'] || '',
             root_place: item['root_place'] || '',
             default_action: item['default action'] || '',
             image: item.image || ''

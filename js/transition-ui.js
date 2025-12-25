@@ -86,12 +86,16 @@ function toggleTextDisplay() {
  * @param {string} placeType - 場所タイプ (public/semi_private/private)
  * @returns {boolean} 移動可能かどうか
  */
-function canMoveTogether(relationship, placeType) {
-    if (!placeType) return false;
-    if (placeType === 'public') return true;
-    if (placeType === 'semi_private' && relationship?.semi_private === 'ok') return true;
-    if (placeType === 'private' && relationship?.private === 'ok') return true;
-    return false;
+function canMoveTogether(relationship, reqStage) {
+    // req_stageが空なら選択肢に出さない
+    if (!reqStage) return false;
+    // req_stageを数値に変換
+    const requiredStage = parseInt(reqStage, 10);
+    if (isNaN(requiredStage)) return false;
+    // 関係性のstageを取得
+    const currentStage = parseInt(relationship?.stage, 10) || 0;
+    // currentStage >= requiredStage なら移動可能
+    return currentStage >= requiredStage;
 }
 
 /**
@@ -119,8 +123,8 @@ function getPlacesWithCharacters() {
     places.forEach((place, placeIndex) => {
         // 現在地はスキップ
         if (placeIndex === userState.placeIndex) return;
-        // place_typeが空の場所はスキップ
-        if (!place.place_type) return;
+        // req_stageが空の場所はスキップ
+        if (!place.req_stage) return;
 
         // この場所にいるキャラクター
         const charsHere = [];
@@ -170,10 +174,10 @@ function openMoveMenu() {
         places.forEach((place, index) => {
             // 現在地はスキップ
             if (index === userState.placeIndex) return;
-            // place_typeが空の場所はスキップ
-            if (!place.place_type) return;
+            // req_stageが空の場所はスキップ
+            if (!place.req_stage) return;
             // 関係性に基づいて移動可能か判定
-            if (!canMoveTogether(companion.relationship, place.place_type)) return;
+            if (!canMoveTogether(companion.relationship, place.req_stage)) return;
             // 他のキャラクターがいる場所はスキップ
             const hasOtherCharacter = characterStatus.some(status =>
                 status.placeIndex === index &&
