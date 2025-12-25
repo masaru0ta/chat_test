@@ -123,8 +123,9 @@ function getPlacesWithCharacters() {
     places.forEach((place, placeIndex) => {
         // 現在地はスキップ
         if (placeIndex === userState.placeIndex) return;
-        // req_stageが空の場所はスキップ
-        if (!place.req_stage) return;
+        // req_stageが空または無効な場所はスキップ
+        const placeReqStage = parseInt(place.req_stage, 10);
+        if (isNaN(placeReqStage)) return;
 
         // この場所にいるキャラクター
         const charsHere = [];
@@ -174,9 +175,7 @@ function openMoveMenu() {
         places.forEach((place, index) => {
             // 現在地はスキップ
             if (index === userState.placeIndex) return;
-            // req_stageが空の場所はスキップ
-            if (!place.req_stage) return;
-            // 関係性に基づいて移動可能か判定
+            // 関係性に基づいて移動可能か判定（canMoveTogetherでreq_stageの有効性もチェック）
             if (!canMoveTogether(companion.relationship, place.req_stage)) return;
             // 他のキャラクターがいる場所はスキップ
             const hasOtherCharacter = characterStatus.some(status =>
