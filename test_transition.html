@@ -1606,15 +1606,18 @@
                 }
             }
         }
-        // キャラクターが実行可能なアクション（agent=character かつ req_stage <= 現在のstage）
-        if (char && genInfo.relationshipId) {
+        // キャラクターが実行可能なアクション（agent=character かつ req_stage <= 関係性stage かつ req_stage <= 場所のreq_stage）
+        if (char && genInfo.relationshipId && genInfo.placeId) {
             const relationship = relationships.find(r => r.relationship_id === genInfo.relationshipId);
+            const place = places.find(p => p.place_id === genInfo.placeId);
             const currentStage = parseInt(relationship?.stage, 10) || 0;
+            const placeReqStage = parseInt(place?.req_stage, 10) || 0;
+            const maxAllowedStage = Math.min(currentStage, placeReqStage);
             const charActions = actions.filter(action => {
                 if (action.agent !== 'character') return false;
                 const reqStage = parseInt(action.req_stage, 10);
                 if (isNaN(reqStage)) return false;
-                return reqStage <= currentStage;
+                return reqStage <= maxAllowedStage;
             });
             if (charActions.length > 0) {
                 html += `<div class="page-info-row" style="margin-top:8px;"><span class="page-info-label" style="color:#8af;">${escapeHtml(char.name)}が実行可能:</span></div>`;
