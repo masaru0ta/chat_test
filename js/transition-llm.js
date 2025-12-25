@@ -170,6 +170,25 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
             }
         }
 
+        // キャラクターが実行可能なアクション一覧を構築
+        let executableActionsPart = '';
+        if (relationship && charAtLocation.status?.placeIndex >= 0) {
+            const place = places[charAtLocation.status.placeIndex];
+            const currentStage = parseInt(relationship?.stage, 10) || 0;
+            const placeReqStageRaw = parseInt(place?.req_stage, 10);
+            const maxAllowedStage = isNaN(placeReqStageRaw) ? currentStage : Math.min(currentStage, placeReqStageRaw);
+            const charActions = actions.filter(action => {
+                if (action.agent !== 'character') return false;
+                const reqStage = parseInt(action.req_stage, 10);
+                if (isNaN(reqStage)) return false;
+                return reqStage <= maxAllowedStage;
+            });
+            if (charActions.length > 0) {
+                const actionNames = charActions.map(a => a.name).join('、');
+                executableActionsPart = `実行可能な行動: ${actionNames}`;
+            }
+        }
+
         // llm_007 テンプレートでキャラクター情報を構築
         const characterInfo = requirePromptTemplate('llm_007', {
             name: charName,
@@ -182,7 +201,8 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
             relationship_memo: relationshipMemo,
             next_relationship_req: nextRelationshipReq,
             costume: costumePart,
-            action: actionPart
+            action: actionPart,
+            executable_actions: executableActionsPart
         });
 
         let prompt = characterInfo;
@@ -330,6 +350,25 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
             }
         }
 
+        // キャラクターが実行可能なアクション一覧を構築
+        let executableActionsPart = '';
+        if (relationship && charAtLocation.status?.placeIndex >= 0) {
+            const place = places[charAtLocation.status.placeIndex];
+            const currentStage = parseInt(relationship?.stage, 10) || 0;
+            const placeReqStageRaw = parseInt(place?.req_stage, 10);
+            const maxAllowedStage = isNaN(placeReqStageRaw) ? currentStage : Math.min(currentStage, placeReqStageRaw);
+            const charActions = actions.filter(action => {
+                if (action.agent !== 'character') return false;
+                const reqStage = parseInt(action.req_stage, 10);
+                if (isNaN(reqStage)) return false;
+                return reqStage <= maxAllowedStage;
+            });
+            if (charActions.length > 0) {
+                const actionNames = charActions.map(a => a.name).join('、');
+                executableActionsPart = `実行可能な行動: ${actionNames}`;
+            }
+        }
+
         // llm_007 テンプレートでキャラクター情報を構築（必須）
         characterInfo = requirePromptTemplate('llm_007', {
             name: char.name,
@@ -342,7 +381,8 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
             relationship_memo: relationshipMemo,
             next_relationship_req: nextRelationshipReq,
             costume: costumePart,
-            action: actionPart
+            action: actionPart,
+            executable_actions: executableActionsPart
         });
     }
 
@@ -448,6 +488,25 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
             }
         }
 
+        // キャラクターが実行可能なアクション一覧を構築
+        let executableActionsPart = '';
+        if (relationship && charAtLocation.status?.placeIndex >= 0) {
+            const place = places[charAtLocation.status.placeIndex];
+            const currentStage = parseInt(relationship?.stage, 10) || 0;
+            const placeReqStageRaw = parseInt(place?.req_stage, 10);
+            const maxAllowedStage = isNaN(placeReqStageRaw) ? currentStage : Math.min(currentStage, placeReqStageRaw);
+            const charActions = actions.filter(action => {
+                if (action.agent !== 'character') return false;
+                const reqStage = parseInt(action.req_stage, 10);
+                if (isNaN(reqStage)) return false;
+                return reqStage <= maxAllowedStage;
+            });
+            if (charActions.length > 0) {
+                const actionNames = charActions.map(a => a.name).join('、');
+                executableActionsPart = `実行可能な行動: ${actionNames}`;
+            }
+        }
+
         characterInfo = requirePromptTemplate('llm_007', {
             name: charName,
             series: seriesPart,
@@ -459,7 +518,8 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
             relationship_memo: relationshipMemo,
             next_relationship_req: nextRelationshipReq,
             costume: costumePart,
-            action: actionPart
+            action: actionPart,
+            executable_actions: executableActionsPart
         });
     }
 
