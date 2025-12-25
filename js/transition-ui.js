@@ -265,11 +265,11 @@ function getAgentLabel(agent, companion) {
  * @returns {boolean} 実行可能かどうか
  */
 function canPerformAction(relationship, reqStage) {
-    // req_stageが空なら全員実行可能
-    if (!reqStage) return true;
+    // req_stageが空なら選択肢に出さない
+    if (!reqStage) return false;
     // req_stageを数値に変換
     const requiredStage = parseInt(reqStage, 10);
-    if (isNaN(requiredStage)) return true;
+    if (isNaN(requiredStage)) return false;
     // 関係性のstageを取得
     const currentStage = parseInt(relationship?.stage, 10) || 0;
     // currentStage >= requiredStage なら実行可能
