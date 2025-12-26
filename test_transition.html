@@ -894,6 +894,12 @@
             if (newRelationship && newRelationship.relationship_id !== currentRelationshipId) {
                 characterStatus[statusIndex].relationshipId = newRelationship.relationship_id;
                 addSystemMessage(`💫 ${charAtLocation.character.name}との関係性が「${currentRelationship?.name || '不明'}」から「${newRelationship.name}」に変化しました`);
+
+                // 現在のページのgenInfoも更新
+                const currentPage = pages[currentPageIndex];
+                if (currentPage?.genInfo) {
+                    currentPage.genInfo.relationshipId = newRelationship.relationship_id;
+                }
             }
         }
 
