@@ -176,10 +176,13 @@
             }
 
             .right-pane {
+                position: sticky;
+                top: 80px;
                 max-height: calc(100vh - 100px);
                 overflow-y: auto;
                 container-type: inline-size;
                 padding-right: 10px;
+                align-self: start;
             }
 
             /* 2ペイン時: ヘッダーサムネイルを非表示、左ペイン結果を表示 */
