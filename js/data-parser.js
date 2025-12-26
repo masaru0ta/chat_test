@@ -92,6 +92,7 @@ function parsePlaces(rawData) {
         return {
             place_id: placeId,
             name: item.name || '',
+            description: item.description || '',
             tag: item.tag || '',
             additionalTag: item['additional tag'] || '',
             req_stage: item['req_stage'] || '',

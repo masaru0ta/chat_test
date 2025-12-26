@@ -223,6 +223,8 @@
                             <div class="field-label">Place ID: <span id="detail-place-id" style="color: #4a9eff; font-weight: normal;"></span></div>
                             <div class="field-label">場所名</div>
                             <input type="text" class="field-input" id="detail-name" onchange="updatePlaceName(this.value)">
+                            <div class="field-label">説明</div>
+                            <textarea class="field-textarea" id="detail-description" onchange="updatePlaceField('description', this.value)" style="height: 60px;"></textarea>
                             <div class="field-row">
                                 <label>必要stage:</label>
                                 <input type="text" id="detail-req-stage" onchange="updatePlaceField('req_stage', this.value)">
@@ -536,6 +538,7 @@
             const gasData = places.map(place => ({
                 'place_id': place.place_id || '',
                 'name': place.name,
+                'description': place.description || '',
                 'tag': place.tag,
                 'additional tag': place.additionalTag,
                 'req_stage': place.req_stage || '',
@@ -796,6 +799,7 @@
 
         document.getElementById('detail-place-id').textContent = place.place_id || '(未設定)';
         document.getElementById('detail-name').value = place.name || '';
+        document.getElementById('detail-description').value = place.description || '';
         document.getElementById('detail-req-stage').value = place.req_stage || '';
         updateRootPlaceSelect(place.root_place);
         updateDefaultActionSelect(place.default_action);

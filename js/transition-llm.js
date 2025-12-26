@@ -259,9 +259,14 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
     } else if (actionMode === 'action' || actionMode === 'scenario') {
         situationText = userInput;
     } else if (actionMode === 'move') {
+        // 場所説明の{name}をキャラクター名で置換
+        const charName = charAtLocation?.character?.name || '';
+        const placeDesc = (newPlace?.description || '').replace(/\{name\}/g, charName);
+
         situationText = requirePromptTemplate('llm_006', {
             from: previousPlace?.name || '',
-            to: newPlace?.name || ''
+            to: newPlace?.name || '',
+            description: placeDesc
         });
 
         // 履歴用も同じ
@@ -626,7 +631,12 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
 function cleanNarrative(text) {
     if (!text) return '';
     // 「画像プロンプト：***」パターンを除去
-    return text.replace(/画像プロンプト[：:].*/g, '').trim();
+    let cleaned = text.replace(/画像プロンプト[：:].*/g, '').trim();
+    // 「無し」「なし」のみの場合は空文字を返す
+    if (/^(無し|なし|ナシ|無|なし。|無し。)$/i.test(cleaned)) {
+        return '';
+    }
+    return cleaned;
 }
 
 /**
