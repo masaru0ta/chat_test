@@ -1992,7 +1992,7 @@
             const pageView = document.getElementById('page-view');
             const pageDiv = pageView.querySelector(`.page-content[data-page-index="${currentPageIndex}"]`);
             if (pageDiv) {
-                const imgElem = pageDiv.querySelector('.page-image');
+                const imgElem = pageDiv.querySelector('.page-image img');
                 if (imgElem) {
                     imgElem.src = result.imageURL;
                 }
