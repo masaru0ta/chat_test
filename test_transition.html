@@ -903,6 +903,12 @@
         }
 
         updateCharacterStatusDisplay();
+
+        // ページ情報パネルが開いていれば更新
+        const pageInfoPanel = document.getElementById('pageInfoPanel');
+        if (pageInfoPanel && pageInfoPanel.classList.contains('active')) {
+            showPageInfo();
+        }
     }
 
     // 初期設定開始
