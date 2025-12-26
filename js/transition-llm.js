@@ -206,10 +206,10 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
         });
 
         let prompt = characterInfo;
-        // （）または()で囲まれた入力は地の文としてそのまま渡す
+        // （）または()で囲まれた入力は地の文として渡す
         const narrationMatch = userInput.match(/^[（(]([\s\S]*)[）)]$/);
         if (narrationMatch) {
-            prompt += `\n\n${narrationMatch[1]}\n`;
+            prompt += `\n\n状況：${narrationMatch[1]}\n`;
         } else {
             prompt += `\n\n主人公「${userInput}」\n`;
         }
@@ -250,9 +250,9 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
         // （）または()で囲まれた入力は地の文として扱う
         const speechNarrationMatch = userInput.match(/^[（(]([\s\S]*)[）)]$/);
         if (speechNarrationMatch) {
-            // 地の文の場合：アクション + 地の文
+            // 地の文の場合：アクション + 状況
             situationText = requirePromptTemplate('llm_009', { agent: agentText, action: actionName });
-            situationText += `\n${speechNarrationMatch[1]}`;
+            situationText += `\n状況：${speechNarrationMatch[1]}`;
         } else {
             situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
         }
@@ -481,7 +481,7 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
         const speechNarrationMatch = userInput.match(/^[（(]([\s\S]*)[）)]$/);
         if (speechNarrationMatch) {
             situationText = requirePromptTemplate('llm_009', { agent: agentText, action: actionName });
-            situationText += `\n${speechNarrationMatch[1]}`;
+            situationText += `\n状況：${speechNarrationMatch[1]}`;
         } else {
             situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
         }
