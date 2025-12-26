@@ -674,12 +674,15 @@ function parseCombinedResponse(response, charAtLocation) {
         relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
     }
 
-    // 【行動】セクションを抽出（最初の行のみ）
+    // 【行動】セクションを抽出（最初の行のみ、「無し」等は除外）
     let characterAction = null;
     const actionMatch = response.match(/【行動】\s*([\s\S]*?)(?=【|$)/);
     if (actionMatch) {
         const lines = actionMatch[1].trim().split('\n').filter(l => l.trim());
-        characterAction = lines[0]?.trim() || null;
+        const actionText = lines[0]?.trim() || null;
+        if (actionText && !/^(無し|なし|ナシ|無|なし。|無し。)$/i.test(actionText)) {
+            characterAction = actionText;
+        }
     }
 
     return { narrative, dialogue, newRelationshipName, relationshipMemo, characterAction };
@@ -740,12 +743,15 @@ function parseMultipleDialogues(response, charAtLocation, expectedCount) {
         relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
     }
 
-    // 【行動】セクションを抽出（最初の行のみ）
+    // 【行動】セクションを抽出（最初の行のみ、「無し」等は除外）
     let characterAction = null;
     const actionMatch = response.match(/【行動】\s*([\s\S]*?)(?=【|$)/);
     if (actionMatch) {
         const lines = actionMatch[1].trim().split('\n').filter(l => l.trim());
-        characterAction = lines[0]?.trim() || null;
+        const actionText = lines[0]?.trim() || null;
+        if (actionText && !/^(無し|なし|ナシ|無|なし。|無し。)$/i.test(actionText)) {
+            characterAction = actionText;
+        }
     }
 
     return { narrative, dialogues, newRelationshipName, relationshipMemo, characterAction };
@@ -800,13 +806,15 @@ function parseConversationResponse(response, charAtLocation) {
         relationshipMemo = memoMatch[1].trim().replace(/[（(]\d+文字[）)]/g, '').trim();
     }
 
-    // 【行動】セクションを抽出（最初の行のみ）
+    // 【行動】セクションを抽出（最初の行のみ、「無し」等は除外）
     let characterAction = null;
     const actionMatch = response.match(/【行動】\s*([\s\S]*?)(?=【|$)/);
     if (actionMatch) {
         const lines = actionMatch[1].trim().split('\n').filter(l => l.trim());
-        characterAction = lines[0]?.trim() || null;
-        console.log('[parseConversation] 行動抽出:', characterAction);
+        const actionText = lines[0]?.trim() || null;
+        if (actionText && !/^(無し|なし|ナシ|無|なし。|無し。)$/i.test(actionText)) {
+            characterAction = actionText;
+        }
     }
 
     return { dialogue, narrative, newRelationshipName, relationshipMemo, characterAction };
