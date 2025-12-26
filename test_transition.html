@@ -838,8 +838,13 @@
 
     // 会話モード処理
     async function handleConversationMode(chatApiKey, charAtLocation, currentPlace, userInput) {
-        // ユーザーの発言を追加
-        addDialogue('あなた', `「${userInput}」`);
+        // ユーザーの発言を追加（括弧で囲まれた場合は地の文として表示）
+        const narrationMatch = userInput.match(/^[（(]([\s\S]*)[）)]$/);
+        if (narrationMatch) {
+            addDialogue('状況：', narrationMatch[1]);
+        } else {
+            addDialogue('あなた', `「${userInput}」`);
+        }
 
         const { fullPrompt, simplePrompt } = buildCombinedPrompt('speech', userInput, null, null, charAtLocation, currentPlace, true);
         console.log('[会話モード] 完全版プロンプト:', fullPrompt);
