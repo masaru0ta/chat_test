@@ -308,6 +308,36 @@ html, body {
     display: block;
 }
 
+/* 画像再生成ボタン（テキスト非表示時のみ表示） */
+.regen-button {
+    display: none;
+    position: absolute;
+    top: 8px;
+    right: 40px;
+    width: 24px;
+    height: 24px;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    z-index: 101;
+    transition: all 0.2s ease;
+}
+
+.regen-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+#page-view.text-hidden .regen-button {
+    display: block;
+}
+
 #page-view .page-text {
     transition: opacity 0.2s ease;
 }

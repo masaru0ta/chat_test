@@ -136,8 +136,9 @@
     <div class="chat-area">
         <div class="page-area">
             <div id="page-view">
-                <!-- テキスト非表示時の情報ボタン -->
+                <!-- テキスト非表示時のボタン -->
                 <button class="info-button" id="infoButton" onclick="showPageInfo()" title="ページ情報">i</button>
+                <button class="regen-button" id="regenButton" onclick="regenerateCurrentImage()" title="画像再生成">↻</button>
                 <!-- ページ情報パネル -->
                 <div class="page-info-panel" id="pageInfoPanel">
                     <div class="page-info-header">
@@ -1940,6 +1941,65 @@
                     setupFieldEditor(prefix, actions, 'action_id', action.action_id, 'name', 'action');
                 });
             }
+        }
+    }
+
+    // 現在ページの画像を再生成
+    async function regenerateCurrentImage() {
+        if (currentPageIndex < 0 || !pages[currentPageIndex]) {
+            console.log('[Regen] ページがありません');
+            return;
+        }
+        const page = pages[currentPageIndex];
+        const genInfo = page.genInfo;
+        if (!genInfo) {
+            console.log('[Regen] genInfoがありません');
+            return;
+        }
+
+        const runwareApiKey = document.getElementById('runwareApiKey').value.trim();
+        if (!runwareApiKey) {
+            addSystemMessage('Runware APIキーが設定されていません');
+            return;
+        }
+
+        // genInfoからキャラクター、場所、コスチューム、関係性を取得
+        const character = genInfo.characterId ? characters.find(c => c.character_id === genInfo.characterId) : null;
+        const place = genInfo.placeId ? places.find(p => p.place_id === genInfo.placeId) : null;
+        const actionIndex = genInfo.actionId ? actions.findIndex(a => a.action_id === genInfo.actionId) : -1;
+
+        if (!character) {
+            console.log('[Regen] キャラクターが見つかりません');
+            return;
+        }
+
+        // 画像再生成
+        const result = await generateCharacterImage({
+            character: character,
+            place: place,
+            actionIndex: actionIndex,
+            costumeId: genInfo.costumeId,
+            relationshipId: genInfo.relationshipId,
+            compositionTag: genInfo.imageGenInfo?.compositionTag
+        });
+
+        if (result?.imageURL) {
+            // ページの画像を更新
+            page.image = result.imageURL;
+            page.genInfo.imageGenInfo = result.imageGenInfo;
+
+            // DOMを更新
+            const pageView = document.getElementById('page-view');
+            const pageDiv = pageView.querySelector(`.page-content[data-page-index="${currentPageIndex}"]`);
+            if (pageDiv) {
+                const imgElem = pageDiv.querySelector('.page-image');
+                if (imgElem) {
+                    imgElem.src = result.imageURL;
+                }
+            }
+            addSystemMessage('🔄 画像を再生成しました');
+        } else {
+            addSystemMessage('画像の再生成に失敗しました');
         }
     }
 
