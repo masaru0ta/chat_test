@@ -206,7 +206,13 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
         });
 
         let prompt = characterInfo;
-        prompt += `\n\n主人公「${userInput}」\n`;
+        // （）または()で囲まれた入力は地の文としてそのまま渡す
+        const narrationMatch = userInput.match(/^[（(]([\s\S]*)[）)]$/);
+        if (narrationMatch) {
+            prompt += `\n\n${narrationMatch[1]}\n`;
+        } else {
+            prompt += `\n\n主人公「${userInput}」\n`;
+        }
 
         // 出力フォーマット（必須）
         const dialogueInstruction = requirePromptTemplate('llm_002', { name: charName });
@@ -219,7 +225,8 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
         }
 
         // 完全版とシンプル版の両方を返す
-        const simplePrompt = requirePromptTemplate('llm_013', { speech: userInput });
+        const speechText = narrationMatch ? narrationMatch[1] : userInput;
+        const simplePrompt = requirePromptTemplate('llm_013', { speech: speechText });
         return {
             fullPrompt: prompt,
             simplePrompt: simplePrompt
@@ -240,7 +247,15 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
         const action = actions[currentState.actionIndex];
         const actionName = action?.name || '';
         const agentText = resolveAgentText(action?.agent, charAtLocation);
-        situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
+        // （）または()で囲まれた入力は地の文として扱う
+        const speechNarrationMatch = userInput.match(/^[（(]([\s\S]*)[）)]$/);
+        if (speechNarrationMatch) {
+            // 地の文の場合：アクション + 地の文
+            situationText = requirePromptTemplate('llm_009', { agent: agentText, action: actionName });
+            situationText += `\n${speechNarrationMatch[1]}`;
+        } else {
+            situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
+        }
     } else if (actionMode === 'action' || actionMode === 'scenario') {
         situationText = userInput;
     } else if (actionMode === 'move') {
@@ -462,7 +477,14 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
         const action = actions[currentState.actionIndex];
         const actionName = action?.name || '';
         const agentText = resolveAgentText(action?.agent, charAtLocation);
-        situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
+        // （）または()で囲まれた入力は地の文として扱う
+        const speechNarrationMatch = userInput.match(/^[（(]([\s\S]*)[）)]$/);
+        if (speechNarrationMatch) {
+            situationText = requirePromptTemplate('llm_009', { agent: agentText, action: actionName });
+            situationText += `\n${speechNarrationMatch[1]}`;
+        } else {
+            situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
+        }
     }
 
     // 画像プロンプト構築（タグ置換前）
