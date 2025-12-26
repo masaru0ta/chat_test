@@ -283,9 +283,11 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
         console.log('[LLMプロンプト] ユーザーアクション:', action?.name, '構図:', compositionTag || '(なし)');
         if (compositionTag) imageParts.push(compositionTag);
     }
-    // キャラクターのアクション（移動時など）
+    // キャラクターのアクション（移動時など、ユーザーアクションと重複しない場合のみ）
     const charActionIndex = charAtLocation?.status?.actionIndex ?? -1;
-    if (charActionIndex >= 0 && actions[charActionIndex]) {
+    const userActionIndex = ((actionMode === 'action_select' || actionMode === 'action_with_speech') && currentState.actionIndex >= 0)
+        ? currentState.actionIndex : -1;
+    if (charActionIndex >= 0 && charActionIndex !== userActionIndex && actions[charActionIndex]) {
         const charAction = actions[charActionIndex];
         if (charAction?.prompt) imageParts.push(charAction.prompt);
         const charCompositionTag = getCompositionTag(actions, charActionIndex);
@@ -298,11 +300,41 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
         imageParts.push(charAtLocation.character.additionalTag);
     }
 
-    // 画像プロンプト文字列
-    const imagePromptText = imageParts.filter(p => p).join(', ');
+    // 画像プロンプト文字列（タグ置換前）
+    const rawImagePromptText = imageParts.filter(p => p).join(', ');
 
     // キャラクター情報と関係性を構築
     const { relationshipText, relationshipMemo, nextRelationshipReq, relationship } = buildRelationshipInfoPrompt(charAtLocation);
+
+    // 画像プロンプトのタグ置換（{clothes}, {camel}, {expression}など）
+    let imagePromptText = rawImagePromptText;
+    if (charAtLocation) {
+        let clothesTag = '';
+        let camelTag = '';
+        let expressionTag = '';
+        const charCostumeId = charAtLocation.status?.costumeId;
+        if (charCostumeId && typeof costumes !== 'undefined') {
+            const costume = costumes.find(c => c.costume_id === charCostumeId);
+            if (costume) {
+                clothesTag = costume.tag || '';
+                camelTag = costume.camel_tag || '';
+            }
+        }
+        const charRelationshipId = charAtLocation.status?.relationshipId;
+        if (charRelationshipId && typeof relationships !== 'undefined') {
+            const rel = relationships.find(r => r.relationship_id === charRelationshipId);
+            if (rel) {
+                expressionTag = rel.expression || '';
+            }
+        }
+        const charForReplace = {
+            ...charAtLocation.character,
+            clothes: clothesTag,
+            camel: camelTag,
+            expression: expressionTag
+        };
+        imagePromptText = replaceCharacterTags(rawImagePromptText, charForReplace);
+    }
     let characterInfo = '';
     const charName = charAtLocation?.character?.name || '';
 
@@ -433,16 +465,17 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
         situationText = requirePromptTemplate('llm_010', { agent: agentText, action: actionName, speech: userInput });
     }
 
-    // 画像プロンプト構築
+    // 画像プロンプト構築（タグ置換前）
     const actionPrompt = (currentState.actionIndex >= 0 && actions[currentState.actionIndex])
         ? actions[currentState.actionIndex].prompt : '';
     const placeTag = currentPlace?.tag || '';
-    const imagePromptText = [actionPrompt, placeTag].filter(p => p).join(', ') || '(なし)';
+    const rawImagePromptText = [actionPrompt, placeTag].filter(p => p).join(', ') || '(なし)';
 
     // キャラクター情報（buildCombinedPromptと同じ形式で構築）
     let characterInfo = '';
     let charName = '';
     let relationship = null;
+    let imagePromptText = rawImagePromptText;
     if (charAtLocation) {
         const char = charAtLocation.character;
         charName = char.name;
@@ -453,13 +486,31 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
 
         // 服装情報
         let costumePart = '';
+        let clothesTag = '';
+        let camelTag = '';
         const charCostumeId = charAtLocation.status?.costumeId;
         if (charCostumeId && typeof costumes !== 'undefined') {
             const costume = costumes.find(c => c.costume_id === charCostumeId);
             if (costume) {
                 costumePart = `現在の服装: ${costume.name}`;
+                clothesTag = costume.tag || '';
+                camelTag = costume.camel_tag || '';
             }
         }
+
+        // 表情タグ取得
+        let expressionTag = '';
+        const charRelationshipId = charAtLocation.status?.relationshipId;
+        if (charRelationshipId && typeof relationships !== 'undefined') {
+            const relObj = relationships.find(r => r.relationship_id === charRelationshipId);
+            if (relObj) {
+                expressionTag = relObj.expression || '';
+            }
+        }
+
+        // 画像プロンプトのタグ置換
+        const charForReplace = { ...char, clothes: clothesTag, camel: camelTag, expression: expressionTag };
+        imagePromptText = replaceCharacterTags(rawImagePromptText, charForReplace);
 
         // アクション情報
         let actionPart = '';
