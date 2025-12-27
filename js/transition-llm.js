@@ -20,6 +20,31 @@ function resolveAgentText(agent, charAtLocation) {
     return '';
 }
 
+/**
+ * 連想している行動を取得（suggest_wordがテキストに含まれているアクション）
+ * @returns {string} 連想行動の文字列（「連想される行動: アクション名、...」形式）
+ */
+function getSuggestedActionsPart() {
+    // 全ページのテキストを結合
+    const allText = (typeof pages !== 'undefined' && Array.isArray(pages))
+        ? pages.map(p => p.fullText || p.text || '').join(' ').toLowerCase()
+        : '';
+    if (!allText) return '';
+
+    const suggestedActions = actions.filter(action => {
+        if (!action.suggest_word) return false;
+        // カンマ区切りで分割し、スペースを除去
+        const words = action.suggest_word.split(',').map(w => w.replace(/\s/g, '').toLowerCase()).filter(w => w);
+        return words.some(word => allText.includes(word));
+    });
+
+    if (suggestedActions.length > 0) {
+        const actionNames = suggestedActions.map(a => a.name).join('、');
+        return `連想される行動: ${actionNames}`;
+    }
+    return '';
+}
+
 // ========== テンプレート取得 ==========
 
 /**
@@ -202,7 +227,8 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
             next_relationship_req: nextRelationshipReq,
             costume: costumePart,
             action: actionPart,
-            executable_actions: executableActionsPart
+            executable_actions: executableActionsPart,
+            suggested_actions: getSuggestedActionsPart()
         });
 
         let prompt = characterInfo;
@@ -433,7 +459,8 @@ function buildCombinedPrompt(actionMode, userInput, previousPlace, newPlace, cha
             next_relationship_req: nextRelationshipReq,
             costume: costumePart,
             action: actionPart,
-            executable_actions: executableActionsPart
+            executable_actions: executableActionsPart,
+            suggested_actions: getSuggestedActionsPart()
         });
     }
 
@@ -596,7 +623,8 @@ function buildMultiDialoguePrompt(actionMode, userInput, charAtLocation, current
             next_relationship_req: nextRelationshipReq,
             costume: costumePart,
             action: actionPart,
-            executable_actions: executableActionsPart
+            executable_actions: executableActionsPart,
+            suggested_actions: getSuggestedActionsPart()
         });
     }
 

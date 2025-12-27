@@ -2554,7 +2554,8 @@
                         'next-action': action.next_action,
                         'char_page_count': action.char_page_count,
                         'effect': action.effect,
-                        'agent': action.agent
+                        'agent': action.agent,
+                        'suggest_word': action.suggest_word || ''
                     };
                     action.compositions.forEach(comp => {
                         row[comp.name + ' quality'] = comp.quality === '未評価' ? '' : comp.quality;

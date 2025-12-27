@@ -138,6 +138,7 @@ function parseActionsWithCompositions(rawData) {
             char_page_count: item['char_page_count'] || '',
             effect: item['effect'] || '',
             agent: item['agent'] || '',
+            suggest_word: item['suggest_word'] || '',
             compositions: []
         };
 

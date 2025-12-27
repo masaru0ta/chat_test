@@ -805,16 +805,26 @@
         }
     }
 
-    // ページにキャラクター行動ボタンを追加
+    // ページにキャラクター行動ボタンを追加（既存があれば更新）
     function appendCharacterActionButtonToPage(pageIndex, action, charAtLocation) {
         const container = getOrCreateButtonContainer(pageIndex);
         if (!container) return;
 
-        // 既存のキャラ行動ボタンがあれば削除
-        const existingBtn = container.querySelector('.char-action-button');
-        if (existingBtn) existingBtn.remove();
+        // 同じアクションIDのnext-action-buttonがあれば削除（重複防止）
+        const existingNextBtn = container.querySelector(`.next-action-button[data-action-id="${action.action_id}"]`);
+        if (existingNextBtn) existingNextBtn.remove();
 
         const charName = charAtLocation?.character?.name || '';
+
+        // 既存のキャラ行動ボタンがあれば内容を更新
+        const existingBtn = container.querySelector('.char-action-button');
+        if (existingBtn) {
+            existingBtn.dataset.actionId = action.action_id;
+            existingBtn.textContent = `${charName}▶ ${action.name}`;
+            return;
+        }
+
+        // 新規作成
         const button = document.createElement('button');
         button.className = 'char-action-button';
         button.dataset.actionId = action.action_id;
@@ -1557,7 +1567,7 @@
     }
 
     // ページ情報: 生成パラメータセクションHTML生成
-    function buildGenParamsHtml(genInfo) {
+    function buildGenParamsHtml(genInfo, page) {
         let html = '<div class="page-info-section">';
         html += '<div class="page-info-section-title">生成パラメータ</div>';
         if (genInfo.actionMode) html += `<div class="page-info-row"><span class="page-info-label">mode:</span><span class="page-info-value">${escapeHtml(genInfo.actionMode)}</span></div>`;
@@ -1731,6 +1741,30 @@
                 });
             }
         }
+        // 連想している行動（suggest_wordがページテキストに含まれているアクション）
+        const pageText = (page?.fullText || page?.text || '').toLowerCase();
+        if (pageText) {
+            const suggestedActions = actions.filter(action => {
+                if (!action.suggest_word) return false;
+                // カンマ区切りで分割し、スペースを除去
+                const words = action.suggest_word.split(',').map(w => w.replace(/\s/g, '').toLowerCase()).filter(w => w);
+                return words.some(word => pageText.includes(word));
+            });
+            if (suggestedActions.length > 0) {
+                html += `<div class="page-info-row" style="margin-top:8px;"><span class="page-info-label" style="color:#fa8;">連想している行動:</span></div>`;
+                suggestedActions.forEach(action => {
+                    // マッチした単語を取得
+                    const words = action.suggest_word.split(',').map(w => w.replace(/\s/g, '').toLowerCase()).filter(w => w);
+                    const matchedWords = words.filter(word => pageText.includes(word));
+                    html += `<div class="page-info-row">`;
+                    html += `<span class="page-info-label"></span>`;
+                    html += `<span class="page-info-value" style="color:#aaa; font-size:0.85rem;">`;
+                    html += `・${escapeHtml(action.name)}`;
+                    html += ` <span style="color:#888; font-size:0.75rem;">(${matchedWords.join(', ')})</span>`;
+                    html += `</span></div>`;
+                });
+            }
+        }
         html += '</div>';
         return html;
     }
@@ -1889,7 +1923,7 @@
             const objects = resolveGenInfoObjects(genInfo);
 
             // 生成パラメータセクション
-            html += buildGenParamsHtml(genInfo);
+            html += buildGenParamsHtml(genInfo, page);
 
             // LLMプロンプト再現セクション
             html += buildLLMPromptSectionHtml(genInfo, objects);
