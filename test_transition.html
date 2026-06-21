@@ -100,7 +100,9 @@
             <div class="settings-group">
                 <label>LLMモデル</label>
                 <select id="llmModelSelect" onchange="onLLMModelSelect()">
-                    <option value="x-ai/grok-4.1-fast">Grok 4.1 Fast</option>
+                    <option value="x-ai/grok-4.3">Grok 4.3</option>
+                    <option value="x-ai/grok-4.20">Grok 4.20</option>
+                    <option value="deepseek/deepseek-chat">DeepSeek V3</option>
                     <option value="x-ai/grok-4-fast">Grok 4 Fast</option>
                 </select>
             </div>
@@ -230,7 +232,7 @@
     let imageGenEnabled = true;
     let llmLogEnabled = false;
     let selectedModelId = '';
-    let selectedLLMModelId = 'x-ai/grok-4.1-fast';
+    let selectedLLMModelId = 'x-ai/grok-4.3';
     let moveWithCompanion = false;
     let isLoading = false;
 

@@ -40,7 +40,9 @@ const DEFAULTS = {
 
 // LLMモデル定義
 const LLM_MODELS = {
-    'x-ai/grok-4.1-fast': { name: 'Grok 4.1 Fast' },
+    'x-ai/grok-4.3': { name: 'Grok 4.3' },
+    'x-ai/grok-4.20': { name: 'Grok 4.20' },
+    'deepseek/deepseek-chat': { name: 'DeepSeek V3' },
     'x-ai/grok-4-fast': { name: 'Grok 4 Fast' }
 };
 
