@@ -47,7 +47,15 @@
       "mcp__playwright__browser_close",
       "mcp__playwright__browser_wait_for",
       "mcp__playwright__browser_press_key",
-      "mcp__playwright__browser_take_screenshot"
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(wc:*)",
+      "Bash(start \"\" \"D:\\\\AI\\\\code\\\\grok\\\\image_gen_setting.html\")",
+      "mcp__playwright__browser_select_option",
+      "mcp__playwright__browser_resize",
+      "WebFetch(domain:docs.runware.ai)",
+      "Bash(gh repo create:*)",
+      "Bash(gh repo view:*)",
+      "Bash(git remote set-url:*)"
     ],
     "deny": [],
     "ask": []

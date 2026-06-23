@@ -356,6 +356,23 @@
         if (imageUploadUrl) localStorage.setItem(STORAGE_KEYS.IMAGE_UPLOAD_URL, imageUploadUrl);
     }
 
+    // settingsシート（key/value形式）からAPIキー・URLを取り出して反映
+    function applySettingsFromGas(settingsData) {
+        if (!Array.isArray(settingsData)) return;
+        const settings = {};
+        for (const row of settingsData) {
+            if (row.key) settings[row.key] = row.value ?? '';
+        }
+        if (settings.runwareApiKey) {
+            document.getElementById('apiKey').value = settings.runwareApiKey;
+            localStorage.setItem(STORAGE_KEYS.API_KEY, settings.runwareApiKey);
+        }
+        if (settings.image_upload_gas) {
+            document.getElementById('imageUploadUrl').value = settings.image_upload_gas;
+            localStorage.setItem(STORAGE_KEYS.IMAGE_UPLOAD_URL, settings.image_upload_gas);
+        }
+    }
+
     // RunwareのURLかどうかを判定
     function isRunwareUrl(url) {
         return url && (url.includes('runware.ai') || url.includes('im.runware'));
@@ -439,14 +456,18 @@
         showStatusWithDetail('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData, relationshipData, costumeData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData, costumeData, settingsData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
                 fetchGasData(baseUrl, 'relationship'),
-                fetchGasData(baseUrl, 'costume')
+                fetchGasData(baseUrl, 'costume'),
+                fetchGasData(baseUrl, 'settings')
             ]);
+
+            // settingsシートからRunware API Key・画像アップロードURLを取得して反映
+            applySettingsFromGas(settingsData);
 
             models = parseModels(modelData);
             characters = parseCharacters(characterData);

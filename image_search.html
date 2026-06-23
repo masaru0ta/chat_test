@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civitai 画像検索</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        h1 { font-size: 1.4rem; margin: 0 0 16px 0; }
+        .container { max-width: 1500px; }
+
+        /* 2カラムレイアウト */
+        .layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+        @media (max-width: 760px) {
+            .layout { grid-template-columns: 1fr; }
+            .left-pane { position: static !important; }
+        }
+
+        /* 左ペイン（設定） */
+        .left-pane {
+            position: sticky; top: 20px;
+            background: #1a1a1a; border-radius: 8px; padding: 16px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .field { display: flex; flex-direction: column; gap: 4px; }
+        .field label { font-size: 0.78rem; color: #888; }
+        .field input, .field select {
+            width: 100%; padding: 9px 10px; border: 1px solid #333; border-radius: 4px;
+            background: #2a2a2a; color: #fff; font-size: 0.9rem; box-sizing: border-box;
+        }
+        .field input:focus, .field select:focus { outline: none; border-color: #4a9eff; }
+        .checks { display: flex; flex-direction: column; gap: 8px; }
+        .checks label { display: flex; align-items: center; gap: 6px; color: #ccc; font-size: 0.85rem; cursor: pointer; }
+        .left-pane .btn-primary { width: 100%; padding: 11px; font-size: 0.95rem; }
+        #status { width: 100%; box-sizing: border-box; }
+
+        .result-meta { color: #888; font-size: 0.85rem; margin: 0 0 12px 0; }
+
+        /* 右ペイン: 1画像1行のリスト（2列） */
+        .list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        @media (max-width: 1100px) { .list { grid-template-columns: 1fr; } }
+        .row-item {
+            display: flex; gap: 14px; align-items: flex-start;
+            background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px;
+        }
+        .row-item:hover { border-color: #4a9eff; }
+
+        .row-thumb { flex: 0 0 180px; position: relative; }
+        .row-thumb img {
+            width: 180px; height: 240px; object-fit: cover; border-radius: 6px;
+            cursor: pointer; display: block; background: #111;
+        }
+        .row-thumb .badges {
+            position: absolute; top: 4px; left: 4px;
+            display: flex; flex-direction: column; gap: 3px; align-items: flex-start; pointer-events: none;
+        }
+        .badge {
+            font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+            background: rgba(0,0,0,0.7); color: #fff;
+        }
+        .badge.nsfw { background: rgba(192,57,43,0.85); }
+        .badge.video { background: rgba(74,158,255,0.85); }
+
+        .row-prompt {
+            flex: 1; min-width: 0; align-self: stretch;
+            background: #111; border-radius: 4px; padding: 8px 10px;
+            font-family: monospace; font-size: 0.75rem; color: #bbb; line-height: 1.45;
+            white-space: pre-wrap; word-break: break-word; overflow-y: auto; max-height: 160px;
+        }
+        .row-prompt { cursor: pointer; }
+        /* タグ調整後: 残ったタグ=青、消えたタグ=取り消し線 */
+        .row-prompt .tag-kept { color: #4a9eff; }
+        .row-prompt .tag-removed { color: #666; text-decoration: line-through; }
+
+        .row-side { flex: 0 0 120px; display: flex; flex-direction: column; gap: 8px; }
+        .row-stats { font-size: 0.72rem; color: #999; display: flex; gap: 10px; flex-wrap: wrap; }
+        .row-actions { display: flex; flex-direction: column; gap: 6px; }
+        .row-actions .btn {
+            width: 100%; padding: 6px 4px; font-size: 0.72rem;
+            text-align: center; text-decoration: none; display: block; box-sizing: border-box;
+        }
+        .btn-detail { background: #333; }
+        .btn-detail:hover { background: #444; }
+        .btn-copy { background: #2a4a6a; }
+        .btn-copy:hover { background: #355a82; }
+        .btn-adjust { background: #2a6a5a; }
+        .btn-adjust:hover:not(:disabled) { background: #357a6a; }
+        /* プロンプト枠（上にアクション名、下にタグ調整ボタン） */
+        .row-prompt-cell { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; gap: 6px; }
+        .row-btn-row { display: flex; gap: 6px; align-self: flex-start; }
+        .btn-adjust-inline { padding: 4px 12px; font-size: 0.7rem; }
+        .btn-reset { background: #555; padding: 4px 12px; font-size: 0.7rem; }
+        .btn-reset:hover { background: #666; }
+        .row-action-name { font-size: 0.82rem; color: #e0b050; font-weight: bold; }
+        .row-action-name:empty { display: none; }
+
+        /* 生成枠（クリックでimage_gen_settingと同じ生成） */
+        .gen-box {
+            flex: 0 0 180px; width: 180px; height: 240px;
+            border: 1px dashed #4a6a8a; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            color: #8cf; font-size: 0.72rem; cursor: pointer; background: #10161d;
+            position: relative; overflow: hidden;
+        }
+        .gen-box:hover { border-color: #4a9eff; background: #16202b; }
+        .gen-box img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+        .gen-box .gen-msg { padding: 6px; line-height: 1.4; }
+        .gen-box .gen-regen {
+            position: absolute; top: 3px; right: 5px; color: #fff; background: rgba(0,0,0,0.55);
+            border-radius: 4px; padding: 0 5px; font-size: 0.85rem; cursor: pointer; line-height: 1.4;
+        }
+        .gen-box .gen-regen:hover { background: rgba(0,0,0,0.8); }
+        .gen-info { font-size: 0.75rem; color: #888; border-top: 1px solid #333; padding-top: 10px; line-height: 1.6; }
+
+        .empty-message { text-align: center; color: #666; padding: 40px; }
+        .loadmore-wrap { text-align: center; margin: 20px 0 40px; }
+        .loadmore-wrap .btn { padding: 12px 40px; }
+
+        /* 拡大表示（ライトボックス） */
+        .lightbox {
+            display: none; position: fixed; inset: 0; z-index: 2000;
+            background: rgba(0,0,0,0.92); align-items: center; justify-content: center; padding: 20px;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox-inner { max-width: 96vw; max-height: 96vh; display: flex; align-items: center; justify-content: center; }
+        .lightbox-inner img, .lightbox-inner video { max-width: 96vw; max-height: 96vh; object-fit: contain; border-radius: 6px; }
+        .lightbox-close {
+            position: fixed; top: 12px; right: 22px; color: #fff; font-size: 2.2rem;
+            cursor: pointer; z-index: 2001; line-height: 1; user-select: none;
+        }
+
+        /* 詳細調整モーダル */
+        .detail-modal {
+            display: none; position: fixed; inset: 0; z-index: 2500;
+            background: rgba(0,0,0,0.85); align-items: center; justify-content: center; padding: 20px;
+        }
+        .detail-modal.active { display: flex; }
+        .detail-modal-inner {
+            background: #1a1a1a; border: 1px solid #333; border-radius: 10px;
+            width: 90vw; height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+        .dm-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #333; }
+        .dm-title { color: #4a9eff; font-size: 1.05rem; }
+        .dm-close { background: none; border: none; color: #fff; font-size: 1.6rem; cursor: pointer; line-height: 1; }
+        .dm-body { display: grid; grid-template-columns: 1.5fr 1fr; gap: 18px; padding: 16px; overflow-y: auto; flex: 1; min-height: 0; align-content: start; }
+        @media (max-width: 820px) { .dm-body { grid-template-columns: 1fr; } }
+        .dm-images { display: flex; gap: 12px; }
+        .dm-img-col { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+        .dm-label { color: #888; font-size: 0.78rem; }
+        .dm-img { background: #111; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 240px; }
+        .dm-img img, .dm-img video { width: 100%; height: auto; max-height: 82vh; object-fit: contain; cursor: zoom-in; }
+        .dm-genph { color: #666; font-size: 0.8rem; text-align: center; padding: 10px; }
+        .dm-controls { align-self: start; display: flex; flex-direction: column; gap: 10px; }
+        .dm-actionname { font-size: 1rem; color: #e0b050; font-weight: bold; }
+        .dm-actionname:empty { display: none; }
+        .dm-register-msg { font-size: 0.78rem; }
+        .dm-register-msg:empty { display: none; }
+        .dm-row { display: flex; flex-direction: column; gap: 4px; }
+        .dm-row label { color: #888; font-size: 0.78rem; }
+        .dm-row select, .dm-row input { padding: 8px; background: #2a2a2a; border: 1px solid #333; border-radius: 4px; color: #fff; font-size: 0.9rem; box-sizing: border-box; }
+        .dm-genbtn { width: 100%; padding: 10px; }
+        .dm-tags { display: flex; flex-wrap: wrap; gap: 6px; max-height: 200px; overflow-y: auto; padding: 6px; background: #111; border-radius: 6px; }
+        .dm-tag { font-size: 0.72rem; padding: 3px 9px; border-radius: 12px; cursor: pointer; border: 1px solid #444; user-select: none; }
+        .dm-tag.on { background: #1d3a55; color: #9fd0ff; border-color: #3a6a95; }
+        .dm-tag.stripped { background: #1d4a3a; color: #9fe0c0; border-color: #3a8a6a; }
+        .dm-tag.off { background: #222; color: #666; text-decoration: line-through; }
+        .dm-promptpreview { background: #111; border-radius: 6px; padding: 8px; font-family: monospace; font-size: 0.72rem; color: #8fbf8f; white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow-y: auto; }
+        .dm-freetag { width: 100%; padding: 8px; background: #2a2a2a; border: 1px solid #333; border-radius: 4px; color: #fff; font-size: 0.85rem; box-sizing: border-box; }
+        .dm-freetag:focus { outline: none; border-color: #4a9eff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Civitai 画像検索</h1>
+
+    <div class="layout">
+        <!-- 左: 設定 -->
+        <aside class="left-pane">
+            <div class="field">
+                <label>検索キーワード</label>
+                <input type="text" id="query" placeholder="例: 1girl, cat ears ..." onkeydown="if(event.key==='Enter')runSearch()">
+            </div>
+            <div class="field">
+                <label>並び順</label>
+                <select id="sort">
+                    <option value="stats.collectedCountAllTime:desc">最も収集された順</option>
+                    <option value="stats.reactionCountAllTime:desc">リアクション数順</option>
+                    <option value="stats.commentCountAllTime:desc">コメント数順</option>
+                    <option value="createdAtUnix:desc">新着順</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>期間（開始日）</label>
+                <input type="date" id="dateFrom">
+            </div>
+            <div class="field">
+                <label>期間（終了日）</label>
+                <input type="date" id="dateTo">
+            </div>
+            <div class="checks">
+                <label><input type="checkbox" id="nsfwOnly"> NSFWのみ</label>
+            </div>
+            <div class="field">
+                <label>プロキシGAS URL（検索用・必須）</label>
+                <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/xxxx/exec" onchange="saveSettings()">
+            </div>
+            <button class="btn btn-primary" onclick="runSearch()" id="searchBtn">検索</button>
+            <div id="status"></div>
+
+            <div class="field">
+                <label>データGAS URL（設定/モデル取得用）</label>
+                <input type="text" id="dataGasUrl" placeholder="https://script.google.com/macros/s/yyyy/exec" onchange="saveSettings()">
+            </div>
+            <button class="btn btn-nav" onclick="loadDataFromGas()" id="loadDataBtn">設定・モデルを読込</button>
+            <div class="gen-info" id="genInfo"></div>
+            <div class="field">
+                <label>生成モデル</label>
+                <select id="genModel" onchange="onGenModelChange()"></select>
+            </div>
+            <div class="field">
+                <label>生成: キャラクター</label>
+                <select id="genCharacter" onchange="saveSettings()"><option value="">（なし）</option></select>
+            </div>
+            <div class="field">
+                <label>生成: 場所</label>
+                <select id="genPlace" onchange="saveSettings()"><option value="">（なし）</option></select>
+            </div>
+            <div class="field">
+                <label>生成サイズ（幅 × 高さ）</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="number" id="genWidth" value="1024" min="256" max="2048" step="64" style="flex:1; min-width:0;" onchange="saveSettings()">
+                    <input type="number" id="genHeight" value="1024" min="256" max="2048" step="64" style="flex:1; min-width:0;" onchange="saveSettings()">
+                </div>
+            </div>
+        </aside>
+
+        <!-- 右: 画像一覧（1画像1行） -->
+        <main class="right-pane">
+            <p class="result-meta" id="resultMeta"></p>
+            <div class="list" id="grid"></div>
+            <div class="loadmore-wrap" id="loadmoreWrap" style="display:none;">
+                <button class="btn btn-nav" onclick="loadMore()" id="loadmoreBtn">さらに読み込む</button>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- 拡大表示 -->
+<div id="lightbox" class="lightbox" onclick="if(event.target===this)closeLightbox()">
+    <span class="lightbox-close" onclick="closeLightbox()">×</span>
+    <div class="lightbox-inner" id="lightboxInner"></div>
+</div>
+
+<!-- 詳細調整・生成モーダル -->
+<div id="detailModal" class="detail-modal" onclick="if(event.target===this)closeDetailModal()">
+    <div class="detail-modal-inner">
+        <div class="dm-header">
+            <span class="dm-title">詳細調整・生成</span>
+            <button class="dm-close" onclick="closeDetailModal()">×</button>
+        </div>
+        <div class="dm-body">
+            <div class="dm-images">
+                <div class="dm-img-col">
+                    <div class="dm-label">元画像</div>
+                    <div class="dm-img" id="dmOriginal"></div>
+                </div>
+                <div class="dm-img-col">
+                    <div class="dm-label">生成画像</div>
+                    <div class="dm-img" id="dmGenerated"></div>
+                </div>
+            </div>
+            <div class="dm-controls">
+                <div class="dm-row">
+                    <label>🎬 アクション名（編集可）</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="dmActionName" style="flex:1; min-width:0;" placeholder="タグ調整で自動生成。手動編集も可" oninput="onDmActionNameChange()">
+                        <button class="btn btn-save" id="dmRegisterActionBtn" onclick="registerAction()" style="white-space:nowrap; padding:8px 12px;">新規アクションとして登録</button>
+                    </div>
+                    <span id="dmRegisterMsg" class="dm-register-msg"></span>
+                </div>
+                <div class="dm-row">
+                    <label>生成モデル</label>
+                    <select id="dmModel"></select>
+                </div>
+                <div class="dm-row">
+                    <label>キャラクター</label>
+                    <select id="dmCharacter"><option value="">（なし）</option></select>
+                </div>
+                <div class="dm-row">
+                    <label>場所</label>
+                    <select id="dmPlace"><option value="">（なし）</option></select>
+                </div>
+                <div class="dm-row">
+                    <label>生成サイズ（幅 × 高さ）</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="number" id="dmWidth" min="256" max="2048" step="64" style="flex:1; min-width:0;">
+                        <input type="number" id="dmHeight" min="256" max="2048" step="64" style="flex:1; min-width:0;">
+                    </div>
+                </div>
+                <button class="btn btn-generate dm-genbtn" id="dmGenBtn" onclick="dmGenerate()">この設定で生成</button>
+                <div class="dm-label" style="margin-top:6px;">タグ（クリックでON/OFF・前後に自由追加可）</div>
+                <input type="text" id="dmTag1" class="dm-freetag" placeholder="タグ1（タグの前に追加。カンマ区切り可）" oninput="updateDmPreview()">
+                <div class="dm-tags" id="dmTags"></div>
+                <input type="text" id="dmTag2" class="dm-freetag" placeholder="タグ2（タグの後に追加。カンマ区切り可）" oninput="updateDmPreview()">
+                <div class="dm-label" style="margin-top:6px;">最終プロンプト（生成に使用）</div>
+                <div class="dm-promptpreview" id="dmPromptPreview"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- image_gen_setting.html と同じ生成パイプラインを使うための共通スクリプト -->
+<script src="js/constants.js"></script>
+<script src="js/gas-api.js"></script>
+<script src="js/data-parser.js"></script>
+<script src="js/prompt-utils.js"></script>
+<script src="js/runware-api.js"></script>
+<script>
+    // ===== 設定 =====
+    // Meilisearch（civitai公開フロントに埋め込まれた読み取り専用キー。個人情報ではない）
+    const SEARCH_URL = 'https://search-new.civitai.com/multi-search';
+    const SEARCH_KEY = '8c46eb2508e21db1e9828a97968d91ab1ca1caa5f70a00e88a2ba1e286603b61';
+    const INDEX = 'images_v6';
+    // 画像CDN（固定の公開バケットトークン）
+    const CDN = 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/';
+    const PAGE_SIZE = 51;
+    const LS_KEY = 'image_search_settings';
+    const LS_PROXY_URL = 'image_search_proxy_url'; // 検索プロキシ用GAS（image_search専用）
+    const LS_DATA_GAS = 'gas_api_url';             // 設定/シート取得用GAS（他ツールと共通）
+
+    // LLM整形の指示（アクション名生成 ＋ 品質/人物特徴/背景/LoRA を除去）。JSON出力。
+    const LLM_CLEAN_SYS = '入力のStable Diffusionプロンプトを処理し、JSON形式で出力してください。出力するJSONのキーは2つです。\n'
+        + '- "actionName": このプロンプトが表す行為・ポーズ・状況を表す短い日本語の名前（10文字程度。例: "椅子に座る", "振り返る", "立ちポーズ", "添い寝"）。\n'
+        + '- "tags": 次を削除した残りのタグをカンマ区切りの文字列にしたもの。削除対象: '
+        + '(1)品質/スコア系（masterpiece, best quality, high quality, 4k, 8k, ultra detailed, score_9, score_8_up, absurdres, highres 等） '
+        + '(2)人物の身体的特徴（人種/国籍, 髪の色・髪型, 目の色(blue eyes等の虹彩の色のみ), 体型, 胸の大きさ, 肌, 年齢, 1girl/1boy等の人数, キャラ名, 服装・衣装・アクセサリー） '
+        + '(3)背景・場所・シーン（background, indoors, outdoors, forest, room, sky, 具体的な場所名 等） '
+        + '(4)<lora:...>等のLoRA呼び出しやトリガーワード/embedding名。\n'
+        + '括弧による強調・重み付き記法（例: (apple on desk:1.5) や (tag)、[tag]）は、括弧と重み数値を外して中身のタグだけを残す（例: (apple on desk:1.5) → apple on desk）。ただし中身が(1)〜(4)の削除対象なら中身ごと削除する。\n'
+        + 'それ以外（行為・ポーズ・構図・カメラアングル・物体や相手との相互作用など）は tags に残す。\n'
+        + '特に、キャラクターの「表情」（smile, blush, parted lips, half-closed eyes, ahegao, crying, angry 等）と「視線・目の向き」（looking at viewer, looking back, looking up, looking down, eye contact, closed eyes 等）は、人物の特徴に見えても削除せず必ず tags に残すこと。\n'
+        + '出力はJSONのみ（説明・前置き・コードブロックは一切不要）。例: {"actionName":"椅子に座る","tags":"sitting on chair, looking at viewer, smile"}';
+
+    let offset = 0;
+    let totalHits = 0;
+    let loading = false;
+    const llmCleanCache = {}; // 画像id -> 整形済みプロンプト（再生成時の再呼び出し防止）
+    const generatedImages = {}; // 画像id -> { imageURL, seed }（一覧と詳細で共有）
+    const genBoxById = {};      // 画像id -> 一覧の生成枠DOM
+
+    function getGasUrl() { return (document.getElementById('gasUrl').value || '').trim(); }        // プロキシ
+    function getDataGasUrl() { return (document.getElementById('dataGasUrl').value || '').trim(); } // データ/設定
+
+    // ===== 初期化 =====
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const s = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+            if (s.query) document.getElementById('query').value = s.query;
+            if (s.sort) document.getElementById('sort').value = s.sort;
+            if (s.dateFrom) document.getElementById('dateFrom').value = s.dateFrom;
+            if (s.dateTo) document.getElementById('dateTo').value = s.dateTo;
+            if (s.nsfwOnly !== undefined) document.getElementById('nsfwOnly').checked = s.nsfwOnly;
+            if (s.genWidth) document.getElementById('genWidth').value = s.genWidth;
+            if (s.genHeight) document.getElementById('genHeight').value = s.genHeight;
+        } catch (e) {}
+
+        // プロキシURL（検索用）を復元（旧 image_search_settings.gasUrl からの移行も対応）
+        let savedProxy = localStorage.getItem(LS_PROXY_URL) || '';
+        try {
+            const s = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+            savedProxy = savedProxy || s.proxyUrl || s.gasUrl || '';
+        } catch (e) {}
+        document.getElementById('gasUrl').value = savedProxy;
+
+        // データGAS URL（設定/モデル取得用）を復元。プロキシURLと同一なら誤って共有キーを上書きした名残なので空に。
+        let dataUrl = localStorage.getItem(LS_DATA_GAS) || '';
+        if (dataUrl && dataUrl === savedProxy) dataUrl = '';
+        document.getElementById('dataGasUrl').value = dataUrl;
+
+        if (!getGasUrl()) {
+            setStatus('プロキシGAS URL を設定してください（検索に使用します）。', 'err');
+        }
+
+        updateGenInfo();
+        populateGenSelectors();
+    });
+
+    function saveSettings() {
+        const proxy = getGasUrl();
+        const dataGas = getDataGasUrl();
+        if (proxy) localStorage.setItem(LS_PROXY_URL, proxy);
+        if (dataGas) localStorage.setItem(LS_DATA_GAS, dataGas); // 他ツールと共通キー
+        localStorage.setItem(LS_KEY, JSON.stringify({
+            query: document.getElementById('query').value,
+            sort: document.getElementById('sort').value,
+            proxyUrl: proxy,
+            dataGasUrl: dataGas,
+            dateFrom: document.getElementById('dateFrom').value,
+            dateTo: document.getElementById('dateTo').value,
+            nsfwOnly: document.getElementById('nsfwOnly').checked,
+            genCharacter: document.getElementById('genCharacter').value,
+            genPlace: document.getElementById('genPlace').value,
+            genWidth: document.getElementById('genWidth').value,
+            genHeight: document.getElementById('genHeight').value
+        }));
+    }
+
+    // ===== データGASから設定・モデル/キャラ/場所を読み込み（image_gen_setting と同じシート） =====
+    async function fetchSheetWithRetry(baseUrl, sheet, tries = 3) {
+        let lastErr;
+        for (let i = 0; i < tries; i++) {
+            try { return await fetchGasData(baseUrl, sheet); }
+            catch (e) { lastErr = e; await new Promise(f => setTimeout(f, 700)); }
+        }
+        throw lastErr || new Error(sheet + ' 取得失敗');
+    }
+
+    async function loadDataFromGas() {
+        const url = getDataGasUrl();
+        if (!url) { setStatus('データGAS URL を入力してください。', 'err'); return; }
+        const btn = document.getElementById('loadDataBtn');
+        btn.disabled = true;
+        setStatus('設定・モデルを読み込み中...', 'loading');
+        try {
+            const [modelData, charData, placeData, settingsRows] = await Promise.all([
+                fetchSheetWithRetry(url, 'model'),
+                fetchSheetWithRetry(url, 'character'),
+                fetchSheetWithRetry(url, 'place'),
+                fetchSheetWithRetry(url, 'settings')
+            ]);
+
+            // モデル/キャラ/場所を共通キャッシュに保存（他フィールドは保持）
+            const cache = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSITION_CACHE) || '{}');
+            cache.models = parseModels(modelData);
+            cache.characters = parseCharacters(charData);
+            cache.places = parsePlaces(placeData);
+            localStorage.setItem(STORAGE_KEYS.TRANSITION_CACHE, JSON.stringify(cache));
+
+            // settings から各種キー/モデルIDを保存
+            const s = {};
+            (settingsRows || []).forEach(r => { if (r.key) s[r.key] = r.value; });
+            if (s.runwareApiKey) localStorage.setItem(STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY, s.runwareApiKey);
+            if (s.chatApiKey) localStorage.setItem(STORAGE_KEYS.TRANSITION_CHAT_API_KEY, s.chatApiKey);
+            if (s.llmModelId) localStorage.setItem(STORAGE_KEYS.TRANSITION_SELECTED_LLM_MODEL, s.llmModelId);
+            if (s.imageModelId) localStorage.setItem(STORAGE_KEYS.TRANSITION_SELECTED_MODEL, s.imageModelId);
+
+            updateGenInfo();
+            populateGenSelectors();
+            setStatus(`読込完了: モデル${Object.keys(cache.models).length}件 / キャラ${cache.characters.length}件 / 場所${cache.places.length}件`, 'ok');
+        } catch (e) {
+            console.error(e);
+            setStatus('データGAS読込に失敗: ' + e.message, 'err');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ===== フィルタ構築（個人情報・ユーザー名は一切使わない） =====
+    function buildFilter() {
+        const parts = [];
+        // 安全側の固定フィルタ：未成年フラグ・実在人物(POI)を除外
+        parts.push('(minor != true)');
+        parts.push('(poi != true)');
+
+        // NSFWレベル（「NSFWのみ」ON: NSFWだけ / OFF: 全レベル）
+        if (document.getElementById('nsfwOnly').checked) {
+            parts.push('(nsfwLevel IN [4, 8, 16])');
+        } else {
+            parts.push('(nsfwLevel IN [1, 2, 4, 8, 16])');
+        }
+
+        // 期間（createdAtUnix はミリ秒）
+        const from = document.getElementById('dateFrom').value;
+        const to = document.getElementById('dateTo').value;
+        if (from) {
+            const ms = new Date(from + 'T00:00:00').getTime();
+            if (!isNaN(ms)) parts.push('createdAtUnix >= ' + ms);
+        }
+        if (to) {
+            const ms = new Date(to + 'T23:59:59.999').getTime();
+            if (!isNaN(ms)) parts.push('createdAtUnix <= ' + ms);
+        }
+        return parts.join(' AND ');
+    }
+
+    // ===== 検索実行 =====
+    function runSearch() {
+        offset = 0;
+        document.getElementById('grid').innerHTML = '';
+        document.getElementById('resultMeta').textContent = '';
+        saveSettings();
+        fetchPage(false);
+    }
+
+    function loadMore() {
+        offset += PAGE_SIZE;
+        fetchPage(true);
+    }
+
+    // MeilisearchへのリクエストをGASプロキシ経由で送る
+    async function proxiedSearch(meiliBody) {
+        const gasUrl = getGasUrl();
+        if (!gasUrl) throw new Error('GAS URLが未設定です');
+        // 認証ヘッダ等はGASがサーバー側で付与して転送する
+        const proxyReq = {
+            url: SEARCH_URL,
+            method: 'POST',
+            contentType: 'application/json',
+            headers: { Authorization: 'Bearer ' + SEARCH_KEY },
+            payload: JSON.stringify(meiliBody)
+        };
+        const sep = gasUrl.includes('?') ? '&' : '?';
+        // Content-Type: text/plain にして simple request 化 → プリフライト無し → file:// でも可
+        const res = await fetch(gasUrl + sep + 'proxy=1', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(proxyReq)
+        });
+        if (!res.ok) throw new Error('GAS HTTP ' + res.status);
+        const json = await res.json();
+        if (json && json.proxyError) throw new Error('GASプロキシ: ' + json.proxyError);
+        return json;
+    }
+
+    async function fetchPage(append) {
+        if (loading) return;
+        loading = true;
+        setStatus('検索中...', 'loading');
+        document.getElementById('searchBtn').disabled = true;
+        document.getElementById('loadmoreBtn').disabled = true;
+
+        const body = {
+            queries: [{
+                q: document.getElementById('query').value.trim(),
+                indexUid: INDEX,
+                limit: PAGE_SIZE,
+                offset: offset,
+                filter: [buildFilter()],
+                sort: [document.getElementById('sort').value]
+            }]
+        };
+
+        try {
+            const json = await proxiedSearch(body);
+            const result = json.results && json.results[0];
+            if (!result) throw new Error('レスポンス形式が不正です');
+
+            const hits = result.hits || [];
+            totalHits = result.estimatedTotalHits || 0;
+            renderHits(hits, append);
+
+            const shown = offset + hits.length;
+            document.getElementById('resultMeta').textContent =
+                `${totalHits.toLocaleString()} 件ヒット（表示 ${shown.toLocaleString()} 件）`;
+            document.getElementById('loadmoreWrap').style.display =
+                (hits.length === PAGE_SIZE) ? 'block' : 'none';
+
+            if (!append && hits.length === 0) {
+                document.getElementById('grid').innerHTML =
+                    '<div class="empty-message">該当する画像がありませんでした</div>';
+            }
+            clearStatus();
+        } catch (e) {
+            console.error(e);
+            const msg = !getGasUrl()
+                ? 'プロキシGAS URL を設定してください（検索に使用します）。'
+                : 'GASプロキシ経由の検索に失敗しました: ' + e.message
+                    + '。GASにproxy関数が導入・「全員」アクセスで再デプロイ済みか、GAS URLが正しいか、転送先ホストが許可リストにあるかを確認してください。';
+            setStatus(msg, 'err');
+        } finally {
+            loading = false;
+            document.getElementById('searchBtn').disabled = false;
+            document.getElementById('loadmoreBtn').disabled = false;
+        }
+    }
+
+    // ===== 描画 =====
+    function renderHits(hits, append) {
+        const grid = document.getElementById('grid');
+        if (!append) grid.innerHTML = '';
+
+        const frag = document.createDocumentFragment();
+        hits.forEach(h => frag.appendChild(buildRow(h)));
+        grid.appendChild(frag);
+    }
+
+    function thumbUrl(h) {
+        if (h.type === 'video') {
+            // 動画は transcode=true + 拡張子.jpeg で静止フレームを取得（.mp4直指定は表示不可）
+            const base = (h.name || 'frame').replace(/\.[^.]+$/, '');
+            const name = encodeURIComponent(base + '.jpeg');
+            return `${CDN}${h.url}/anim=false,transcode=true,width=450,optimized=true/${name}`;
+        }
+        const name = encodeURIComponent(h.name || 'image.jpeg');
+        return `${CDN}${h.url}/anim=false,width=450,optimized=true/${name}`;
+    }
+
+    // 拡大表示用URL（動画は再生可能なmp4、画像は大きめ）
+    function largeUrl(h) {
+        const name = encodeURIComponent(h.name || 'image');
+        if (h.type === 'video') {
+            return `${CDN}${h.url}/transcode=true,original=true/${name}`;
+        }
+        return `${CDN}${h.url}/width=1024,optimized=true/${name}`;
+    }
+
+    // ===== ライトボックス（拡大表示） =====
+    function openLightboxMedia(src, isVideo) {
+        const inner = document.getElementById('lightboxInner');
+        inner.innerHTML = isVideo
+            ? `<video src="${src}" controls autoplay loop playsinline referrerpolicy="no-referrer"></video>`
+            : `<img src="${src}" alt="" referrerpolicy="no-referrer">`;
+        document.getElementById('lightbox').classList.add('active');
+    }
+    function openLightbox(h) {
+        openLightboxMedia(largeUrl(h), h.type === 'video');
+    }
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('active');
+        document.getElementById('lightboxInner').innerHTML = ''; // 動画停止のためクリア
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        // ライトボックスが開いていればそれを、無ければモーダルを閉じる
+        if (document.getElementById('lightbox').classList.contains('active')) closeLightbox();
+        else closeDetailModal();
+    });
+
+    // ===== 詳細調整・生成モーダル =====
+    let dmState = null;
+
+    function openDetailModal(h, promptBox) {
+        // タグの初期状態。各タグは full(強調付き) / stripped(強調なし) / off の3状態
+        // タグ調整済みなら、残存=強調付きは「stripped」・強調なしは「full」、消えたタグは「off」。未調整なら全て「full」
+        const cleaned = (promptBox && promptBox.dataset.cleaned !== undefined) ? promptBox.dataset.cleaned : null;
+        const keptSet = cleaned !== null ? new Set(splitTags(cleaned).map(normTag).filter(Boolean)) : null;
+        const tags = splitTags(h.prompt)
+            .map(full => {
+                const stripped = stripEmphasis(full);
+                const hasEmphasis = stripped.length > 0 && stripped !== full;
+                let state;
+                if (keptSet) {
+                    state = !keptSet.has(normTag(full)) ? 'off' : (hasEmphasis ? 'stripped' : 'full');
+                } else {
+                    state = 'full';
+                }
+                return { full, stripped, hasEmphasis, state };
+            });
+        dmState = { h, tags, promptBox };
+
+        // 元画像（動画は静止フレーム、クリックで拡大）
+        const origBox = document.getElementById('dmOriginal');
+        if (h.type === 'video') {
+            origBox.innerHTML = `<img src="${thumbUrl(h)}" referrerpolicy="no-referrer">`;
+            origBox.querySelector('img').addEventListener('click', () => openLightboxMedia(largeUrl(h), true));
+        } else {
+            origBox.innerHTML = `<img src="${largeUrl(h)}" referrerpolicy="no-referrer">`;
+            origBox.querySelector('img').addEventListener('click', () => openLightboxMedia(largeUrl(h), false));
+        }
+        // 生成画像: 一覧で生成済みなら同じ画像を表示、無ければプレースホルダ
+        if (generatedImages[h.id]) renderDmGenerated(generatedImages[h.id]);
+        else document.getElementById('dmGenerated').innerHTML = '<div class="dm-genph">「この設定で生成」を押してください</div>';
+
+        // アクション名（タグ調整で生成済みなら表示。編集可）
+        document.getElementById('dmActionName').value = (promptBox && promptBox.dataset.actionName) ? promptBox.dataset.actionName : '';
+        document.getElementById('dmRegisterMsg').textContent = '';
+
+        // 生成サイズは一覧画面の値を初期値に
+        document.getElementById('dmWidth').value = document.getElementById('genWidth').value || 1024;
+        document.getElementById('dmHeight').value = document.getElementById('genHeight').value || 1024;
+
+        populateDmSelectors();
+        renderDmTags();
+        document.getElementById('detailModal').classList.add('active');
+    }
+
+    // 登録するアクションのprompt（自由タグ前 ＋ 有効タグ ＋ 自由タグ後。モデル品質/キャラ/場所は含めない）
+    function buildActionPromptForRegister() {
+        const enabled = dmState ? dmState.tags.filter(t => t.state !== 'off').map(t => t.state === 'stripped' ? t.stripped : t.full).join(', ') : '';
+        const tag1 = (document.getElementById('dmTag1').value || '').trim();
+        const tag2 = (document.getElementById('dmTag2').value || '').trim();
+        return [tag1, enabled, tag2].filter(Boolean).join(', ');
+    }
+
+    function setRegisterMsg(text, ok) {
+        const el = document.getElementById('dmRegisterMsg');
+        el.textContent = text || '';
+        el.style.color = ok ? '#8f8' : '#e88';
+    }
+
+    // 「新規アクションとして登録」: actionシート末尾に追記（追記専用GAS関数を使用）
+    async function registerAction() {
+        const actionName = document.getElementById('dmActionName').value.trim();
+        const prompt = buildActionPromptForRegister();
+        if (!actionName) { setRegisterMsg('アクション名を入力してください', false); return; }
+        if (!prompt) { setRegisterMsg('登録するプロンプト（タグ）が空です', false); return; }
+        const dataGas = getDataGasUrl();
+        if (!dataGas) { setRegisterMsg('データGAS URL を設定してください', false); return; }
+        if (!confirm('action シートの末尾に新規アクションを追記します。\n\nアクション名: ' + actionName + '\nprompt: ' + prompt + '\n\n実行しますか？')) return;
+
+        const btn = document.getElementById('dmRegisterActionBtn');
+        const orig = btn.textContent;
+        btn.disabled = true; btn.textContent = '登録中...';
+        setRegisterMsg('', true);
+        try {
+            const sep = dataGas.includes('?') ? '&' : '?';
+            const res = await fetch(dataGas + sep + 'action=appendAction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ actionName: actionName, prompt: prompt })
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const j = await res.json();
+            if (j && j.status === 'success') {
+                setRegisterMsg('登録しました: ' + j.action_id + ' 「' + actionName + '」', true);
+            } else {
+                throw new Error((j && j.message) ? j.message : '不明なエラー');
+            }
+        } catch (e) {
+            console.error(e);
+            setRegisterMsg('登録失敗: ' + e.message + '（GASに appendAction を導入・再デプロイ済みか確認）', false);
+        } finally {
+            btn.textContent = orig; btn.disabled = false;
+        }
+    }
+
+    // アクション名の手動編集を一覧の行にも反映
+    function onDmActionNameChange() {
+        const v = document.getElementById('dmActionName').value;
+        if (dmState && dmState.promptBox) {
+            dmState.promptBox.dataset.actionName = v;
+            const cell = dmState.promptBox.parentElement;
+            const el = cell && cell.querySelector('.row-action-name');
+            if (el) el.textContent = v.trim() ? '🎬 ' + v.trim() : '';
+        }
+    }
+
+    function closeDetailModal() {
+        document.getElementById('detailModal').classList.remove('active');
+        document.getElementById('dmGenerated').innerHTML = '';
+        document.getElementById('dmOriginal').innerHTML = '';
+        dmState = null;
+    }
+
+    function populateDmSelectors() {
+        const cfg = getGenConfig();
+        const { characters, places } = getGenData();
+
+        const modelSel = document.getElementById('dmModel');
+        modelSel.innerHTML = '';
+        Object.keys(cfg.models).forEach(id => {
+            const o = document.createElement('option');
+            o.value = id; o.textContent = cfg.models[id].name;
+            modelSel.appendChild(o);
+        });
+        if (cfg.modelId) modelSel.value = cfg.modelId;
+
+        const charSel = document.getElementById('dmCharacter');
+        charSel.innerHTML = '<option value="">（なし）</option>';
+        characters.forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.character_id; o.textContent = c.name + (c.series ? ` (${c.series})` : '');
+            charSel.appendChild(o);
+        });
+        charSel.value = document.getElementById('genCharacter').value || '';
+
+        const placeSel = document.getElementById('dmPlace');
+        placeSel.innerHTML = '<option value="">（なし）</option>';
+        places.forEach(p => {
+            const o = document.createElement('option');
+            o.value = p.place_id; o.textContent = p.name;
+            placeSel.appendChild(o);
+        });
+        placeSel.value = document.getElementById('genPlace').value || '';
+
+        modelSel.onchange = charSel.onchange = placeSel.onchange = updateDmPreview;
+    }
+
+    // 状態 → チップ表示テキスト（強調なし状態は中身のみ表示）
+    function dmTagText(tag) { return tag.state === 'stripped' ? tag.stripped : tag.full; }
+    // 状態 → クラス
+    function dmTagClass(tag) {
+        return 'dm-tag ' + (tag.state === 'off' ? 'off' : tag.state === 'stripped' ? 'stripped' : 'on');
+    }
+    // クリックで状態を循環。強調ありは full→stripped→off、強調なしは full→off
+    function dmCycleTag(tag) {
+        if (tag.hasEmphasis) {
+            tag.state = tag.state === 'full' ? 'stripped' : (tag.state === 'stripped' ? 'off' : 'full');
+        } else {
+            tag.state = tag.state === 'off' ? 'full' : 'off';
+        }
+    }
+
+    function renderDmTags() {
+        const cont = document.getElementById('dmTags');
+        cont.innerHTML = '';
+        dmState.tags.forEach(tag => {
+            const chip = document.createElement('span');
+            chip.className = dmTagClass(tag);
+            chip.textContent = dmTagText(tag);
+            if (tag.hasEmphasis) chip.title = '強調付き → 強調なし → オフ で切替';
+            chip.onclick = () => {
+                dmCycleTag(tag);
+                chip.className = dmTagClass(tag);
+                chip.textContent = dmTagText(tag);
+                updateDmPreview();
+            };
+            cont.appendChild(chip);
+        });
+        updateDmPreview();
+    }
+
+    // モデル品質 + キャラ + 場所 + 有効タグ + additionalTag からプロンプトを組む
+    function dmBuildPrompt() {
+        const cfg = getGenConfig();
+        const modelId = document.getElementById('dmModel').value;
+        const model = cfg.models[modelId] || null;
+        const { characters, places } = getGenData();
+        const charId = document.getElementById('dmCharacter').value;
+        const placeId = document.getElementById('dmPlace').value;
+        const character = charId ? characters.find(c => c.character_id === charId) : null;
+        const place = placeId ? places.find(p => p.place_id === placeId) : null;
+        const enabled = dmState ? dmState.tags.filter(t => t.state !== 'off').map(t => t.state === 'stripped' ? t.stripped : t.full).join(', ') : '';
+        const tag1 = (document.getElementById('dmTag1').value || '').trim();
+        const tag2 = (document.getElementById('dmTag2').value || '').trim();
+        const raw = [
+            model ? model.qualityPositive : '',
+            character ? character.tag : '',
+            place ? place.tag : '',
+            tag1,        // 既存タグの前
+            enabled,
+            tag2,        // 既存タグの後
+            place ? place.additionalTag : '',
+            character ? character.additionalTag : ''
+        ].filter(Boolean).join(', ');
+        const characterWithExtras = character ? { ...character, clothes: '', camel: '', expression: '' } : null;
+        return { raw, model, modelId, character, characterWithExtras };
+    }
+
+    function updateDmPreview() {
+        const { raw, characterWithExtras } = dmBuildPrompt();
+        document.getElementById('dmPromptPreview').textContent = buildFinalPrompt(raw, characterWithExtras) || '(空)';
+    }
+
+    async function dmGenerate() {
+        const { raw, model, modelId, characterWithExtras } = dmBuildPrompt();
+        const cfg = getGenConfig();
+        const gen = document.getElementById('dmGenerated');
+        if (!cfg.apiKey) { setStatus('画像APIキーが未設定です（「設定・モデルを読込」を実行）。', 'err'); return; }
+        if (!model) { setStatus('モデルが未設定です。', 'err'); return; }
+
+        const btn = document.getElementById('dmGenBtn');
+        btn.disabled = true;
+        gen.innerHTML = '<div class="dm-genph">生成中...</div>';
+        try {
+            const result = await generateImage(cfg.apiKey, modelId, raw, {
+                negativePrompt: model.qualityNegative,
+                steps: model.steps,
+                cfgScale: model.cfgScale,
+                scheduler: model.scheduler,
+                width: parseInt(document.getElementById('dmWidth').value) || 1024,
+                height: parseInt(document.getElementById('dmHeight').value) || 1024,
+                character: characterWithExtras
+            });
+            if (dmState && dmState.h) storeGenerated(dmState.h, result); // 一覧・詳細で共有
+            else renderDmGenerated(result);
+        } catch (e) {
+            console.error(e);
+            gen.innerHTML = '';
+            const d = document.createElement('div');
+            d.className = 'dm-genph';
+            d.style.color = '#e74c3c';
+            d.textContent = '生成失敗: ' + e.message;
+            gen.appendChild(d);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // 1画像 = 1行（画像 / プロンプト / 操作 を横並び）
+    function buildRow(h) {
+        const row = document.createElement('div');
+        row.className = 'row-item';
+
+        const prompt = (h.prompt || '').trim();
+
+        // サムネイル（クリックで拡大表示）
+        const thumb = document.createElement('div');
+        thumb.className = 'row-thumb';
+        thumb.innerHTML = `
+            <img src="${thumbUrl(h)}" loading="lazy" alt="" referrerpolicy="no-referrer">
+        `;
+        thumb.title = '元画像のURLを開く';
+        thumb.addEventListener('click', () => {
+            const name = encodeURIComponent(h.name || 'image');
+            const url = (h.type === 'video')
+                ? `${CDN}${h.url}/transcode=true,original=true/${name}`
+                : `${CDN}${h.url}/original=true/${name}`;
+            window.open(url, '_blank', 'noopener');
+        });
+
+        // 生成枠（画像と同サイズ。クリックで現在のプロンプトで生成）
+        const genBox = document.createElement('div');
+        genBox.className = 'gen-box';
+        genBox.innerHTML = '<div class="gen-msg">🎨 クリックで生成</div>';
+
+        // プロンプト枠（クリックで詳細調整。アクション名 ＋ タグ ＋ タグ調整ボタン）
+        const promptCell = document.createElement('div');
+        promptCell.className = 'row-prompt-cell';
+
+        const actionNameEl = document.createElement('div');
+        actionNameEl.className = 'row-action-name';
+
+        const promptBox = document.createElement('div');
+        promptBox.className = 'row-prompt';
+        promptBox.textContent = prompt || '(プロンプトなし)';
+        promptBox.title = 'クリックで詳細調整・生成';
+        promptBox.addEventListener('click', () => openDetailModal(h, promptBox));
+
+        const adjustBtn = document.createElement('button');
+        adjustBtn.className = 'btn btn-adjust btn-adjust-inline';
+        adjustBtn.textContent = 'タグ調整';
+        adjustBtn.title = 'LLMで品質/人物/背景/LoRAタグを除去し、アクション名も生成';
+        adjustBtn.onclick = (e) => { e.stopPropagation(); adjustTags(h, promptBox, adjustBtn); };
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'btn btn-reset';
+        resetBtn.textContent = '元に戻す';
+        resetBtn.title = 'タグ調整前の元のプロンプトに戻す';
+        resetBtn.onclick = (e) => { e.stopPropagation(); resetTags(h, promptBox); };
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'row-btn-row';
+        btnRow.appendChild(adjustBtn);
+        btnRow.appendChild(resetBtn);
+
+        promptCell.appendChild(actionNameEl);
+        promptCell.appendChild(promptBox);
+        promptCell.appendChild(btnRow);
+
+        genBox.onclick = () => { if (genBox.dataset.has !== '1') generateForRow(h, genBox, promptBox); };
+        genBoxById[h.id] = genBox;
+        if (generatedImages[h.id]) renderGenBoxImage(h, genBox, generatedImages[h.id]); // 生成済みを復元
+
+        row.appendChild(thumb);
+        row.appendChild(genBox);
+        row.appendChild(promptCell);
+        return row;
+    }
+
+    // ===== 生成（image_gen_setting.html と同じパイプライン） =====
+    // localStorage から画像生成の設定（APIキー・モデル）を取得
+    function getGenConfig() {
+        let apiKey = '', models = {}, modelId = '';
+        try { apiKey = localStorage.getItem(STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY) || ''; } catch (e) {}
+        try {
+            const cache = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSITION_CACHE) || '{}');
+            models = cache.models || {};
+        } catch (e) {}
+        // 画面のモデルセレクタを優先、無ければ保存値、無ければ先頭
+        const sel = document.getElementById('genModel');
+        modelId = (sel && sel.value) || localStorage.getItem(STORAGE_KEYS.TRANSITION_SELECTED_MODEL) || '';
+        if (!modelId || !models[modelId]) modelId = Object.keys(models)[0] || '';
+        return { apiKey, models, modelId, model: models[modelId] || null };
+    }
+
+    // モデル選択変更時（共通キーに保存して image_gen_setting / モーダルと連動）
+    function onGenModelChange() {
+        const id = document.getElementById('genModel').value;
+        if (id) localStorage.setItem(STORAGE_KEYS.TRANSITION_SELECTED_MODEL, id);
+        updateGenInfo();
+    }
+
+    // キャッシュからキャラ・場所データを取得（image_gen_setting と共通）
+    function getGenData() {
+        let characters = [], places = [];
+        try {
+            const cache = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSITION_CACHE) || '{}');
+            characters = cache.characters || [];
+            places = cache.places || [];
+        } catch (e) {}
+        return { characters, places };
+    }
+
+    // モデル・キャラ・場所セレクタを生成（保存済み選択を復元）
+    function populateGenSelectors() {
+        const { characters, places } = getGenData();
+
+        // 生成モデル
+        let models = {};
+        try { models = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSITION_CACHE) || '{}').models || {}; } catch (e) {}
+        const modelSel = document.getElementById('genModel');
+        const prevModel = modelSel.value;
+        modelSel.innerHTML = '';
+        Object.keys(models).forEach(id => {
+            const o = document.createElement('option');
+            o.value = id; o.textContent = models[id].name;
+            modelSel.appendChild(o);
+        });
+        const savedModel = localStorage.getItem(STORAGE_KEYS.TRANSITION_SELECTED_MODEL);
+        if (prevModel && models[prevModel]) modelSel.value = prevModel;
+        else if (savedModel && models[savedModel]) modelSel.value = savedModel;
+        else modelSel.value = Object.keys(models)[0] || '';
+
+        const charSel = document.getElementById('genCharacter');
+        const placeSel = document.getElementById('genPlace');
+
+        charSel.innerHTML = '<option value="">（なし）</option>';
+        characters.forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.character_id;
+            o.textContent = c.name + (c.series ? ` (${c.series})` : '');
+            charSel.appendChild(o);
+        });
+        placeSel.innerHTML = '<option value="">（なし）</option>';
+        places.forEach(p => {
+            const o = document.createElement('option');
+            o.value = p.place_id;
+            o.textContent = p.name;
+            placeSel.appendChild(o);
+        });
+
+        try {
+            const s = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+            if (s.genCharacter) charSel.value = s.genCharacter;
+            if (s.genPlace) placeSel.value = s.genPlace;
+        } catch (e) {}
+    }
+
+    function updateGenInfo() {
+        const { apiKey } = getGenConfig();
+        const chatKey = localStorage.getItem(STORAGE_KEYS.TRANSITION_CHAT_API_KEY) || '';
+        const llmModel = localStorage.getItem(STORAGE_KEYS.TRANSITION_SELECTED_LLM_MODEL) || '';
+        const el = document.getElementById('genInfo');
+        el.innerHTML =
+            '画像APIキー: ' + (apiKey ? '✅ あり' : '❌ なし') + '<br>'
+            + 'LLM整形: ' + (chatKey ? '✅ ' : '❌ ') + '<span class="gi-llm" style="color:#8cf"></span>';
+        el.querySelector('.gi-llm').textContent = chatKey ? (llmModel || '(モデル未設定)') : 'キーなし';
+    }
+
+    // OpenRouter(LLM)でプロンプトを整形（品質/人物/背景/LoRAタグを除去）
+    async function cleanPromptViaLLM(raw, cacheId) {
+        if (cacheId && llmCleanCache[cacheId] !== undefined) return llmCleanCache[cacheId];
+        const apiKey = localStorage.getItem(STORAGE_KEYS.TRANSITION_CHAT_API_KEY) || '';
+        if (!apiKey) throw new Error('OpenRouter(チャット)APIキー未設定');
+        const model = localStorage.getItem(STORAGE_KEYS.TRANSITION_SELECTED_LLM_MODEL) || 'x-ai/grok-4-fast';
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+            body: JSON.stringify({
+                model: model,
+                temperature: 0,
+                stream: false,
+                messages: [
+                    { role: 'system', content: LLM_CLEAN_SYS },
+                    { role: 'user', content: raw }
+                ]
+            })
+        });
+        if (!res.ok) {
+            let m = ''; try { const j = await res.json(); m = j.error?.message || ''; } catch (e) {}
+            throw new Error('LLM HTTP ' + res.status + (m ? ' ' + m : ''));
+        }
+        const json = await res.json();
+        let out = (json.choices?.[0]?.message?.content || '').trim();
+        out = out.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim(); // コードブロック除去
+        // JSON { actionName, tags } をパース。失敗時は全体をタグ扱い
+        let result;
+        try {
+            const parsed = JSON.parse(out);
+            result = { tags: String(parsed.tags || '').trim(), actionName: String(parsed.actionName || '').trim() };
+        } catch (e) {
+            result = { tags: out.replace(/\s*\n+\s*/g, ' ').trim(), actionName: '' };
+        }
+        if (cacheId) llmCleanCache[cacheId] = result;
+        return result;
+    }
+
+    // 一覧の生成枠に画像を描画（再生成ボタン付き）
+    function renderGenBoxImage(h, box, result) {
+        box.innerHTML = '';
+        box.dataset.has = '1';
+        const promptBox = box.parentElement ? box.parentElement.querySelector('.row-prompt') : null;
+        const img = document.createElement('img');
+        img.src = result.imageURL;
+        img.alt = '';
+        img.title = 'Seed: ' + result.seed;
+        img.referrerPolicy = 'no-referrer';
+        img.addEventListener('click', (e) => { e.stopPropagation(); openLightboxMedia(result.imageURL, false); });
+        box.appendChild(img);
+        const regen = document.createElement('span');
+        regen.className = 'gen-regen';
+        regen.textContent = '↻';
+        regen.title = '再生成';
+        regen.addEventListener('click', (e) => { e.stopPropagation(); box.dataset.has = ''; box.dataset.generating = ''; generateForRow(h, box, promptBox); });
+        box.appendChild(regen);
+    }
+
+    // 詳細モーダルの生成画像欄に描画
+    function renderDmGenerated(result) {
+        const gen = document.getElementById('dmGenerated');
+        gen.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = result.imageURL;
+        img.title = 'Seed: ' + result.seed;
+        img.referrerPolicy = 'no-referrer';
+        img.addEventListener('click', () => openLightboxMedia(result.imageURL, false));
+        gen.appendChild(img);
+    }
+
+    // 生成結果を保存し、一覧の生成枠と（開いていれば）詳細モーダルの両方に反映
+    function storeGenerated(h, result) {
+        generatedImages[h.id] = result;
+        const box = genBoxById[h.id];
+        if (box && box.isConnected) renderGenBoxImage(h, box, result);
+        if (dmState && dmState.h && dmState.h.id === h.id) renderDmGenerated(result);
+    }
+
+    async function generateForRow(h, box, promptBox) {
+        const { apiKey, modelId, model } = getGenConfig();
+        if (!apiKey || !model) {
+            box.innerHTML = '<div class="gen-msg" style="color:#e74c3c">モデル/APIキー<br>未設定</div>';
+            setStatus('生成にはモデルと画像APIキーが必要です。左の「設定・モデルを読込」を押してください（データGAS URL設定が必要）。', 'err');
+            return;
+        }
+        if (box.dataset.generating === '1') return;
+        box.dataset.generating = '1';
+        box.innerHTML = '<div class="gen-msg">生成中...</div>';
+
+        // 生成に使うプロンプト（「タグ調整」済みなら整形後、未調整なら元のまま）
+        const rowPrompt = promptBox ? getRowPrompt(promptBox) : (h.prompt || '').trim();
+
+        // image_gen_setting の buildPrompt 相当
+        // 順序: モデル品質タグ + キャラtag + 場所tag + プロンプト(customPrompt位置) + 場所additionalTag + キャラadditionalTag
+        const { characters, places } = getGenData();
+        const charId = document.getElementById('genCharacter').value;
+        const placeId = document.getElementById('genPlace').value;
+        const character = charId ? characters.find(c => c.character_id === charId) : null;
+        const place = placeId ? places.find(p => p.place_id === placeId) : null;
+        // 服装・関係性は未対応なので空（buildFinalPrompt の {clothes}/{expression} は空に置換される）
+        const characterWithExtras = character ? { ...character, clothes: '', camel: '', expression: '' } : null;
+
+        const promptRaw = [
+            model.qualityPositive,
+            character ? character.tag : '',
+            place ? place.tag : '',
+            rowPrompt,
+            place ? place.additionalTag : '',
+            character ? character.additionalTag : ''
+        ].filter(Boolean).join(', ');
+
+        try {
+            const result = await generateImage(apiKey, modelId, promptRaw, {
+                negativePrompt: model.qualityNegative,
+                steps: model.steps,
+                cfgScale: model.cfgScale,
+                scheduler: model.scheduler,
+                width: parseInt(document.getElementById('genWidth').value) || 1024,
+                height: parseInt(document.getElementById('genHeight').value) || 1024,
+                character: characterWithExtras
+            });
+            storeGenerated(h, result); // 一覧・詳細で共有
+        } catch (e) {
+            console.error(e);
+            box.innerHTML = '<div class="gen-msg" style="color:#e74c3c">生成失敗<br>クリックで再試行</div>';
+            box.dataset.has = '';
+        } finally {
+            box.dataset.generating = '';
+        }
+    }
+
+    // 生成/コピー/生成へ で使うプロンプト（調整済みなら整形後、未調整なら表示テキスト）
+    function getRowPrompt(promptBox) {
+        return (promptBox.dataset.cleaned !== undefined ? promptBox.dataset.cleaned : promptBox.textContent).trim();
+    }
+
+    // タグ正規化（比較用）。括弧による強調・末尾の重み数値を無視して比較する
+    // 例: "(apple on desk:1.5)" → "apple on desk"
+    function normTag(t) {
+        return t
+            .replace(/[()\[\]]/g, '')        // 括弧を除去
+            .replace(/:\s*[\d.]+\s*$/, '')    // 末尾の :重み を除去
+            .replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    // プロンプトをタグに分割。カンマ・改行・ピリオドを区切りに使う。
+    // ただし小数点（数字に挟まれた . 例:1.5 や v5.0）は区切りにしない。
+    function splitTags(prompt) {
+        return (prompt || '')
+            .split(/\s*(?:,|\n|(?<!\d)\.(?!\d))\s*/)
+            .map(t => t.replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+    }
+
+    // 強調記法を外して中身だけにする（表示・生成用、大文字小文字は保持）
+    // 例: "(apple on desk: 1.5)" → "apple on desk"
+    function stripEmphasis(t) {
+        return t
+            .replace(/^[\(\[]+/, '')          // 先頭の ( [ を除去
+            .replace(/[\)\]]+$/, '')          // 末尾の ) ] を除去
+            .replace(/:\s*[\d.]+\s*$/, '')    // 末尾の :重み を除去
+            .replace(/\s+/g, ' ').trim();
+    }
+
+    // 元プロンプトを表示しつつ、整形後に残ったタグ=青、消えたタグ=取り消し線で描画
+    function renderAdjustedPrompt(promptBox, original, cleaned) {
+        const keptSet = new Set(splitTags(cleaned).map(normTag).filter(Boolean));
+        const parts = splitTags(original);
+        promptBox.innerHTML = '';
+        parts.forEach((raw, idx) => {
+            if (idx > 0) promptBox.appendChild(document.createTextNode(', '));
+            const span = document.createElement('span');
+            span.textContent = raw;
+            span.className = keptSet.has(normTag(raw)) ? 'tag-kept' : 'tag-removed';
+            promptBox.appendChild(span);
+        });
+        promptBox.dataset.cleaned = cleaned; // 生成にはこちらを使用
+    }
+
+    // 「元に戻す」: タグ調整前の元プロンプト表示に戻す（整形結果・アクション名を破棄）
+    function resetTags(h, promptBox) {
+        promptBox.textContent = (h.prompt || '').trim() || '(プロンプトなし)';
+        delete promptBox.dataset.cleaned;
+        delete promptBox.dataset.actionName;
+        const cell = promptBox.parentElement;
+        const el = cell && cell.querySelector('.row-action-name');
+        if (el) el.textContent = '';
+    }
+
+    // 「タグ調整」: 元プロンプトをLLMで整形し、残存タグを青字で表示（生成は整形後を使用）
+    async function adjustTags(h, promptBox, btn) {
+        const original = (h.prompt || '').trim();
+        if (!original) return;
+        const orig = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '調整中...';
+        try {
+            const result = await cleanPromptViaLLM(original, h.id); // { tags, actionName }
+            renderAdjustedPrompt(promptBox, original, result.tags || '');
+            // アクション名を保存＆一覧に表示
+            promptBox.dataset.actionName = result.actionName || '';
+            const cell = promptBox.parentElement;
+            const actionEl = cell && cell.querySelector('.row-action-name');
+            if (actionEl) actionEl.textContent = result.actionName ? '🎬 ' + result.actionName : '';
+            btn.textContent = '調整済';
+            setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1200);
+        } catch (e) {
+            console.error(e);
+            setStatus('タグ調整に失敗: ' + e.message, 'err');
+            btn.textContent = orig;
+            btn.disabled = false;
+        }
+    }
+
+    async function copyPrompt(text, btn) {
+        try {
+            await navigator.clipboard.writeText(text);
+            const orig = btn.textContent;
+            btn.textContent = 'コピー済';
+            setTimeout(() => { btn.textContent = orig; }, 1200);
+        } catch (e) {
+            alert('コピーに失敗しました');
+        }
+    }
+
+    // ===== ステータス =====
+    function setStatus(msg, type) {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = type === 'err' ? 'status-err' : (type === 'loading' ? 'status-loading' : 'status-ok');
+    }
+    function clearStatus() {
+        const el = document.getElementById('status');
+        el.textContent = '';
+        el.className = '';
+    }
+</script>
+</body>
+</html>

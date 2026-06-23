@@ -888,7 +888,9 @@
         relationshipId: urlParams.get('relationshipId'),
         compositionIndex: urlParams.get('compositionIndex'),
         seed: urlParams.get('seed'),
-        imageUrl: urlParams.get('imageUrl')
+        imageUrl: urlParams.get('imageUrl'),
+        prompt: urlParams.get('prompt'),          // 生プロンプト（追加プロンプト欄へ）
+        auto: urlParams.get('auto')               // '1'/'true' で自動生成
     };
 
     // 初期化
@@ -913,6 +915,24 @@
         // シードがあれば設定
         if (initialParams.seed) {
             document.getElementById('seed').value = initialParams.seed;
+        }
+
+        // URLパラメータのプロンプトを追加プロンプト欄へ反映（キャッシュ有無に依存しない）
+        if (initialParams.prompt) {
+            document.getElementById('customPrompt').value = initialParams.prompt;
+            updatePromptPreview();
+        }
+
+        // auto指定があれば自動生成（モデル・APIキーが揃っている場合のみ）
+        const autoGen = initialParams.auto === '1' || initialParams.auto === 'true';
+        if (autoGen && initialParams.prompt) {
+            const hasModel = document.getElementById('model').value;
+            const hasKey = document.getElementById('apiKey').value.trim();
+            if (hasModel && hasKey) {
+                handleGenerateImage();
+            } else {
+                showStatus('自動生成不可: モデル/APIキーが未設定です（手動で「生成」を押してください）', 'error');
+            }
         }
     });
 
@@ -1058,14 +1078,15 @@
         showStatus('読み込み中...', 'loading');
 
         try {
-            const [modelData, characterData, placeData, actionData, relationshipData, costumeData, personalityData] = await Promise.all([
+            const [modelData, characterData, placeData, actionData, relationshipData, costumeData, personalityData, settingsData] = await Promise.all([
                 fetchGasData(baseUrl, 'model'),
                 fetchGasData(baseUrl, 'character'),
                 fetchGasData(baseUrl, 'place'),
                 fetchGasData(baseUrl, 'action'),
                 fetchGasData(baseUrl, 'relationship'),
                 fetchGasData(baseUrl, 'costume'),
-                fetchGasData(baseUrl, 'personality')
+                fetchGasData(baseUrl, 'personality'),
+                fetchGasData(baseUrl, 'settings')
             ]);
 
             models = parseModels(modelData);
@@ -1075,6 +1096,18 @@
             relationships = parseRelationships(relationshipData);
             costumes = parseCostumes(costumeData);
             personalities = parsePersonalities(personalityData);
+
+            // settingsシートからRunware API Keyを適用（test_transition.htmlと共通仕様）
+            const settings = {};
+            if (Array.isArray(settingsData)) {
+                for (const row of settingsData) {
+                    if (row.key) settings[row.key] = row.value ?? '';
+                }
+            }
+            if (settings.runwareApiKey) {
+                document.getElementById('apiKey').value = settings.runwareApiKey;
+                localStorage.setItem(STORAGE_KEYS.TRANSITION_RUNWARE_API_KEY, settings.runwareApiKey);
+            }
 
             saveCachedData();
             updateAllSelects();
