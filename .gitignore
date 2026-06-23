@@ -1,2 +1,5 @@
 # Playwright MCP のスクリーンショット出力
 .playwright-mcp/
+
+# 秘匿設定（スプレッドシートID等）。git 管理外
+tools/config.local.json

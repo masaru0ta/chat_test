@@ -8,11 +8,15 @@
 // 他スクリプトから require して getActionColumnB() を再利用することも可能。
 
 const { spawnSync } = require('node:child_process');
+const { getSpreadsheetId } = require('./config.js');
 
 // --- 設定 ---
-const SPREADSHEET_ID = '1pkQRmrP4IIqN-SmfZCIFuPmhurLob-UAGDlDnEMxGaU';
 const ACTION_GID = 0; // action シート
-const ACTION_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${ACTION_GID}`;
+
+// action シートのCSVエクスポートURL
+function actionCsvUrl() {
+  return `https://docs.google.com/spreadsheets/d/${getSpreadsheetId()}/export?format=csv&gid=${ACTION_GID}`;
+}
 
 // --- 最小CSVパーサ（引用符・カンマ・改行をフィールド内に含むケースに対応） ---
 function parseCsv(text) {
@@ -45,7 +49,7 @@ function parseCsv(text) {
 
 // action シートの B列を取得し、{ colName, values, joined } を返す
 async function getActionColumnB() {
-  const res = await fetch(ACTION_URL); // Node18+ はグローバル fetch / リダイレクト自動追従
+  const res = await fetch(actionCsvUrl()); // Node18+ はグローバル fetch / リダイレクト自動追従
   if (!res.ok) {
     throw new Error(`取得失敗: HTTP ${res.status}。シートの公開設定を確認してください。`);
   }

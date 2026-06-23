@@ -11,15 +11,17 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { getSpreadsheetId } = require('./config.js');
 
 // --- 設定 ---
-const SPREADSHEET_ID = '1pkQRmrP4IIqN-SmfZCIFuPmhurLob-UAGDlDnEMxGaU';
 const SETTINGS_GID = 930706504; // settings シート
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const PROMPT_FILE = path.join(__dirname, 'llm_request.txt'); // 外部化したプロンプト
 
-// 通常CSVエクスポート（gviz は行を誤結合するため gid 指定の export を使う）
-const settingsUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${SETTINGS_GID}`;
+// settings シートのCSVエクスポートURL（gviz は行を誤結合するため gid 指定の export を使う）
+function settingsCsvUrl() {
+  return `https://docs.google.com/spreadsheets/d/${getSpreadsheetId()}/export?format=csv&gid=${SETTINGS_GID}`;
+}
 
 // --- 最小CSVパーサ（引用符・カンマ・改行をフィールド内に含むケースに対応） ---
 function parseCsv(text) {
@@ -52,7 +54,7 @@ function parseCsv(text) {
 
 // settings シートを key/value マップ化
 async function loadSettings() {
-  const res = await fetch(settingsUrl);
+  const res = await fetch(settingsCsvUrl());
   if (!res.ok) {
     throw new Error(`settings 取得失敗: HTTP ${res.status}。シートの公開設定を確認してください。`);
   }
