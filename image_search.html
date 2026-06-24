@@ -209,7 +209,7 @@
                     <option value="stats.collectedCountAllTime:desc">最も収集された順</option>
                     <option value="stats.reactionCountAllTime:desc">リアクション数順</option>
                     <option value="stats.commentCountAllTime:desc">コメント数順</option>
-                    <option value="createdAtUnix:desc">新着順</option>
+                    <option value="createdAt:desc">新着順</option>
                 </select>
             </div>
             <div class="field">
@@ -386,7 +386,8 @@
         try {
             const s = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
             if (s.query) document.getElementById('query').value = s.query;
-            if (s.sort) document.getElementById('sort').value = s.sort;
+            if (s.sort) document.getElementById('sort').value =
+                (s.sort === 'createdAtUnix:desc') ? 'createdAt:desc' : s.sort; // 旧ソート値の移行
             if (s.dateFrom) document.getElementById('dateFrom').value = s.dateFrom;
             if (s.dateTo) document.getElementById('dateTo').value = s.dateTo;
             if (s.nsfwMode !== undefined) document.getElementById('nsfwMode').value = s.nsfwMode;
