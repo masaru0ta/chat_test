@@ -220,8 +220,13 @@
                 <label>期間（終了日）</label>
                 <input type="date" id="dateTo">
             </div>
-            <div class="checks">
-                <label><input type="checkbox" id="nsfwOnly"> NSFWのみ</label>
+            <div class="field">
+                <label>表示対象</label>
+                <select id="nsfwMode" onchange="saveSettings()">
+                    <option value="sfw">SFWのみ</option>
+                    <option value="nsfw">NSFWのみ</option>
+                    <option value="both" selected>両方</option>
+                </select>
             </div>
             <div class="field">
                 <label>プロキシGAS URL（検索用・必須）</label>
@@ -384,7 +389,8 @@
             if (s.sort) document.getElementById('sort').value = s.sort;
             if (s.dateFrom) document.getElementById('dateFrom').value = s.dateFrom;
             if (s.dateTo) document.getElementById('dateTo').value = s.dateTo;
-            if (s.nsfwOnly !== undefined) document.getElementById('nsfwOnly').checked = s.nsfwOnly;
+            if (s.nsfwMode !== undefined) document.getElementById('nsfwMode').value = s.nsfwMode;
+            else if (s.nsfwOnly !== undefined) document.getElementById('nsfwMode').value = s.nsfwOnly ? 'nsfw' : 'both'; // 旧設定の移行
             if (s.genWidth) document.getElementById('genWidth').value = s.genWidth;
             if (s.genHeight) document.getElementById('genHeight').value = s.genHeight;
         } catch (e) {}
@@ -422,7 +428,7 @@
             dataGasUrl: dataGas,
             dateFrom: document.getElementById('dateFrom').value,
             dateTo: document.getElementById('dateTo').value,
-            nsfwOnly: document.getElementById('nsfwOnly').checked,
+            nsfwMode: document.getElementById('nsfwMode').value,
             genCharacter: document.getElementById('genCharacter').value,
             genPlace: document.getElementById('genPlace').value,
             genWidth: document.getElementById('genWidth').value,
@@ -487,8 +493,11 @@
         parts.push('(minor != true)');
         parts.push('(poi != true)');
 
-        // NSFWレベル（「NSFWのみ」ON: NSFWだけ / OFF: 全レベル）
-        if (document.getElementById('nsfwOnly').checked) {
+        // 表示対象（SFWのみ: [1,2] / NSFWのみ: [4,8,16] / 両方: 全レベル）
+        const nsfwMode = document.getElementById('nsfwMode').value;
+        if (nsfwMode === 'sfw') {
+            parts.push('(nsfwLevel IN [1, 2])');
+        } else if (nsfwMode === 'nsfw') {
             parts.push('(nsfwLevel IN [4, 8, 16])');
         } else {
             parts.push('(nsfwLevel IN [1, 2, 4, 8, 16])');
