@@ -129,6 +129,29 @@
             cursor: pointer; z-index: 2001; line-height: 1; user-select: none;
         }
 
+        /* サムネイルクリック時のポップアップメニュー */
+        .thumb-menu {
+            position: fixed; z-index: 3000; background: #1f1f1f; border: 1px solid #444;
+            border-radius: 8px; padding: 4px; min-width: 230px; box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+        }
+        .thumb-menu button {
+            display: block; width: 100%; text-align: left; background: none; border: none;
+            color: #e0e0e0; font-size: 0.9rem; padding: 9px 12px; border-radius: 5px; cursor: pointer;
+        }
+        .thumb-menu button:hover:not(:disabled) { background: #2d4a66; color: #fff; }
+        .thumb-menu button:disabled { color: #666; cursor: default; }
+
+        /* ユーザー絞り込みチップ */
+        .user-filter-chip {
+            display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px 0;
+            background: #1d3a55; color: #9fd0ff; border: 1px solid #3a6a95;
+            border-radius: 14px; padding: 4px 12px; font-size: 0.85rem;
+        }
+        .user-filter-chip button {
+            background: none; border: none; color: #9fd0ff; cursor: pointer; font-size: 1rem; line-height: 1; padding: 0;
+        }
+        .user-filter-chip button:hover { color: #fff; }
+
         /* 詳細調整モーダル */
         .detail-modal {
             display: none; position: fixed; inset: 0; z-index: 2500;
@@ -236,6 +259,7 @@
 
         <!-- 右: 画像一覧（1画像1行） -->
         <main class="right-pane">
+            <div id="userFilterBar" style="display:none;"></div>
             <p class="result-meta" id="resultMeta"></p>
             <div class="list" id="grid"></div>
             <div class="loadmore-wrap" id="loadmoreWrap" style="display:none;">
@@ -344,6 +368,7 @@
     let offset = 0;
     let totalHits = 0;
     let loading = false;
+    let userFilter = null; // { username } 設定時はそのユーザーの画像だけに絞り込む
     const llmCleanCache = {}; // 画像id -> 整形済みプロンプト（再生成時の再呼び出し防止）
     const generatedImages = {}; // 画像id -> { imageURL, seed }（一覧と詳細で共有）
     const genBoxById = {};      // 画像id -> 一覧の生成枠DOM
@@ -480,6 +505,12 @@
             const ms = new Date(to + 'T23:59:59.999').getTime();
             if (!isNaN(ms)) parts.push('createdAtUnix <= ' + ms);
         }
+
+        // ユーザー絞り込み（user.username がフィルタ可能属性。値はクオートしてエスケープ）
+        if (userFilter && userFilter.username) {
+            const u = userFilter.username.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            parts.push(`user.username = "${u}"`);
+        }
         return parts.join(' AND ');
     }
 
@@ -595,13 +626,14 @@
         return `${CDN}${h.url}/anim=false,width=450,optimized=true/${name}`;
     }
 
-    // 拡大表示用URL（動画は再生可能なmp4、画像は大きめ）
+    // 拡大表示用URL（動画は再生可能なmp4、画像はサムネイルと同じ width=450）
+    // 画像は大きいサイズの取得待ちを避けるため、あえてサムネイルサイズを流用する
     function largeUrl(h) {
         const name = encodeURIComponent(h.name || 'image');
         if (h.type === 'video') {
             return `${CDN}${h.url}/transcode=true,original=true/${name}`;
         }
-        return `${CDN}${h.url}/width=1024,optimized=true/${name}`;
+        return thumbUrl(h);
     }
 
     // ===== ライトボックス（拡大表示） =====
@@ -618,6 +650,81 @@
     function closeLightbox() {
         document.getElementById('lightbox').classList.remove('active');
         document.getElementById('lightboxInner').innerHTML = ''; // 動画停止のためクリア
+    }
+
+    // ===== サムネイルクリック時のポップアップメニュー =====
+    let thumbMenuEl = null;
+    function closeThumbMenu() {
+        if (thumbMenuEl) { thumbMenuEl.remove(); thumbMenuEl = null; }
+        document.removeEventListener('click', closeThumbMenu);
+    }
+    function openThumbMenu(e, h) {
+        closeThumbMenu();
+        const menu = document.createElement('div');
+        menu.className = 'thumb-menu';
+
+        // ① Civitaiページを開く
+        const openBtn = document.createElement('button');
+        openBtn.textContent = '🔗 Civitaiページを開く';
+        openBtn.onclick = (ev) => {
+            ev.stopPropagation();
+            window.open(`https://civitai.com/images/${h.id}`, '_blank', 'noopener');
+            closeThumbMenu();
+        };
+        menu.appendChild(openBtn);
+
+        // ② このユーザーの他の画像を検索
+        const user = (h.user && h.user.username) ? h.user.username : null;
+        const userBtn = document.createElement('button');
+        userBtn.textContent = user ? `👤 ${user} の他の画像を検索` : '👤 ユーザー情報なし';
+        userBtn.disabled = !user;
+        if (user) {
+            userBtn.onclick = (ev) => {
+                ev.stopPropagation();
+                setUserFilter(user);
+                closeThumbMenu();
+            };
+        }
+        menu.appendChild(userBtn);
+
+        document.body.appendChild(menu);
+        // クリック位置に表示しつつ、画面外にはみ出さないよう調整
+        const mw = menu.offsetWidth, mh = menu.offsetHeight;
+        let x = e.clientX, y = e.clientY;
+        if (x + mw > window.innerWidth - 8) x = window.innerWidth - mw - 8;
+        if (y + mh > window.innerHeight - 8) y = window.innerHeight - mh - 8;
+        menu.style.left = Math.max(8, x) + 'px';
+        menu.style.top = Math.max(8, y) + 'px';
+        thumbMenuEl = menu;
+        // 次の外側クリックで閉じる（メニュー内クリックは stopPropagation 済み）
+        setTimeout(() => document.addEventListener('click', closeThumbMenu), 0);
+    }
+
+    // ===== ユーザー絞り込み =====
+    function setUserFilter(username) {
+        userFilter = { username };
+        renderUserFilterBar();
+        runSearch();
+    }
+    function clearUserFilter() {
+        userFilter = null;
+        renderUserFilterBar();
+        runSearch();
+    }
+    function renderUserFilterBar() {
+        const bar = document.getElementById('userFilterBar');
+        if (!userFilter) { bar.innerHTML = ''; bar.style.display = 'none'; return; }
+        bar.style.display = 'block';
+        bar.innerHTML = '';
+        const chip = document.createElement('span');
+        chip.className = 'user-filter-chip';
+        chip.appendChild(document.createTextNode(`👤 ${userFilter.username} の画像のみ`));
+        const x = document.createElement('button');
+        x.textContent = '✕';
+        x.title = 'ユーザー絞り込みを解除';
+        x.onclick = clearUserFilter;
+        chip.appendChild(x);
+        bar.appendChild(chip);
     }
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
@@ -890,13 +997,10 @@
         thumb.innerHTML = `
             <img src="${thumbUrl(h)}" loading="lazy" alt="" referrerpolicy="no-referrer">
         `;
-        thumb.title = '元画像のURLを開く';
-        thumb.addEventListener('click', () => {
-            const name = encodeURIComponent(h.name || 'image');
-            const url = (h.type === 'video')
-                ? `${CDN}${h.url}/transcode=true,original=true/${name}`
-                : `${CDN}${h.url}/original=true/${name}`;
-            window.open(url, '_blank', 'noopener');
+        thumb.title = 'クリックで操作を選択';
+        thumb.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openThumbMenu(e, h);
         });
 
         // 生成枠（画像と同サイズ。クリックで現在のプロンプトで生成）
